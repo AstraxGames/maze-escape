@@ -1,21 +1,38 @@
 {
-  "name": "Maze Escape",
+  "name": "maze-escape",
+  "productName": "Maze Escape",
   "version": "1.0.0",
+  "description": "3D Multiplayer Maze Escape game built with Electron and Three.js.",
+  "author": "AstraX Games",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstraxGames/maze-escape.git"
+  },
   "build": {
-    "appId": "com.maze.escape",
-    "icon": "icon.ico", 
+    "appId": "com.astraxgames.mazeescape",
+    "icon": "icon.ico",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AstraxGames",
+        "repo": "maze-escape"
+      }
+    ],
     "win": {
-        "target": "nsis",
-        "icon": "icon.ico"
+      "target": "nsis",
+      "icon": "icon.ico"
     }
-},
+  },
   "devDependencies": {
     "electron": "^34.0.0",
     "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
