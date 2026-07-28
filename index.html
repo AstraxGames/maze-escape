@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Title that shows up on Google and browser tabs -->
+    <title>Maze Escape - 3D Multiplayer Game</title>
+    
+    <!-- Meta Description that shows up under my link on Google -->
+    <meta name="description" content="Play Maze Escape, a thrilling 3D multiplayer maze game built by AstraX Games. Navigate procedural mazes, join online lobbies, and battle friends in real-time." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        /* CSS Variables for Responsive Scaling */
+        :root {
+            --menu-max-width: 420px;
+            --menu-padding: 1.5rem;
+            --font-scale-base: 16px;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --menu-max-width: 90vw;
+                --menu-padding: 1rem;
+                --font-scale-base: 14px;
+            }
+        }
+
+        body { margin: 0; overflow: hidden; background-color: #0b0c16; touch-action: none; font-family: 'Inter', sans-serif; font-size: var(--font-scale-base); }
+        #game-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+        
+        /* Overlay and Container Fixes */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; /* Enable scrolling if content is too tall */ }
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+        
+        /* Responsive Typography */
+        .title-text { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: clamp(1rem, 5vh, 2rem); font-size: clamp(2rem, 8vw, 3.5rem); color: #fff; text-shadow: 2px 2px 0 #000; text-align: center; }
+        
+        /* Responsive Menu Container */
+        .gta-menu { width: 100%; max-width: var(--menu-max-width); background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; max-height: 90vh; /* Prevent menu from exceeding viewport height */ display: flex; flex-direction: column;}
+        .gta-menu-header { background: linear-gradient(90deg, #fff, #ddd); color: #000; padding: clamp(12px, 3vh, 18px) clamp(15px, 4vw, 20px); font-weight: 900; font-size: clamp(1.1rem, 4vw, 1.4rem); letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #000; flex-shrink: 0;}
+        .gta-btn { width: 100%; padding: clamp(10px, 2.5vh, 14px) clamp(15px, 4vw, 20px); font-weight: 800; font-size: clamp(0.9rem, 3vw, 1.1rem); text-align: left; cursor: pointer; transition: all 0.1s; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent; color: #fff; display: flex; justify-content: space-between; align-items: center; user-select: none; flex-shrink: 0;}
+        .gta-btn:hover { background: rgba(255,255,255,0.1); padding-left: clamp(20px, 5vw, 25px); border-left: 4px solid #fff; }
+        
+        /* Responsive Submenu Main Buttons */
+        .btn-main { width: 100%; padding: clamp(16px, 4vh, 24px) clamp(20px, 5vw, 30px); display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(1.2rem, 4vw, 1.5rem); text-transform: uppercase; cursor: pointer; transition: 0.15s; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;}
+        .btn-main:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; padding-left: clamp(26px, 6vw, 36px); border-left: 6px solid #22d3ee; }
+        .btn-main:hover span { color: #22d3ee !important; }
+        
+        /* Responsive Submenu Sub Buttons */
+        .btn-sub { width: 100%; display: flex; align-items: stretch; font-weight: 900; font-size: clamp(1.2rem, 4vw, 1.5rem); text-transform: uppercase; cursor: pointer; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.15s; flex-shrink: 0;}
+        .btn-sub:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; }
+        .btn-sub-arrow { width: clamp(50px, 15vw, 70px); display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.05); transition: 0.15s; }
+        .btn-sub:hover .btn-sub-arrow { color: #22d3ee !important; padding-right: 10px; }
+        .btn-sub-text { flex: 1; padding: clamp(16px, 4vh, 24px) clamp(20px, 5vw, 30px); }
+
+        /* Responsive Submenu Panel */
+        .submenu-panel { background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; pointer-events: auto; max-height: 80vh; width: 100%; max-width: var(--menu-max-width);}
+        
+        /* Layout adjustments for smaller screens */
+        @media (max-width: 1024px) {
+            #left-submenus {
+                left: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 50vh !important;
+                border-radius: 8px 8px 0 0;
+            }
+            .absolute.top-32.left-8 {
+                top: auto;
+                bottom: 1rem;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 75; /* Ensure it stays above other elements */
+                width: 90%;
+            }
+            .w-\[320px\] {
+               width: 100% !important;
+            }
+
+            #right-submenus {
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 50vh !important;
+                border-radius: 8px 8px 0 0;
+            }
+            .absolute.bottom-10.right-8 {
+                 bottom: auto;
+                 top: 5rem; /* Give space for top left profile */
+                 right: 50%;
+                 transform: translateX(50%);
+                 z-index: 75;
+                 width: 90%;
+            }
+        }
+
+        .gta-input { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
+        .gta-input:disabled { opacity: 0.5; cursor: not-allowed; background: rgba(0,0,0,0.8); }
+        .gta-textarea { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; min-height: 100px; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
+        .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 15px; }
+        .store-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; }
+        .store-item.equipped { border-color: #4CAF50; background: rgba(76, 175, 80, 0.2); }
+        .store-item-title { font-weight: 900; text-transform: uppercase; font-size: clamp(0.7rem, 2vw, 0.9rem); margin-top: 8px; }
+
+        .tab-btn { color: #fff; font-size: clamp(0.75rem, 2vw, 0.95rem); padding: 12px; flex: 1; text-align: center; font-weight: 800; border-bottom: 3px solid transparent; opacity: 0.4; cursor: pointer; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .tab-btn.active { opacity: 1; border-bottom: 3px solid #fff; }
+        .settings-panel { padding: clamp(1rem, 3vh, 1.5rem) clamp(10px, 4vw, 20px); width: 100%; flex-grow: 1; overflow-y: auto;}
+        .gta-toggle { background: transparent; border: 2px solid #fff; padding: 4px clamp(8px, 2vw, 16px); font-size: clamp(0.7rem, 2vw, 0.9rem); color: #fff; font-weight: 900; cursor: pointer; border-radius: 4px; }
+        .gta-toggle.active { background: #fff; color: #000; }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 12px 0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 8px; background: #fff; border-radius: 2px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        select.gta-select { background: rgba(0,0,0,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 10px; font-weight: 800; width: 100%; margin-top: 5px; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
+        
+        .keybind-btn { background: transparent; border: 2px solid #fff; padding: 0.25rem clamp(0.5rem, 2vw, 1.2rem); font-family: monospace; font-weight: 900; font-size: clamp(0.9rem, 3vw, 1.1rem); cursor: pointer; min-width: clamp(50px, 15vw, 70px); color: #fff; border-radius: 4px; transition: all 0.2s; text-align: center; }
+        .keybind-btn:hover { background: rgba(255,255,255,0.1); border-color: #22d3ee; color: #22d3ee; }
+        .keybind-btn.waiting { background: #fff; color: #000; border-color: #fff; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .hud-icon { position: relative; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2); color: white; width: clamp(35px, 8vw, 45px); height: clamp(35px, 8vw, 45px); display: flex; justify-content: center; align-items: center; font-size: clamp(1rem, 3vw, 1.2rem); cursor: pointer; border-radius: 8px; }
+        #notification-feed { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none; max-width: 80vw;}
+        .gta-notification { background: rgba(0,0,0,0.85); border-left: 4px solid #fff; color: #fff; padding: 10px 16px; font-size: clamp(0.75rem, 2.5vw, 0.85rem); font-weight: 800; text-transform: uppercase; transform: translateX(-120%); transition: transform 0.3s, opacity 0.3s; opacity: 0; border-radius: 0 4px 4px 0; word-wrap: break-word;}
+        .gta-notification.show { transform: translateX(0); opacity: 1; }
+        
+        #damage-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(255,0,0,0.4) 100%); z-index: 40; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+        #hud-hp-container { position: absolute; bottom: clamp(20px, 5vh, 30px); left: 50%; transform: translateX(-50%); width: clamp(200px, 50vw, 300px); height: clamp(10px, 2vh, 14px); background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.4); border-radius: 7px; overflow: hidden; z-index: 10; }
+        #hud-hp-fill { height: 100%; background: #22c55e; transition: width 0.1s; width: 100%; }
+
+        #pvp-scoreboard { position: absolute; top: clamp(20px, 5vh, 40px); left: 50%; transform: translateX(-50%); display: flex; gap: clamp(1rem, 4vw, 2rem); background: rgba(10,12,20,0.9); padding: clamp(8px, 2vh, 12px) clamp(20px, 5vw, 30px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: clamp(1rem, 4vw, 1.5rem); font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 20; }
+        .score-you { color: #4CAF50; } .score-enemy { color: #ff4444; }
+
+        #invite-popup { position: absolute; top: clamp(10px, 3vh, 20px); right: clamp(10px, 3vw, 20px); background: rgba(10,12,20,0.95); border: 1px solid #4CAF50; padding: clamp(10px, 2.5vh, 15px) clamp(15px, 4vw, 20px); border-radius: 8px; z-index: 110; display: flex; flex-direction: column; gap: 10px; transform: translateY(-150%); transition: transform 0.3s; max-width: 90vw;}
+        #invite-popup.show { transform: translateY(0); }
+
+        #initial-loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; transition: opacity 0.5s; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #fff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        
+        /* Flex improvements for Profile Menu */
+        #profile-menu .gta-menu {
+             max-height: 95vh;
+        }
+    </style
+
+</head>
+<body>
+    <div id="initial-loader">
+        <div class="spinner"></div>
+        <h2 class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+    <div id="voice-chat-audio"></div>
+    <div id="damage-overlay"></div>
+
+    <div id="invite-popup">
+        <div class="font-black text-white uppercase text-sm truncate"><span id="invite-sender-name" class="text-cyan-400">Player</span> invited you!</div>
+        <div class="flex gap-2">
+            <button class="bg-green-600 hover:bg-green-500 text-white font-black text-xs px-4 py-2 rounded flex-1" id="btn-accept-invite">ACCEPT</button>
+            <button class="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-4 py-2 rounded flex-1" onclick="document.getElementById('invite-popup').classList.remove('show')">DECLINE</button>
+        </div>
+    </div>
+
+    <div id="main-menu-layer" class="absolute top-0 left-0 w-full h-full pointer-events-none z-[60] hidden">
+        <div class="absolute top-4 left-4 pointer-events-auto z-10">
+            <div class="bg-black/90 border border-white/10 rounded-md p-2 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition shadow-2xl" onclick="openMenu('profile-menu')">
+                <img id="widget-pfp" src="" class="w-10 h-10 rounded-full border border-white/20 object-cover bg-gray-800">
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-1.5">
+                        <span id="widget-name" class="font-black text-sm uppercase text-white tracking-wide truncate max-w-[150px]">Player</span>
+                        <span id="dev-badge" class="hidden bg-cyan-500 text-black font-black text-[0.6rem] px-1.5 py-0.5 rounded shadow">DEV</span>
+                    </div>
+                    <span id="widget-uid" class="text-[0.65rem] font-bold text-gray-500">UID: ------</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute top-4 right-4 pointer-events-auto z-10">
+            <div class="bg-black/90 border border-white/10 rounded-md p-3 cursor-pointer hover:bg-white/10 transition flex items-center justify-center shadow-2xl relative" onclick="openMenu('messages-menu')" title="Message Center">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                <span class="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border border-black"></span>
+            </div>
+        </div>
+        
+        <div class="absolute top-32 left-8 pointer-events-none z-[65]">
+            <div class="relative pointer-events-auto flex flex-col md:flex-row h-full max-h-[70vh]">
+                <div class="w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10">
+                    <div onclick="toggleLeftSub('sub-play')" class="btn-main text-cyan-400">PLAY GAME <span class="text-cyan-400">&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-store')" class="btn-main text-white">STORE <span class="text-white">&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-settings')" class="btn-main text-white border-none">SETTINGS <span class="text-white">&gt;</span></div>
+                </div>
+                
+                <div id="left-submenus" class="md:absolute md:top-0 md:left-[340px] w-full md:w-[460px] hidden submenu-panel flex flex-col mt-4 md:mt-0">
+                    <div id="sub-play" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Game Modes</div>
+                        <div class="flex-grow overflow-y-auto">
+                            <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
+                            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online Session <span>></span></div>
+                            <div id="btn-pvp-open" class="gta-btn text-red-500 font-black">PvP Arena <span>></span></div>
+                        </div>
+                        <div class="gta-btn mt-auto border-t border-white/20" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+
+                    <div id="sub-pvp" class="hidden w-full flex-col">
+                        <div class="gta-menu-header text-red-500">PvP ARENA</div>
+                        <div class="flex-grow overflow-y-auto">
+                            <div class="gta-menu-header bg-transparent !border-none !pb-2 text-sm">Select Match Type</div>
+                            <div id="btn-mode-pvp1v1" class="gta-btn font-black border-t border-white/10">1v1 Matchmaking <span>></span></div>
+                            <div id="btn-mode-pvp4v4" class="gta-btn text-gray-500">4v4 Squads <span class="text-xs">(Coming Soon)</span></div>
+                        </div>
+                        <div class="gta-btn mt-auto border-t border-white/20" onclick="toggleLeftSub('sub-play')">Back</div>
+                    </div>
+
+                    <div id="sub-store" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Store</div>
+                        <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
+                            <button class="tab-btn active text-white" data-tab="store-weapons">Weapons</button>
+                            <button class="tab-btn text-white" data-tab="store-characters">Characters</button>
+                        </div>
+                        
+                        <div id="tab-store-weapons" class="settings-panel flex-grow">
+                            <div class="store-grid">
+                                <div class="store-item" data-weapon="knife" onclick="equipWeapon('knife')"><div class="text-4xl py-2">🔪</div><div class="store-item-title">Knife</div></div>
+                                <div class="store-item" data-weapon="bat" onclick="equipWeapon('bat')"><div class="text-4xl py-2">🏏</div><div class="store-item-title">Baseball Bat</div></div>
+                                <div class="store-item" data-weapon="sword" onclick="equipWeapon('sword')"><div class="text-4xl py-2">🗡️</div><div class="store-item-title">Sword</div></div>
+                                <div class="store-item" data-weapon="chappal" onclick="equipWeapon('chappal')"><div class="text-4xl py-2">🩴</div><div class="store-item-title">Chappal</div></div>
+                            </div>
+                            <p class="text-xs text-gray-500 text-center mt-2 uppercase pb-2">*Weapons are only visible in PvP Arena</p>
+                        </div>
+                        
+                        <div id="tab-store-characters" class="settings-panel hidden flex-grow">
+                            <div class="store-grid">
+                                <div class="store-item" data-char="default" onclick="equipCharacter('default')"><div class="w-10 h-10 mx-auto rounded-full bg-blue-600 mb-2 border-2 border-white"></div><div class="store-item-title">Default</div></div>
+                                <div class="store-item" data-char="ninja" onclick="equipCharacter('ninja')"><div class="w-10 h-10 mx-auto rounded-full bg-gray-900 mb-2 border-2 border-white"></div><div class="store-item-title">Ninja</div></div>
+                                <div class="store-item" data-char="soldier" onclick="equipCharacter('soldier')"><div class="w-10 h-10 mx-auto rounded-full bg-green-700 mb-2 border-2 border-white"></div><div class="store-item-title">Soldier</div></div>
+                                <div class="store-item" data-char="gold" onclick="equipCharacter('gold')"><div class="w-10 h-10 mx-auto rounded-full bg-yellow-400 mb-2 border-2 border-white"></div><div class="store-item-title">Gold</div></div>
+                            </div>
+                        </div>
+                        <div class="gta-btn border-t border-white/20 mt-auto justify-center flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+
+                    <div id="sub-settings" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Settings</div>
+                        <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
+                            <button class="tab-btn active text-white" data-tab="display">Display</button>
+                            <button class="tab-btn text-white" data-tab="graphics">Graphics</button>
+                            <button class="tab-btn text-white" data-tab="controls">Controls</button>
+                            <button class="tab-btn text-white" data-tab="sound">Audio</button>
+                        </div>
+                        
+                        <div id="tab-display" class="settings-panel flex-grow">
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Resolution</label>
+                                <select id="set-resolution" class="gta-select"></select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Brightness: <span id="val-brightness" class="text-white">100%</span></label>
+                                <input type="range" id="set-brightness" min="50" max="200" value="100">
+                            </div>
+                        </div>
+                        
+                        <div id="tab-graphics" class="settings-panel hidden flex-grow">
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Graphics Quality</label>
+                                <select id="set-quality" class="gta-select">
+                                    <option value="custom">Custom</option>
+                                    <option value="ultra">Ultra</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Render Scale: <span id="val-scale" class="text-white">100%</span></label>
+                                <input type="range" id="set-scale" min="20" max="200" value="100" step="5">
+                            </div>
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="text-xs font-bold text-gray-400 uppercase">HD Shadows</label>
+                                <button id="set-shadows" class="gta-toggle">ON</button>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">FPS Limit</label>
+                                <select id="set-fps" class="gta-select">
+                                    <option value="uncapped">Uncapped</option><option value="60">60 FPS</option><option value="30">30 FPS</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="tab-controls" class="settings-panel hidden flex-grow">
+                            <div id="settings-pc">
+                                <p class="text-xs text-gray-500 mb-4 text-center uppercase">Click to Rebind Keys</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Forward</span><button class="keybind-btn" data-action="up">W</button></div>
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Backward</span><button class="keybind-btn" data-action="down">S</button></div>
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Left</span><button class="keybind-btn" data-action="left">A</button></div>
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Right</span><button class="keybind-btn" data-action="right">D</button></div>
+                                    <div class="flex justify-between items-center col-span-2 pt-2 border-t border-white/20"><span class="text-xs font-bold text-gray-400 uppercase">Jump</span><button class="keybind-btn" data-action="jump">SPACE</button></div>
+                                    <div class="flex justify-between items-center col-span-2"><span class="text-xs font-bold text-gray-400 uppercase">Sprint (Hold)</span><button class="keybind-btn" data-action="sprint">SHIFT</button></div>
+                                    <div class="flex justify-between items-center col-span-2"><span class="text-xs font-bold text-gray-400 uppercase">Sit / Crouch (Hold)</span><button class="keybind-btn" data-action="crouch">C</button></div>
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Paint (✔️)</span><button class="keybind-btn" data-action="sprayTick">F</button></div>
+                                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Paint (❌)</span><button class="keybind-btn" data-action="sprayCross">G</button></div>
+                                    <div class="flex justify-between items-center col-span-2"><span class="text-xs font-bold text-gray-400 uppercase">PvP Melee Attack</span><button class="keybind-btn" data-action="attack">E</button></div>
+                                    
+                                    <!-- Mouse Sensitivity Control -->
+                                    <div class="mb-4 col-span-2 pt-4 border-t border-white/20 mt-2">
+                                        <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Mouse Sensitivity: <span id="val-sens" class="text-white">50%</span></label>
+                                        <input type="range" id="set-sens" min="1" max="100" value="50">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="tab-sound" class="settings-panel hidden flex-grow">
+                            <div class="mb-6 border-b border-white/20 pb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Custom Music</label>
+                                <input type="file" id="custom-music-upload" accept="audio/*" multiple class="w-full text-xs text-gray-300 file:mr-4 file:py-1 file:px-3 file:border file:border-white file:text-xs file:font-bold file:bg-transparent file:text-white hover:file:bg-white hover:file:text-black cursor-pointer outline-none transition-colors">
+                                <button id="btn-clear-music" class="hidden mt-2 bg-red-600 hover:bg-red-500 text-white font-black text-xs px-3 py-2 rounded w-full transition-colors uppercase tracking-widest">Clear Custom Track</button>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Master Volume: <span id="val-master" class="text-white">100%</span></label>
+                                <input type="range" id="set-master" min="0" max="100" value="100">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Music: <span id="val-music" class="text-white">50%</span></label>
+                                <input type="range" id="set-music" min="0" max="100" value="50">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">SFX: <span id="val-sfx" class="text-white">100%</span></label>
+                                <input type="range" id="set-sfx" min="0" max="100" value="100">
+                            </div>
+                        </div>
+                        <div class="gta-btn border-t border-white/20 mt-auto justify-center flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-10 right-8 pointer-events-none z-[65]">
+            <div class="relative pointer-events-auto flex flex-col md:flex-row h-full max-h-[70vh]">
+                <div id="right-submenus" class="md:absolute md:bottom-0 md:right-[340px] w-full md:w-[460px] hidden submenu-panel flex flex-col mb-4 md:mb-0">
+                    <div id="sub-friends" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Friends</div>
+                        <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
+                            <button class="tab-btn active text-white" data-tab="friends-list">My Friends</button>
+                            <button class="tab-btn text-white" data-tab="friends-reqs">Requests <span id="req-count" class="text-red-500"></span></button>
+                            <button class="tab-btn text-white" data-tab="friends-add">Add Friend</button>
+                        </div>
+                        <div id="tab-friends-list" class="settings-panel flex-grow overflow-y-auto min-h-[200px]">
+                            <div id="friends-list-container" class="flex flex-col gap-2"><div class="text-center text-gray-500 font-bold py-8 uppercase">No friends added yet.</div></div>
+                        </div>
+                        <div id="tab-friends-reqs" class="settings-panel hidden flex-grow overflow-y-auto min-h-[200px]">
+                            <div id="friends-reqs-container" class="flex flex-col gap-2"><div class="text-center text-gray-500 font-bold py-8 uppercase">No pending requests.</div></div>
+                        </div>
+                        <div id="tab-friends-add" class="settings-panel hidden flex-grow min-h-[200px]">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Send Friend Request by UID</label>
+                            <div class="flex gap-2 mb-6">
+                                <input type="number" id="add-friend-uid" class="gta-input flex-1" placeholder="Enter 6-digit UID">
+                                <button class="bg-white text-black font-black px-4 rounded-md uppercase" onclick="sendFriendRequest()">Send</button>
+                            </div>
+                            <p class="text-xs text-gray-500 uppercase">You can find your UID in the top-left profile widget.</p>
+                        </div>
+                        <div class="gta-btn justify-center border-t border-white/20 mt-auto flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+
+                    <div id="sub-credits" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Credits</div>
+                        <div class="text-center p-8 flex-grow flex flex-col justify-center">
+                            <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v2.50</p>
+                            <p class="text-gray-300 font-bold mb-2">Developed by</p>
+                            <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
+                        </div>
+                        <div class="gta-btn justify-center border-t border-white/20 mt-auto flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+
+                    <div id="sub-support" class="hidden w-full flex-col">
+                        <div class="gta-menu-header">Support</div>
+                        <div class="p-6 flex-grow flex flex-col">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Report an Issue or Feedback</label>
+                            <textarea id="support-text" class="gta-textarea mb-4 flex-grow" placeholder="Describe the bug or feature request..."></textarea>
+                            <div class="gta-btn bg-white text-black justify-center mb-3" onclick="submitSupport()">Submit Report</div>
+                        </div>
+                        <div class="gta-btn justify-center border-t border-white/20 mt-auto flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+                </div>
+
+                <div class="w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10">
+                    <div class="btn-sub text-white" onclick="toggleRightSub('sub-friends')">
+                        <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">FRIENDS</div>
+                    </div>
+                    <div class="btn-sub text-white" onclick="toggleRightSub('sub-credits')">
+                        <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">CREDITS</div>
+                    </div>
+                    <div class="btn-sub text-white border-none" onclick="toggleRightSub('sub-support')">
+                        <div class="btn-sub-arrow text-cyan-400">&lt;</div><div class="btn-sub-text text-cyan-400">SUPPORT</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-menu" class="overlay hidden bg-black/90 z-[70]">
+        <h2 class="title-text">YOUR PROFILE</h2>
+        <div class="gta-menu p-6 flex flex-col items-center">
+            
+            <div class="relative cursor-pointer group mb-6 flex-shrink-0" onclick="if(!localStorage.getItem('ax_uid')) document.getElementById('pfp-upload').click()">
+                <img id="edit-pfp" src="" class="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white object-cover bg-gray-800">
+                <div id="pfp-change-overlay" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-white font-black text-xs uppercase">Change</span>
+                </div>
+            </div>
+            <input type="file" id="pfp-upload" accept="image/*" class="hidden">
+            
+            <div class="w-full mb-4">
+                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Display Name <span id="name-changes-text">(Changes Left: <span id="name-changes-left">2</span>)</span></label>
+                <input type="text" id="edit-name-input" class="gta-input" maxlength="15">
+            </div>
+            <div class="w-full mb-6">
+                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Account UID</label>
+                <div id="edit-uid-display" class="gta-input bg-black/80 text-gray-500 cursor-not-allowed">------</div>
+            </div>
+
+            <div class="w-full mt-auto mb-6 p-4 bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border border-blue-500/30 rounded-lg flex flex-col items-center shadow-lg relative overflow-hidden flex-shrink-0">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400"></div>
+                <h3 class="text-[0.65rem] font-black text-cyan-400 tracking-widest uppercase mb-1">AstraX Cloud Network</h3>
+                <div id="ax-status" class="text-sm font-bold mb-4 text-gray-300 truncate w-full text-center">Playing as Local Guest</div>
+                <div id="ax-locked-warning" class="hidden text-[0.65rem] text-gray-400 uppercase tracking-widest mb-3 flex items-center justify-center gap-1"><span class="text-green-400">✔</span> Identity Locked</div>
+                <button id="btn-ax-modal" onclick="openAstraXModal()" class="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-black uppercase tracking-widest py-3 rounded transition-all">Link AstraX ID</button>
+            </div>
+
+            <div id="btn-save-profile" class="gta-btn bg-white text-black justify-center mb-3 rounded-md flex-shrink-0">Save Profile</div>
+            <div class="gta-btn justify-center border border-white/20 rounded-md flex-shrink-0" onclick="closeMenu('profile-menu')">Cancel</div>
+        </div>
+    </div>
+
+    <!-- AstraX ID Link Modal -->
+    <div id="astrax-link-modal" class="overlay hidden bg-black/95 z-[110] backdrop-blur-xl flex-col justify-center items-center">
+        <div class="w-full max-w-sm bg-[#0a0c14] border border-white/10 rounded-xl shadow-[0_0_50px_rgba(34,211,238,0.1)] overflow-hidden">
+            <div class="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 p-6 text-center border-b border-white/10">
+                <h2 class="text-xl font-black text-white tracking-widest uppercase mb-1">AstraX Connect</h2>
+                <p class="text-[0.65rem] text-cyan-400 font-bold uppercase tracking-widest">Cross-Platform Sync</p>
+            </div>
+            <div class="p-6">
+                <p class="text-xs text-gray-400 text-center mb-6 leading-relaxed">Secure your progression, inventory, and friends list to your permanent AstraX identity.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[0.6rem] font-black text-gray-500 uppercase tracking-widest mb-1">Email</label>
+                        <input type="email" id="ax-email" class="w-full bg-black/50 border border-white/10 rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="player@astrax.com">
+                    </div>
+                    <div>
+                        <label class="block text-[0.6rem] font-black text-gray-500 uppercase tracking-widest mb-1">Password</label>
+                        <input type="password" id="ax-pass" class="w-full bg-black/50 border border-white/10 rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="mt-8 space-y-3">
+                    <button id="btn-ax-link" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest text-xs py-3.5 rounded transition-colors" onclick="submitAstraXLink()">Initialize Link</button>
+                    <a href="https://astraxgames.com" target="_blank" class="block w-full text-center text-[0.7rem] text-gray-400 hover:text-white uppercase tracking-widest font-bold py-2 transition-colors">Create New ID</a>
+                </div>
+            </div>
+            <div class="bg-white/5 p-3 text-center border-t border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onclick="closeAstraXModal()">
+                <span class="text-[0.65rem] text-gray-300 font-black uppercase tracking-widest">Cancel / Return</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="messages-menu" class="overlay hidden z-[70]">
+        <h2 class="title-text">MESSAGE CENTER</h2>
+        <div class="gta-menu w-full max-w-lg">
+            <div class="gta-menu-header flex justify-between items-center">
+                <span>Notices & Updates</span>
+                <span id="dev-msg-indicator" class="hidden text-xs bg-cyan-400 text-black px-2 py-0.5 rounded font-black">DEV ACTIVE</span>
+            </div>
+
+            <!-- Developer Broadcast Input Box -->
+            <div id="dev-broadcast-panel" class="hidden p-4 border-b border-white/20 bg-cyan-950/40 flex-shrink-0">
+                <label class="block text-xs font-black text-cyan-400 mb-1 uppercase tracking-widest">📢 Developer Broadcast (Publish to All)</label>
+                <input type="text" id="dev-broadcast-title" class="gta-input mb-2 text-xs" placeholder="Announcement Title...">
+                <textarea id="dev-broadcast-body" class="gta-textarea mb-2 text-xs" style="min-height: 60px;" placeholder="Write message to send to everyone's inbox..."></textarea>
+                <button class="gta-btn bg-cyan-400 text-black font-black justify-center rounded-md text-xs py-2" onclick="sendGlobalBroadcast()">Send Announcement</button>
+            </div>
+
+            <div id="global-notice-container" class="p-6 text-sm font-bold text-gray-300 flex-grow overflow-y-auto min-h-[150px]">
+                <h3 id="notice-title" class="text-white text-xl font-black mb-2 text-cyan-400">Welcome to Early Access!</h3>
+                <p id="notice-meta" class="text-[0.65rem] text-gray-500 mb-2">System Notice</p>
+                <p id="notice-body" class="text-gray-400 text-base leading-relaxed mt-2">Thanks for joining early access! We are constantly working on new features, bug fixes, and improvements.</p>
+            </div>
+            <div class="gta-btn justify-center border-t border-white/20 mt-auto flex-shrink-0" onclick="closeMenu('messages-menu')">Close</div>
+        </div>
+    </div>
+
+    <div id="play-menu" class="overlay hidden z-[70]">
+        <h1 class="title-text">SELECT MODE</h1>
+        <div class="gta-menu">
+            <div class="gta-menu-header">Game Modes</div>
+            <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
+            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online Session <span>></span></div>
+            <div id="btn-pvp-open" class="gta-btn text-red-500 font-black">PvP Arena <span>></span></div>
+            <div id="btn-play-back" class="gta-btn mt-4 border-t border-white/20">Back</div>
+        </div>
+    </div>
+
+    <div id="pvp-menu" class="overlay hidden z-[70]">
+        <h1 class="title-text text-red-500">PvP ARENA</h1>
+        <div class="gta-menu">
+            <div class="gta-menu-header">Select Match Type</div>
+            <div id="btn-mode-pvp1v1" class="gta-btn font-black">1v1 Matchmaking <span>></span></div>
+            <div id="btn-mode-pvp4v4" class="gta-btn text-gray-500">4v4 Squads <span class="text-xs">(Coming Soon)</span></div>
+            <div id="btn-pvp-back" class="gta-btn mt-4 border-t border-white/20">Back</div>
+        </div>
+    </div>
+
+    <div id="matchmaking-screen" class="overlay hidden items-center justify-center bg-black/90 z-[70]">
+        <div class="text-center">
+            <h2 class="text-3xl md:text-4xl font-black text-white tracking-widest mb-4 animate-pulse">SEARCHING...</h2>
+            <p class="text-gray-400 mb-8 uppercase font-bold tracking-widest text-sm">Looking for opponent</p>
+            <div id="btn-cancel-matchmaking" class="gta-btn max-w-xs mx-auto border border-white/20 justify-center">Cancel</div>
+        </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden bg-black/80 backdrop-blur-md z-[70]">
+        <h2 class="title-text">PAUSED</h2>
+        <div class="gta-menu mb-4">
+            <!-- Developer Controls in Pause Menu -->
+            <div id="dev-pause-controls" class="hidden p-3 border-b border-cyan-500/30 bg-cyan-950/30">
+                <div class="text-xs font-black text-cyan-400 uppercase mb-2 text-center">⚡ Developer Options</div>
+                <div class="flex gap-2">
+                    <button id="btn-dev-fly-pause" class="gta-btn bg-cyan-600/50 hover:bg-cyan-500 text-white font-black text-xs justify-center rounded py-2 border border-cyan-400/40" onclick="toggleDeveloperFlyMode()">Toggle Fly [N]</button>
+                    <button class="gta-btn bg-amber-600/50 hover:bg-amber-500 text-white font-black text-xs justify-center rounded py-2 border border-amber-400/40" onclick="teleportToFinish()">Teleport Finish</button>
+                </div>
+            </div>
+
+            <div id="btn-resume" class="gta-btn">Resume Game</div>
+            <div id="btn-quit" class="gta-btn" style="color: #ff4444;">Quit to Menu</div>
+        </div>
+        
+        <div id="session-players-container" class="gta-menu hidden p-4 w-full max-w-sm">
+            <h3 class="text-xs font-black text-gray-400 mb-2 uppercase text-center border-b border-white/20 pb-2">Session Players</h3>
+            <div id="pause-player-list" class="max-h-48 overflow-y-auto flex flex-col gap-2 pt-2"></div>
+        </div>
+    </div>
+
+    <div id="level-menu" class="overlay hidden bg-black/90 z-[70]">
+        <h2 id="end-title" class="title-text" style="color: #4CAF50;">LEVEL CLEARED</h2>
+        <div class="gta-menu">
+            <div id="next-level-btn" class="gta-btn">Continue <span>></span></div>
+        </div>
+    </div>
+    
+    <div id="mmo-victory-screen" class="overlay hidden bg-transparent z-[70]">
+        <h2 class="text-4xl md:text-5xl font-black text-white tracking-widest text-shadow-xl animate-pulse text-center mb-8" style="text-shadow: 0 0 20px #22d3ee;">ESCAPED!</h2>
+        <h3 class="text-xl md:text-2xl font-bold text-cyan-300 uppercase tracking-widest text-center">Session Conquered</h3>
+    </div>
+
+    <div id="pvp-scoreboard" class="hidden">
+        <div class="score-you">YOU: <span id="score-val-you">0</span></div>
+        <div class="text-gray-500">|</div>
+        <div class="score-enemy">ENEMY: <span id="score-val-enemy">0</span></div>
+    </div>
+
+    <div id="hud" class="absolute top-0 left-0 w-full h-full z-10 hidden pointer-events-none p-4 md:p-6 flex justify-between items-start">
+        <div class="bg-black/80 px-3 md:px-4 py-2 md:py-3 border-l-4 border-white pointer-events-auto flex items-center gap-3 md:gap-4 shadow-lg min-w-[180px] md:min-w-[220px] rounded-r-md">
+            <div id="hud-level-container" class="text-xs md:text-sm font-black text-white flex items-center uppercase">LVL <span id="hud-level" class="text-base md:text-lg ml-2">1</span></div>
+            <div id="hud-online-container" class="text-xs md:text-sm font-black text-cyan-300 hidden items-center uppercase">ONLINE <span id="hud-players" class="text-base md:text-lg ml-2">1/30</span></div>
+            <div id="hud-pvp-container" class="text-xs md:text-sm font-black text-red-500 hidden items-center uppercase">PvP 1v1</div>
+            <div class="w-px h-4 md:h-5 bg-white/30"></div>
+            <div class="text-xs md:text-sm font-black text-white flex items-center font-mono">⏱ <span id="hud-timer" class="text-base md:text-lg ml-2">00:00</span></div>
+            
+            <!-- Dev HUD Indicator -->
+            <div id="dev-hud-fly-indicator" class="hidden bg-cyan-400 text-black font-black text-[0.6rem] md:text-xs px-2 py-1 rounded tracking-wider animate-pulse ml-2 whitespace-nowrap">🚀 FLY ON [N]</div>
+        </div>
+        <div class="flex gap-2 pointer-events-auto">
+            <div id="btn-dev-instant-win" class="hud-icon text-cyan-400 border-cyan-400 hidden" title="Dev Finish" onclick="teleportToFinish()">⚡</div>
+            <div id="btn-hud-mic" class="hud-icon text-red-500 hidden" title="Toggle Voice Chat">
+                🎤<span id="mic-status-text" class="text-[0.5rem] md:text-[0.55rem] font-black absolute bottom-0 left-1/2 -translate-x-1/2">OFF</span>
+            </div>
+            <div id="btn-hud-camera" class="hud-icon">🎥</div>
+            <div id="btn-hud-pause" class="hud-icon">⏸</div>
+        </div>
+    </div>
+    
+    <div id="hud-hp-container"><div id="hud-hp-fill"></div></div>
+    <div id="notification-feed"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, onDisconnect, remove, push, onChildAdded, update, get } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getDatabase, ref, set, onValue, onDisconnect, remove, push, onChildAdded, update, get };
+    </script>
+
+    <script>
+    const DEFAULT_PFP = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==";
+    
+    // Arrays for dynamic cool name generation
+    const coolAdjectives = ["Neon", "Cyber", "Shadow", "Quantum", "Void", "Crimson", "Electric", "Phantom", "Astral", "Nova", "Toxic", "Ghost", "Stealth", "Iron", "Zero"];
+    const coolNouns = ["Viper", "Ninja", "Samurai", "Wolf", "Dragon", "Specter", "Rogue", "Phoenix", "Striker", "Reaper", "Glitch", "Titan", "Wraith", "Venom", "Hunter"];
+
+    function generateCoolName() {
+        const adj = coolAdjectives[Math.floor(Math.random() * coolAdjectives.length)];
+        const noun = coolNouns[Math.floor(Math.random() * coolNouns.length)];
+        return adj + noun;
+    }
+
+    // Developer Privileges State
+    let isDeveloper = false;
+    let isFlyMode = false;
+    
+    // Orbital Camera State Variables
+    let camAzimuth = Math.PI, camElevation = -0.15, mouseSensitivity = 0.002;
+
+    function closeAllSubmenus() {
+        document.getElementById('left-submenus').classList.add('hidden');
+        document.getElementById('right-submenus').classList.add('hidden');
+        ['sub-play', 'sub-pvp', 'sub-store', 'sub-settings', 'sub-friends', 'sub-credits', 'sub-support'].forEach(id => {
+            const el = document.getElementById(id); if(el) el.classList.add('hidden');
+        });
+    }
+
+    function toggleLeftSub(id) {
+        const content = document.getElementById(id);
+        if(!content.classList.contains('hidden')) { closeAllSubmenus(); return; }
+        closeAllSubmenus();
+        document.getElementById('left-submenus').classList.remove('hidden');
+        content.classList.remove('hidden');
+    }
+
+    function toggleRightSub(id) {
+        const content = document.getElementById(id);
+        if(!content.classList.contains('hidden')) { closeAllSubmenus(); return; }
+        closeAllSubmenus();
+        document.getElementById('right-submenus').classList.remove('hidden');
+        content.classList.remove('hidden');
+    }
+
+    function gtaNotify(message, isAlert = false) {
+        const feed = document.getElementById('notification-feed');
+        const note = document.createElement('div');
+        note.className = 'gta-notification';
+        if (isAlert) note.style.borderLeftColor = '#ff4444';
+        note.innerText = message;
+        feed.appendChild(note);
+        requestAnimationFrame(() => requestAnimationFrame(() => note.classList.add('show')));
+        setTimeout(() => { note.classList.remove('show'); setTimeout(() => note.remove(), 300); }, 3000);
+    }
+    
+    function openMenu(id) {
+        closeAllSubmenus();
+        document.querySelectorAll('.overlay').forEach(el => { if(el.id !== 'initial-loader' && el.id !== 'hud' && el.id !== 'invite-popup' && el.id !== 'mmo-victory-screen' && el.id !== 'astrax-link-modal') el.classList.add('hidden') });
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeMenu(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById('main-menu-layer').classList.remove('hidden');
+    }
+    
+    window.openAstraXModal = () => {
+        document.getElementById('astrax-link-modal').classList.remove('hidden');
+        document.getElementById('astrax-link-modal').classList.add('flex');
+    };
+    window.closeAstraXModal = () => {
+        document.getElementById('astrax-link-modal').classList.add('hidden');
+        document.getElementById('astrax-link-modal').classList.remove('flex');
+    };
+    
+    window.submitAstraXLink = async () => {
+        const email = document.getElementById('ax-email').value;
+        const pass = document.getElementById('ax-pass').value;
+        if(!email || !pass) return gtaNotify("Enter email and password", true);
+        
+        document.getElementById('btn-ax-link').innerText = "Linking...";
+        try {
+            const res = await fetch('https://astrax-auth.ranjanroushan5.workers.dev', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({action: 'login', email: email, password: pass})
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                const newAstraXUid = data.uid;
+
+                if (!localStorage.getItem('ax_uid')) {
+                    const guestDataSnap = await window.FB.get(window.FB.ref(db, 'users/' + myDBUid));
+                    const astraxDataSnap = await window.FB.get(window.FB.ref(db, 'users/' + newAstraXUid));
+                    
+                    if (guestDataSnap.exists() && !astraxDataSnap.exists()) {
+                        let transferData = guestDataSnap.val();
+                        transferData.profile.name = data.name;
+                        if(data.pfp) transferData.profile.pfp = data.pfp;
+                        
+                        transferData.profile.level = parseInt(localStorage.getItem('maze_escape_level') || 1);
+                        
+                        await window.FB.set(window.FB.ref(db, 'users/' + newAstraXUid), transferData);
+                        if(transferData.profile && transferData.profile.uidNum) {
+                            await window.FB.set(window.FB.ref(db, 'uids/' + transferData.profile.uidNum), newAstraXUid);
+                        }
+                        await window.FB.remove(window.FB.ref(db, 'users/' + myDBUid));
+                        
+                    } else if (guestDataSnap.exists() && astraxDataSnap.exists()) {
+                        await window.FB.remove(window.FB.ref(db, 'users/' + myDBUid));
+                    }
+                }
+                
+                localStorage.setItem('ax_uid', data.uid);
+                localStorage.setItem('ax_email', data.email);
+                localStorage.setItem('ax_name', data.name);
+                if (data.pfp) localStorage.setItem('ax_pfp', data.pfp);
+
+                gtaNotify("AstraX ID Linked! Synchronizing...");
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                gtaNotify(data.error || "Login failed", true);
+                document.getElementById('btn-ax-link').innerText = "Link Account";
+            }
+        } catch(e) {
+            gtaNotify("Server error connecting to Cloudflare.", true);
+            document.getElementById('btn-ax-link').innerText = "Link Account";
+        }
+    };
+
+    function submitSupport() {
+        const txt = document.getElementById('support-text').value;
+        if(txt.length < 5) { gtaNotify("Please enter details.", true); return; }
+        if(window.FB && db && myDBUid) window.FB.push(window.FB.ref(db, 'feedback'), { uid: myDBUid, msg: txt, ts: Date.now() });
+        document.getElementById('support-text').value = '';
+        gtaNotify("Report Submitted. Thank you!"); closeAllSubmenus();
+    }
+
+    const MY_FIREBASE_CONFIG = { apiKey: "AIzaSyAXwPgUZosfl8A8b7xdyOBhRvb6OhS1b5U", authDomain: "astrax-games.firebaseapp.com", databaseURL: "https://astrax-games-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "astrax-games", storageBucket: "astrax-games.firebasestorage.app", messagingSenderId: "34977949864", appId: "1:34977949864:web:80dccbf1b3230e8bf03a9d", measurementId: "G-JXLYFP05T4" };
+    
+    let db, auth, currentUser, myDBUid, onlineUnsub, onlineSyncInterval, sprayUnsub, pvpStateUnsub;
+    
+    let userProfile = { name: "Player", uidNum: "------", changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: 1 };
+    
+    let mySessionId = Math.random().toString(36).substring(2, 10);
+    let myStatusRef = null;
+    
+    async function loadAppAuth() {
+        if(!window.FB || !MY_FIREBASE_CONFIG.apiKey) {
+            document.getElementById('initial-loader').innerHTML = "<h2 class='text-red-500 font-black text-2xl'>NETWORK ERROR</h2><p>Please check internet or Firebase keys.</p>"; return;
+        }
+        const app = window.FB.initializeApp(MY_FIREBASE_CONFIG);
+        db = window.FB.getDatabase(app); auth = window.FB.getAuth(app);
+        
+        window.FB.onAuthStateChanged(auth, async (user) => {
+            if (user) { 
+                currentUser = user; 
+                myDBUid = localStorage.getItem('ax_uid') || currentUser.uid;
+                
+                const axEmail = (localStorage.getItem('ax_email') || '').toLowerCase();
+                isDeveloper = (axEmail === 'ranjanroushan5@gmail.com');
+                
+                myStatusRef = window.FB.ref(db, 'users/' + myDBUid + '/status');
+                window.FB.onDisconnect(myStatusRef).set('Offline');
+                await loadUserProfile(); 
+                listenForInvites();
+                listenForGlobalNotices();
+            } else { 
+                await window.FB.signInAnonymously(auth); 
+            }
+        });
+    }
+
+    function setMyStatus(status) { if(myStatusRef) window.FB.set(myStatusRef, status); }
+
+    async function loadUserProfile() {
+        const userRef = window.FB.ref(db, 'users/' + myDBUid + '/profile');
+        const snap = await window.FB.get(userRef);
+        if (snap.exists()) {
+            userProfile = snap.val();
+            if(!userProfile.equippedWeapon) userProfile.equippedWeapon = 'knife';
+            if(!userProfile.equippedChar) userProfile.equippedChar = 'default';
+            if(!userProfile.level) userProfile.level = 1;
+            if(!userProfile.pfp || userProfile.pfp.includes('placehold.co')) userProfile.pfp = DEFAULT_PFP;
+            
+            localStorage.setItem('maze_escape_level', userProfile.level);
+            currentLevel = parseInt(userProfile.level);
+
+            if(localStorage.getItem('ax_uid')) {
+                userProfile.name = localStorage.getItem('ax_name') || userProfile.name;
+                userProfile.pfp = localStorage.getItem('ax_pfp') || userProfile.pfp;
+            }
+        } else {
+            const randomID = Math.floor(100000 + Math.random() * 900000);
+            
+            const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
+            userProfile = { name: generateCoolName(), uidNum: randomID, changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: localLevel };
+            
+            await window.FB.set(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
+            await window.FB.set(window.FB.ref(db, 'uids/' + randomID), myDBUid);
+            currentLevel = localLevel;
+        }
+        
+        updateProfileUI();
+        listenForFriends();
+        setMyStatus('Online');
+        document.getElementById('initial-loader').classList.add('hidden');
+        document.getElementById('main-menu-layer').classList.remove('hidden');
+        clock.start(); isPlaying = false; isPaused = false; buildLevel(true); animate();
+    }
+
+    function updateProfileUI() {
+        document.getElementById('widget-name').innerText = userProfile.name;
+        document.getElementById('widget-uid').innerText = "UID: " + userProfile.uidNum;
+        document.getElementById('widget-pfp').src = userProfile.pfp;
+        
+        document.getElementById('edit-name-input').value = userProfile.name;
+        document.getElementById('edit-uid-display').innerText = userProfile.uidNum;
+        document.getElementById('name-changes-left').innerText = userProfile.changesLeft;
+        document.getElementById('edit-pfp').src = userProfile.pfp;
+
+        if (isDeveloper) {
+            document.getElementById('dev-badge').classList.remove('hidden');
+            document.getElementById('dev-broadcast-panel').classList.remove('hidden');
+            document.getElementById('dev-msg-indicator').classList.remove('hidden');
+            document.getElementById('dev-pause-controls').classList.remove('hidden');
+            document.getElementById('btn-dev-instant-win').classList.remove('hidden');
+        }
+
+        const axUid = localStorage.getItem('ax_uid');
+        if(axUid) {
+            document.getElementById('ax-status').innerText = "Linked Account: " + (localStorage.getItem('ax_email') || "Active");
+            document.getElementById('ax-status').className = "text-sm font-bold mb-1 text-green-400";
+            if(document.getElementById('btn-ax-modal')) document.getElementById('btn-ax-modal').classList.add('hidden');
+            
+            document.getElementById('edit-name-input').disabled = true;
+            document.getElementById('name-changes-text').classList.add('hidden');
+            document.getElementById('pfp-change-overlay').classList.remove('flex');
+            document.getElementById('pfp-change-overlay').classList.add('hidden');
+            document.getElementById('ax-locked-warning').classList.remove('hidden');
+            document.getElementById('btn-save-profile').classList.add('hidden');
+        }
+        
+        document.querySelectorAll('.store-item').forEach(el => el.classList.remove('equipped'));
+        const activeWpn = document.querySelector(`.store-item[data-weapon="${userProfile.equippedWeapon}"]`);
+        if(activeWpn) activeWpn.classList.add('equipped');
+        const activeChar = document.querySelector(`.store-item[data-char="${userProfile.equippedChar}"]`);
+        if(activeChar) activeChar.classList.add('equipped');
+        
+        applyWeaponMesh(player, userProfile.equippedWeapon);
+        applyCharacterSkin(player, userProfile.equippedChar);
+    }
+
+    window.toggleDeveloperFlyMode = () => {
+        if (!isDeveloper) return;
+        isFlyMode = !isFlyMode;
+        if (isFlyMode) {
+            gtaNotify("🚀 DEVELOPER FLY MODE: ACTIVATED", false);
+            document.getElementById('dev-hud-fly-indicator').classList.remove('hidden');
+        } else {
+            gtaNotify("FLY MODE: DISABLED", true);
+            document.getElementById('dev-hud-fly-indicator').classList.add('hidden');
+            player.position.y = 0;
+        }
+    };
+
+    window.teleportToFinish = () => {
+        if (!isDeveloper || !isPlaying) return;
+        player.position.set(levelEndX * CELL_SIZE, 0.1, levelEndZ * CELL_SIZE);
+        gtaNotify("⚡ TELEPORTED TO FINISH GOAL!", false);
+    };
+
+    window.sendGlobalBroadcast = async () => {
+        if (!isDeveloper || !db || !window.FB) return;
+        const title = document.getElementById('dev-broadcast-title').value.trim();
+        const body = document.getElementById('dev-broadcast-body').value.trim();
+        if (!title || !body) return gtaNotify("Please enter title and broadcast message", true);
+
+        await window.FB.set(window.FB.ref(db, 'global_notices/latest'), {
+            title: title,
+            body: body,
+            ts: Date.now()
+        });
+
+        document.getElementById('dev-broadcast-title').value = '';
+        document.getElementById('dev-broadcast-body').value = '';
+        gtaNotify("📢 Global Announcement Published to All Players!");
+    };
+
+    function listenForGlobalNotices() {
+        if (!db || !window.FB) return;
+        window.FB.onValue(window.FB.ref(db, 'global_notices/latest'), (snap) => {
+            const data = snap.val();
+            if (data && data.title && data.body) {
+                document.getElementById('notice-title').innerText = data.title;
+                document.getElementById('notice-meta').innerText = "Developer Broadcast • " + new Date(data.ts).toLocaleDateString();
+                document.getElementById('notice-body').innerText = data.body;
+            }
+        });
+    }
+
+    document.getElementById('pfp-upload').addEventListener('change', (e) => {
+        if(localStorage.getItem('ax_uid')) return;
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                const min = Math.min(img.width, img.height);
+                const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+                ctx.drawImage(img, sx, sy, min, min, 0, 0, 128, 128);
+                const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                document.getElementById('edit-pfp').src = base64;
+                userProfile.pfp = base64;
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('btn-save-profile').onclick = async () => {
+        if(localStorage.getItem('ax_uid')) return;
+        const newName = document.getElementById('edit-name-input').value.trim();
+        if(newName !== userProfile.name) {
+            if(userProfile.changesLeft <= 0) { gtaNotify("No name changes left!", true); return; }
+            if(newName.length < 3) { gtaNotify("Name too short!", true); return; }
+            userProfile.name = newName; userProfile.changesLeft--;
+        }
+        await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
+        updateProfileUI(); closeMenu('profile-menu'); gtaNotify("Profile Saved!");
+    };
+
+    window.equipWeapon = async (w) => {
+        userProfile.equippedWeapon = w;
+        if(myDBUid && db) await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { equippedWeapon: w });
+        updateProfileUI(); gtaNotify("Weapon Equipped!");
+    };
+    window.equipCharacter = async (c) => {
+        userProfile.equippedChar = c;
+        if(myDBUid && db) await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { equippedChar: c });
+        updateProfileUI(); gtaNotify("Character Equipped!");
+    };
+
+    let myFriends = {}; let myFriendRequests = {}; let friendStatuses = {};
+    function listenForFriends() {
+        if(!myDBUid || !db) return;
+        window.FB.onValue(window.FB.ref(db, `users/${myDBUid}/friends`), snap => {
+            myFriends = snap.val() || {}; 
+            for(let id in myFriends) {
+                window.FB.onValue(window.FB.ref(db, `users/${id}/status`), sSnap => {
+                    friendStatuses[id] = sSnap.val() || 'Offline';
+                    renderFriendsUI();
+                });
+            }
+            renderFriendsUI();
+        });
+        window.FB.onValue(window.FB.ref(db, `users/${myDBUid}/friendRequests`), snap => {
+            myFriendRequests = snap.val() || {}; renderFriendsUI();
+        });
+    }
+
+    function listenForInvites() {
+        window.FB.onChildAdded(window.FB.ref(db, `users/${myDBUid}/invites`), snap => {
+            const data = snap.val(); const sessionId = snap.key;
+            if(!data || !sessionId) return;
+            document.getElementById('invite-sender-name').innerText = data.sender;
+            document.getElementById('btn-accept-invite').onclick = () => {
+                document.getElementById('invite-popup').classList.remove('show');
+                window.FB.remove(window.FB.ref(db, `users/${myDBUid}/invites/${sessionId}`));
+                if(isPlaying && gameMode !== 'campaign') leaveOnlineSession();
+                mySessionId = sessionId; joinOnlineLobby();
+            };
+            document.getElementById('invite-popup').classList.add('show');
+        });
+    }
+
+    window.sendFriendRequest = async () => {
+        const targetUidNum = document.getElementById('add-friend-uid').value.trim();
+        if(!targetUidNum || targetUidNum.length !== 6) { gtaNotify("Enter a valid 6-digit UID", true); return; }
+        if(targetUidNum == userProfile.uidNum) { gtaNotify("You cannot add yourself", true); return; }
+        document.getElementById('add-friend-uid').value = '';
+        window.sendFriendRequestByUid(targetUidNum);
+    };
+
+    window.sendFriendRequestByUid = async (targetUidNum) => {
+        if(targetUidNum == userProfile.uidNum) return;
+        const uidSnap = await window.FB.get(window.FB.ref(db, `uids/${targetUidNum}`));
+        if(!uidSnap.exists()) { gtaNotify("Player not found!", true); return; }
+        
+        const targetFirebaseId = uidSnap.val();
+        await window.FB.set(window.FB.ref(db, `users/${targetFirebaseId}/friendRequests/${myDBUid}`), {
+            name: userProfile.name, uidNum: userProfile.uidNum, pfp: userProfile.pfp, ts: Date.now()
+        });
+        gtaNotify("Friend Request Sent!");
+    };
+
+    window.sendSessionInvite = async (friendFirebaseId) => {
+        if(!myDBUid || !db) return;
+        await window.FB.set(window.FB.ref(db, `users/${friendFirebaseId}/invites/${mySessionId}`), {
+            sender: userProfile.name,
+            ts: Date.now()
+        });
+        gtaNotify("Invite Sent!");
+    };
+
+    window.acceptRequest = async (senderFirebaseId, senderName, senderUid, senderPfp) => {
+        await window.FB.set(window.FB.ref(db, `users/${myDBUid}/friends/${senderFirebaseId}`), { name: senderName, uidNum: senderUid, pfp: senderPfp });
+        await window.FB.set(window.FB.ref(db, `users/${senderFirebaseId}/friends/${myDBUid}`), { name: userProfile.name, uidNum: userProfile.uidNum, pfp: userProfile.pfp });
+        await window.FB.remove(window.FB.ref(db, `users/${myDBUid}/friendRequests/${senderFirebaseId}`));
+        gtaNotify(`${senderName} added to friends!`);
+    };
+    window.rejectRequest = async (senderFirebaseId) => { await window.FB.remove(window.FB.ref(db, `users/${myDBUid}/friendRequests/${senderFirebaseId}`)); };
+
+    function renderFriendsUI() {
+        const reqKeys = Object.keys(myFriendRequests); const reqCount = reqKeys.length;
+        document.getElementById('req-count').innerText = reqCount > 0 ? `(${reqCount})` : '';
+        const reqCont = document.getElementById('friends-reqs-container'); reqCont.innerHTML = '';
+        if(reqCount === 0) { reqCont.innerHTML = `<div class="text-center text-gray-500 font-bold py-8 uppercase">No pending requests.</div>`; }
+        else {
+            reqKeys.forEach(id => {
+                const data = myFriendRequests[id];
+                reqCont.innerHTML += `
+                    <div class="flex items-center justify-between bg-black/50 border border-white/10 p-3 rounded-md">
+                        <div class="flex items-center gap-3">
+                            <img src="${data.pfp}" class="w-10 h-10 rounded-full border border-gray-500 object-cover">
+                            <div class="flex flex-col"><span class="font-black text-white text-sm uppercase">${data.name}</span><span class="text-[0.65rem] text-gray-400">UID: ${data.uidNum}</span></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="bg-green-600 hover:bg-green-500 text-white font-black text-xs px-3 py-1 rounded" onclick="acceptRequest('${id}', '${data.name}', '${data.uidNum}', '${data.pfp}')">✓</button>
+                            <button class="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-3 py-1 rounded" onclick="rejectRequest('${id}')">✕</button>
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        const frKeys = Object.keys(myFriends); const frCont = document.getElementById('friends-list-container'); frCont.innerHTML = '';
+        if(frKeys.length === 0) { frCont.innerHTML = `<div class="text-center text-gray-500 font-bold py-8 uppercase">No friends added yet.</div>`; }
+        else {
+            frKeys.forEach(id => {
+                const data = myFriends[id]; const status = friendStatuses[id] || 'Offline';
+                let sColor = status === 'Offline' ? 'text-gray-500' : (status === 'Online' ? 'text-green-500' : 'text-cyan-400');
+                frCont.innerHTML += `
+                    <div class="flex items-center gap-3 bg-black/30 border border-white/5 p-3 rounded-md">
+                        <img src="${data.pfp}" class="w-10 h-10 rounded-full border border-gray-600 object-cover">
+                        <div class="flex flex-col"><span class="font-black text-white text-sm uppercase">${data.name}</span><span class="text-[0.65rem] font-bold ${sColor}">${status}</span></div>
+                    </div>`;
+            });
+        }
+    }
+
+    const voiceChat = {
+        localStream: null, peers: {}, isActive: false, signalListenerSet: false,
+        toggleMic: async function() { if (this.isActive) this.stopMic(); else await this.startMic(); },
+        startMic: async function() {
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+                this.isActive = true; const btn = document.getElementById('btn-hud-mic'); btn.classList.remove('text-red-500'); btn.classList.add('text-green-400');
+                document.getElementById('mic-status-text').innerText = 'ON'; gtaNotify("Microphone Connected", false); 
+                
+                if (!this.signalListenerSet && myDBUid && db && window.FB) {
+                    this.signalListenerSet = true;
+                    const signalRef = window.FB.ref(db, `session/signals/${mySessionId}`);
+                    window.FB.onChildAdded(signalRef, (snap) => { const data = snap.val(); if(data) this.handleSignal(data); });
+                }
+
+                // Add tracks to existing peers and renegotiate, or create new peers
+                for(let id in remotePlayers) {
+                    if(id === mySessionId) continue;
+                    let peer = this.peers[id];
+                    if (peer) {
+                        const pc = peer.connection;
+                        let tracksAdded = false;
+                        this.localStream.getTracks().forEach(track => {
+                            if(!pc.getSenders().find(s => s.track === track)) {
+                                pc.addTrack(track, this.localStream);
+                                tracksAdded = true;
+                            }
+                        });
+                        if(tracksAdded) {
+                            const offer = await pc.createOffer();
+                            await pc.setLocalDescription(offer);
+                            window.FB.push(window.FB.ref(db, `session/signals/${id}`), { senderId: mySessionId, type: 'offer', offer: JSON.stringify(offer) });
+                        }
+                    } else {
+                        this.createPeer(id, true);
+                    }
+                }
+            } catch (err) { gtaNotify("Mic access denied", true); }
+        },
+        stopMic: function() {
+            if (this.localStream) { this.localStream.getTracks().forEach(track => track.stop()); this.localStream = null; }
+            this.isActive = false; for(let id in this.peers) { if(this.peers[id].connection) this.peers[id].connection.close(); } this.peers = {};
+            const btn = document.getElementById('btn-hud-mic'); btn.classList.add('text-red-500'); btn.classList.remove('text-green-400');
+            document.getElementById('mic-status-text').innerText = 'OFF'; gtaNotify("Microphone Disconnected", true);
+        },
+        createPeer: async function(peerId, initiator) {
+            if(this.peers[peerId]) return this.peers[peerId];
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            const audioEl = document.createElement('audio'); audioEl.autoplay = true; document.getElementById('voice-chat-audio').appendChild(audioEl);
+            this.peers[peerId] = { connection: pc, audio: audioEl };
+            if(this.localStream) { this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream)); }
+            pc.ontrack = (event) => { 
+                if(event.streams && event.streams[0]) { 
+                    audioEl.srcObject = event.streams[0]; 
+                    audioEl.onloadedmetadata = () => {
+                        audioEl.play().catch(e => console.error("Mic Play Error:", e));
+                    };
+                } 
+            };
+            pc.onicecandidate = (event) => { if (event.candidate && myDBUid && db) window.FB.push(window.FB.ref(db, `session/signals/${peerId}`), { senderId: mySessionId, type: 'candidate', candidate: JSON.stringify(event.candidate) }); };
+            if (initiator) { const offer = await pc.createOffer(); await pc.setLocalDescription(offer); window.FB.push(window.FB.ref(db, `session/signals/${peerId}`), { senderId: mySessionId, type: 'offer', offer: JSON.stringify(offer) }); }
+            return this.peers[peerId];
+        },
+        handleSignal: async function(data) {
+            const senderId = data.senderId; if(!senderId || senderId === mySessionId) return;
+            let peer = this.peers[senderId]; if(!peer) peer = await this.createPeer(senderId, false);
+            const pc = peer.connection;
+            try {
+                if (data.type === 'offer') { await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.offer))); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); window.FB.push(window.FB.ref(db, `session/signals/${senderId}`), { senderId: mySessionId, type: 'answer', answer: JSON.stringify(answer) }); }
+                if (data.type === 'answer' && pc.signalingState !== 'stable') { await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer))); }
+                if (data.type === 'candidate') { await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate))); }
+            } catch (err) {}
+        },
+        updateVolumes: function(localPos, remoteMeshesData) {
+            const maxDist = 35.0; 
+            for(let id in this.peers) {
+                const peer = this.peers[id];
+                if(peer && peer.audio && remoteMeshesData[id]) {
+                    const dist = localPos.distanceTo(remoteMeshesData[id].position);
+                    let vol = 1.0 - (dist / maxDist); if (vol < 0) vol = 0; if (vol > 1) vol = 1;
+                    peer.audio.volume = vol * (window.gameSettings.sound.master / 100);
+                }
+            }
+        }
+    };
+
+    let gameMode = 'campaign'; 
+    let remotePlayers = {}; let remoteMeshes = {}; let activePlayerCount = 1; let currentPvPRoom = null;
+    let myHP = 100, isDead = false; let myScore = 0, enemyScore = 0; let pvpState = 'playing'; let mmoVictoryState = false;
+    window.currentPvPSeed = null;
+
+    let mazeGrid = [], mazeWidth = 15, mazeHeight = 15;
+    let mazeStart = {x: 1, y: 1, rot: 0}, mazeEnd = {x: 1, y: 1, rot: 0};
+    let mazeSeed = 12345;
+
+    function deterministicRandom() { mazeSeed = (mazeSeed * 9301 + 49297) % 233280; return mazeSeed / 233280; }
+    function deterministicShuffle(array) { let m = array.length, t, i; while (m) { i = Math.floor(deterministicRandom() * m--); t = array[m]; array[m] = array[i]; array[i] = t; } return array; }
+
+    function getRandomSpawn() {
+        let cells = [];
+        for(let y=1; y<mazeHeight-1; y++) {
+            for(let x=1; x<mazeWidth-1; x++) {
+                if(mazeGrid[y] && mazeGrid[y][x] === 0) cells.push({x, y});
+            }
+        }
+        if(cells.length > 0) return cells[Math.floor(Math.random()*cells.length)];
+        return {x: 1, y: 1};
+    }
+
+    async function joinOnlineLobby() {
+        gtaNotify("Connecting to Session...");
+        document.getElementById('main-menu-layer').classList.add('hidden'); document.getElementById('play-menu').classList.add('hidden');
+        gameMode = 'mmo'; document.getElementById('btn-hud-mic').classList.remove('hidden'); 
+
+        const playersRef = window.FB.ref(db, 'session/players');
+        const myPlayerRef = window.FB.ref(db, 'session/players/' + mySessionId);
+        window.FB.onDisconnect(myPlayerRef).remove();
+        setMyStatus('In-Game');
+
+        onlineUnsub = window.FB.onValue(playersRef, (snap) => {
+            const data = snap.val() || {}; let count = 0; const activeIds = Object.keys(data); 
+            activeIds.forEach(id => { count++; });
+            
+            if(!onlineSyncInterval && count >= 30) { gtaNotify("Session Full (30/30). Try later.", true); leaveOnlineSession(); document.getElementById('main-menu-layer').classList.remove('hidden'); document.getElementById('play-menu').classList.add('hidden'); return; }
+            activePlayerCount = count === 0 ? 1 : count; document.getElementById('hud-players').innerText = `${activePlayerCount}/30`;
+            
+            if (!onlineSyncInterval) {
+                if (count === 0 || (count === 1 && data[mySessionId])) {
+                    window.FB.remove(window.FB.ref(db, 'session/sprays')).catch(()=>{});
+                }
+            }
+
+            activeIds.forEach(id => {
+                const pData = data[id]; if(id === mySessionId) return;
+                if(!remotePlayers[id]) { gtaNotify(`${pData.name || 'Player'} joined`); createHologram(id, pData.wpn, pData.char); if(voiceChat.isActive) voiceChat.createPeer(id, true); } 
+                else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
+                remotePlayers[id] = pData;
+            });
+            for(let id in remotePlayers) { if(!data[id]) { gtaNotify(`${remotePlayers[id].name || 'Player'} left`); removeHologram(id); delete remotePlayers[id]; } }
+        });
+
+        onlineSyncInterval = setInterval(() => {
+            if(!myDBUid) return;
+            window.FB.set(myPlayerRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
+        }, 150);
+
+        const spraysRef = window.FB.ref(db, 'session/sprays');
+        sprayUnsub = window.FB.onChildAdded(spraysRef, (snap) => { addSprayToScene(snap.val()); });
+        startGamePlay();
+    }
+
+    let pvpMatchTimer = 7 * 60;
+    async function startPvPMatchmaking() {
+        document.getElementById('pvp-menu').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('hidden'); document.getElementById('matchmaking-screen').classList.add('flex');
+        gameMode = 'pvp_1v1'; myHP = 100; isDead = false; myScore = 0; enemyScore = 0; pvpState = 'intro'; pvpMatchTimer = 7 * 60; player.rotation.z = 0;
+        updatePvPScoreboard(); setMyStatus('In-PvP');
+
+        const waitRef = window.FB.ref(db, 'pvp/waiting'); const myRoomRef = window.FB.ref(db, 'pvp/rooms/' + mySessionId);
+        window.FB.get(waitRef).then((snap) => {
+            const waitingData = snap.val();
+            if (!waitingData || waitingData.uid === mySessionId) {
+                const seed = Math.floor(Math.random() * 100000);
+                window.currentPvPSeed = seed;
+                window.FB.set(waitRef, { uid: mySessionId, seed: seed }); window.FB.onDisconnect(waitRef).remove();
+                pvpStateUnsub = window.FB.onValue(myRoomRef, (roomSnap) => { const rData = roomSnap.val(); if(rData && rData.guest) { window.FB.remove(waitRef); joinPvPRoom(mySessionId, rData.guest, seed, 'host'); } });
+            } else {
+                const hostUid = waitingData.uid; const seed = waitingData.seed; window.FB.remove(waitRef);
+                window.currentPvPSeed = seed;
+                window.FB.set(window.FB.ref(db, 'pvp/rooms/' + hostUid), { guest: mySessionId, host: hostUid });
+                joinPvPRoom(hostUid, hostUid, seed, 'guest');
+            }
+        });
+    }
+
+    function updatePvPScoreboard() { document.getElementById('score-val-you').innerText = myScore; document.getElementById('score-val-enemy').innerText = enemyScore; }
+
+    function joinPvPRoom(roomId, opponentUid, seed, role) {
+        currentPvPRoom = roomId; window.currentPvPSeed = seed;
+        document.getElementById('matchmaking-screen').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('flex');
+        document.getElementById('pvp-scoreboard').classList.remove('hidden'); document.getElementById('pvp-scoreboard').classList.add('flex');
+        const roomRef = window.FB.ref(db, `pvp/rooms/${roomId}`); const myStateRef = window.FB.ref(db, `pvp/rooms/${roomId}/players/${mySessionId}`);
+        window.FB.onDisconnect(myStateRef).remove();
+        
+        window.FB.update(myStateRef, { hp: 100, x: player.position.x, y: player.position.y, z: player.position.z });
+
+        if(sprayUnsub) sprayUnsub();
+        const pvpSpraysRef = window.FB.ref(db, `pvp/rooms/${roomId}/sprays`);
+        sprayUnsub = window.FB.onChildAdded(pvpSpraysRef, (snap) => { addSprayToScene(snap.val()); });
+
+        onlineSyncInterval = setInterval(() => {
+            if(!myDBUid || pvpState !== 'playing') return;
+            window.FB.update(myStateRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, isAttacking: isAttacking, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, score: myScore, crouch: keys.crouch });
+        }, 100);
+
+        if (pvpStateUnsub) { pvpStateUnsub(); pvpStateUnsub = null; }
+        pvpStateUnsub = window.FB.onValue(roomRef, (snap) => {
+            const data = snap.val(); if(!data || !data.players) return;
+            
+            const playerIds = Object.keys(data.players);
+            if (pvpState === 'playing' && playerIds.length < 2 && playerIds.includes(mySessionId)) {
+                gtaNotify("Opponent left the match!", true);
+                endPvP(true);
+                return;
+            }
+
+            for(let id in data.players) {
+                if(id !== mySessionId) {
+                    const pData = data.players[id];
+                    if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char); gtaNotify("Match Started! First to 15!"); }
+                    else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
+                    remotePlayers[id] = pData; enemyScore = pData.score || 0; updatePvPScoreboard();
+                    if((enemyScore >= 15 || myScore >= 15) && pvpState === 'playing') { endPvP(myScore >= 15); }
+                } else {
+                    const serverHP = data.players[id].hp;
+                    if(serverHP < myHP && serverHP > 0) { myHP = serverHP; triggerDamageFlash(); updateHPBar(); } 
+                    else if (serverHP <= 0 && !isDead && pvpState === 'playing') { 
+                        myHP = 0; isDead = true; updateHPBar();
+                        
+                        let killerName = "Enemy";
+                        for (let kId in data.players) { if (kId !== mySessionId) killerName = data.players[kId].name || "Enemy"; }
+                        gtaNotify(`${killerName} killed ${userProfile.name}!`, true);
+                        
+                        setTimeout(() => { if(pvpState === 'playing') { myHP = 100; isDead = false; player.rotation.z = 0; updateHPBar(); const rp = getRandomSpawn(); player.position.set(rp.x*CELL_SIZE, 0, rp.y*CELL_SIZE); window.FB.update(myStateRef, { hp: 100, x: player.position.x, z: player.position.z }); } }, 3000);
+                    }
+                }
+            }
+        });
+        
+        let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
+        startGamePlay(sx, sy);
+    }
+
+    function triggerDamageFlash() { const flash = document.getElementById('damage-overlay'); flash.style.opacity = '1'; if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); setTimeout(() => { flash.style.opacity = '0'; }, 200); }
+    function updateHPBar() { document.getElementById('hud-hp-fill').style.width = Math.max(0, myHP) + '%'; if(myHP < 40) document.getElementById('hud-hp-fill').style.background = '#ef4444'; else document.getElementById('hud-hp-fill').style.background = '#22c55e'; }
+
+    function cancelMatchmaking() {
+        if(pvpStateUnsub) pvpStateUnsub();
+        if(myDBUid) window.FB.remove(window.FB.ref(db, 'pvp/waiting')).catch(()=>{});
+        document.getElementById('matchmaking-screen').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('flex'); document.getElementById('pvp-menu').classList.remove('hidden'); setMyStatus('Online');
+    }
+
+    function leaveOnlineSession() {
+        voiceChat.stopMic(); document.getElementById('btn-hud-mic').classList.add('hidden');
+        if(onlineSyncInterval) clearInterval(onlineSyncInterval); if(onlineUnsub) onlineUnsub(); if(sprayUnsub) sprayUnsub(); if(pvpStateUnsub) pvpStateUnsub();
+        onlineSyncInterval = null; onlineUnsub = null; sprayUnsub = null; pvpStateUnsub = null;
+        if(myDBUid && db) {
+            if(gameMode === 'mmo') window.FB.remove(window.FB.ref(db, 'session/players/' + mySessionId)).catch(e=>{});
+            if(gameMode === 'pvp_1v1' && currentPvPRoom) window.FB.remove(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}`)).catch(e=>{});
+            window.FB.remove(window.FB.ref(db, 'session/signals/' + mySessionId)).catch(e=>{});
+        }
+        gameMode = 'campaign'; setMyStatus('Online'); document.getElementById('pvp-scoreboard').classList.add('hidden'); document.getElementById('hud-hp-container').classList.add('hidden'); document.getElementById('hud-hp-container').classList.remove('flex');
+        for(let id in remoteMeshes) removeHologram(id); remotePlayers = {}; currentPvPRoom = null; player.rotation.z = 0; mmoVictoryState = false;
+    }
+
+    function createHologram(id, wpn, charType) {
+        const holo = createBoy(false); applyWeaponMesh(holo, wpn || 'knife'); applyCharacterSkin(holo, charType || 'default'); scene.add(holo); remoteMeshes[id] = holo;
+    }
+    function removeHologram(id) { if(remoteMeshes[id]) { scene.remove(remoteMeshes[id]); delete remoteMeshes[id]; } }
+
+    let customAudio = new Audio(); customAudio.loop = false; let customPlaylist = ["https://www.dropbox.com/scl/fi/s19la3xygk253t36170g8/Creating-Modern-Latin-Dance-Pop.mp3?rlkey=mq1fslnrv1cngcrg5wy01w457&st=2pstyob0&raw=1"]; let currentPlaylistIndex = 0; customAudio.src = customPlaylist[0];
+    customAudio.addEventListener('ended', () => { if (customPlaylist.length > 1) { currentPlaylistIndex = (currentPlaylistIndex + 1) % customPlaylist.length; customAudio.src = customPlaylist[currentPlaylistIndex]; playCustomAudio(); } else customAudio.play(); });
+    function playCustomAudio() { if(customAudio.src && customAudio.src !== window.location.href) { let p = customAudio.play(); if (p !== undefined) p.catch(e => {}); } }
+
+    let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: true, texture: 'high', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
+    window.gameSettings = defaultSettings;
+    try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
+    if(!window.gameSettings.controls.crouch) window.gameSettings.controls.crouch = 'c';
+    if(!window.gameSettings.controls.sensitivity) window.gameSettings.controls.sensitivity = 50;
+    mouseSensitivity = window.gameSettings.controls.sensitivity * 0.00004;
+    
+    // Save settings correctly
+    window.saveSettings = () => { localStorage.setItem('maze_settings', JSON.stringify(window.gameSettings)); };
+    window.initGameSave = async () => { let s = localStorage.getItem('maze_escape_level'); return s ? parseInt(s) : 1; };
+    
+    window.saveGameProgress = async (level) => { 
+        localStorage.setItem('maze_escape_level', level); 
+        userProfile.level = level;
+        if(myDBUid && db) {
+            await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { level: level });
+        }
+    };
+
+    function makeHDWallTextures() {
+        const S = 512, c = document.createElement('canvas'), b = document.createElement('canvas'); c.width = b.width = S; c.height = b.height = S;
+        const ctx = c.getContext('2d'), btx = b.getContext('2d'); ctx.fillStyle = '#3a1f16'; ctx.fillRect(0, 0, S, S); btx.fillStyle = '#222222'; btx.fillRect(0, 0, S, S); 
+        const bW = 128, bH = 48, gap = 6; const rows = Math.ceil(S / bH) + 1, cols = Math.ceil(S / bW) + 2;
+        for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col < cols; col++) { const x = col * bW + off, y = row * bH; const rr = 80 + Math.random() * 40, gg = 30 + Math.random() * 20, bb = 20 + Math.random() * 10; ctx.fillStyle = `rgb(${rr},${gg},${bb})`; ctx.fillRect(x + gap, y + gap, bW - gap, bH - gap); btx.fillStyle = '#ffffff'; btx.fillRect(x + gap, y + gap, bW - gap, bH - gap); for (let n = 0; n < 40; n++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`; ctx.fillRect(x + gap + Math.random() * (bW - gap), y + gap + Math.random() * (bH - gap), 3, 3); } } }
+        ctx.strokeStyle = '#1a0a05'; ctx.lineWidth = gap; btx.strokeStyle = '#000000'; btx.lineWidth = gap;
+        for (let row = 0; row <= rows; row++) { ctx.beginPath(); ctx.moveTo(0, row * bH); ctx.lineTo(S, row * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(0, row * bH); btx.lineTo(S, row * bH); btx.stroke(); }
+        for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col <= cols; col++) { const x = col * bW + off; ctx.beginPath(); ctx.moveTo(x, row * bH); ctx.lineTo(x, (row + 1) * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(x, row * bH); btx.lineTo(x, (row + 1) * bH); btx.stroke(); } }
+        const tex = new THREE.CanvasTexture(c), bumpTex = new THREE.CanvasTexture(b); tex.wrapS = tex.wrapT = bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping; tex.minFilter = bumpTex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = bumpTex.generateMipmaps = true; return { map: tex, bumpMap: bumpTex };
+    }
+    function makeGrassTexture() {
+        const S = 512, c = document.createElement('canvas'); c.width = S; c.height = S; const ctx = c.getContext('2d'); ctx.fillStyle = '#1c331c'; ctx.fillRect(0, 0, S, S);
+        for (let i = 0; i < 2000; i++) { const x = Math.random() * S, y = Math.random() * S, g = 30 + Math.floor(Math.random() * 40); ctx.fillStyle = `rgba(20,${g},20,0.6)`; ctx.fillRect(x, y, 4 + Math.random() * 14, 2 + Math.random() * 7); }
+        const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(380, 380); return tex;
+    }
+    function makeTickTexture() { const S=256, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d'); ctx.strokeStyle='#00ff44'; ctx.lineWidth=24; ctx.lineCap=ctx.lineJoin='round'; ctx.shadowColor='#00ff44'; ctx.shadowBlur=20; ctx.beginPath(); ctx.moveTo(50, 130); ctx.lineTo(100, 190); ctx.lineTo(210, 60); ctx.stroke(); return new THREE.CanvasTexture(c); }
+    function makeCrossTexture() { const S=256, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d'); ctx.strokeStyle='#ff2222'; ctx.lineWidth=24; ctx.lineCap='round'; ctx.shadowColor='#ff2222'; ctx.shadowBlur=20; ctx.beginPath(); ctx.moveTo(60, 60); ctx.lineTo(196, 196); ctx.stroke(); ctx.beginPath(); ctx.moveTo(196, 60); ctx.lineTo(60, 196); ctx.stroke(); return new THREE.CanvasTexture(c); }
+
+    function makeFinishTexture() {
+        const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+        const ctx = c.getContext('2d');
+        for(let i=0; i<8; i++) {
+            for(let j=0; j<8; j++) {
+                ctx.fillStyle = (i+j)%2 === 0 ? '#ffffff' : '#000000';
+                ctx.fillRect(i*64, j*64, 64, 64);
+            }
+        }
+        ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 192, 512, 128);
+        ctx.fillStyle = '#22d3ee'; ctx.font = '900 80px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('FINISH', 256, 256);
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    }
+    const finishTex = makeFinishTexture();
+
+    const wallTexData = makeHDWallTextures(); const wallColorTex = wallTexData.map; const wallBumpTex = wallTexData.bumpMap;
+    const grassTex = makeGrassTexture();
+    const tickMat = new THREE.MeshBasicMaterial({ map: makeTickTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const crossMat = new THREE.MeshBasicMaterial({ map: makeCrossTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const sprayGeo = new THREE.PlaneGeometry(1.5, 1.5); let sprayMeshes = [];
+
+    function addSprayToScene(data) {
+        if (!data || !data.type || !data.ts || Date.now() - data.ts > 3600000) return; 
+        const mat = data.type === 'cross' ? crossMat : tickMat; const mesh = new THREE.Mesh(sprayGeo, mat); mesh.position.set(data.px, data.py, data.pz);
+        const norm = new THREE.Vector3(data.nx, data.ny, data.nz); mesh.position.add(norm.clone().multiplyScalar(0.015)); mesh.lookAt(mesh.position.clone().add(norm)); scene.add(mesh); sprayMeshes.push(mesh);
+    }
+    
+    const raycaster = new THREE.Raycaster();
+    function sprayPaint(type) {
+        if(!isPlaying || isPaused || isDead) return;
+        if(gameMode === 'pvp_1v1') { return; }
+        
+        // Exact center screen aiming
+        const origin = player.position.clone(); origin.y += 1.5; 
+        const dir = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+        raycaster.set(origin, dir); 
+        const hits = raycaster.intersectObjects(wallsGroup.children);
+        
+        if(hits.length > 0 && hits[0].distance < 4.0) {
+            if(audioInitialized && window.gameSettings.sound.sfx > 0) footstepSynth.triggerAttackRelease('32n');
+            const hit = hits[0]; const sprayData = { px: hit.point.x, py: hit.point.y, pz: hit.point.z, nx: hit.face.normal.x, ny: hit.face.normal.y, nz: hit.face.normal.z, type: type, ts: Date.now() };
+            if(gameMode === 'mmo' && db && window.FB) window.FB.push(window.FB.ref(db, 'session/sprays'), sprayData);
+            else if(gameMode === 'pvp_1v1' && db && currentPvPRoom && window.FB) window.FB.push(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/sprays`), sprayData);
+            else addSprayToScene(sprayData);
+        }
+    }
+
+    const charColors = { default: {skin: 0xffdcb1, shirt: 0x2563eb}, ninja: {skin: 0x333333, shirt: 0x111111}, soldier: {skin: 0xffdcb1, shirt: 0x15803d}, gold: {skin: 0xffd700, shirt: 0xeab308} };
+
+    function createWeaponMesh(type) {
+        const group = new THREE.Group();
+        if(type === 'bat') { const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.7, 12), new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.9})); bat.position.y = 0.35; group.add(bat); group.position.set(0, -0.2, 0.2); group.rotation.x = Math.PI / 2.5; } 
+        else if (type === 'sword') { const h = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.05), new THREE.MeshStandardMaterial({color: 0x111111})); const g = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.05), new THREE.MeshStandardMaterial({color: 0xaaaaaa, metalness: 0.8})); g.position.y = 0.125; const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.1), new THREE.MeshStandardMaterial({color: 0xeeeeee, metalness: 0.9, roughness: 0.1})); b.position.y = 0.5; group.add(h); group.add(g); group.add(b); group.position.set(0, -0.1, 0.2); group.rotation.x = Math.PI / 2.5; } 
+        else if (type === 'chappal') { const c = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.03), new THREE.MeshStandardMaterial({color: 0x3b82f6})); const strap = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.05), new THREE.MeshStandardMaterial({color: 0xffffff})); strap.position.y = 0.05; strap.position.z = 0.01; c.add(strap); c.position.y = 0.15; group.add(c); group.position.set(0, -0.1, 0.2); group.rotation.x = Math.PI / 2.5; } 
+        else { const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.08), new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9})); const blade = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.4, 0.1), new THREE.MeshStandardMaterial({color: 0xeeeeee, metalness: 0.8, roughness: 0.2})); blade.position.y = 0.32; group.add(handle); group.add(blade); group.position.set(0, -0.25, 0.1); group.rotation.x = Math.PI / 2; }
+        return group;
+    }
+
+    function applyWeaponMesh(playerGroup, wpnStr) {
+        if(!playerGroup || !playerGroup.userData.rightArm) return;
+        const arm = playerGroup.userData.rightArm; arm.children = arm.children.filter(c => !c.userData.isWeapon);
+        const newWpn = createWeaponMesh(wpnStr); newWpn.userData.isWeapon = true; arm.add(newWpn);
+        newWpn.visible = (gameMode === 'pvp_1v1'); 
+    }
+
+    function applyCharacterSkin(playerGroup, charType) {
+        if(!playerGroup) return; const colors = charColors[charType] || charColors.default;
+        if(playerGroup.userData.head) playerGroup.userData.head.material.color.setHex(colors.skin);
+        if(playerGroup.userData.leftArm) playerGroup.userData.leftArm.children[0].material.color.setHex(colors.skin);
+        if(playerGroup.userData.rightArm) playerGroup.userData.rightArm.children[0].material.color.setHex(colors.skin);
+        if(playerGroup.userData.body) playerGroup.userData.body.material.color.setHex(colors.shirt);
+    }
+
+    function createBoy(isLocal = true) {
+        const g = new THREE.Group();
+        const skin = new THREE.MeshStandardMaterial({color:0xffdcb1,roughness:0.5}); const shirt = new THREE.MeshStandardMaterial({color:0x2563eb,roughness:0.6}); const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.8});
+        const b=new THREE.Mesh(new THREE.BoxGeometry(.7,1,.4),shirt); b.position.y=1.3; b.castShadow=true; g.add(b);
+        const h=new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6),skin); h.position.y=2.1; h.castShadow=true; g.add(h);
+        
+        const eyeMat = new THREE.MeshBasicMaterial({color: 0x000000});
+        const leftEye = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, .05), eyeMat); leftEye.position.set(-.15, .1, .31);
+        const rightEye = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, .05), eyeMat); rightEye.position.set(.15, .1, .31);
+        const mouth = new THREE.Mesh(new THREE.BoxGeometry(.2, .05, .05), eyeMat); mouth.position.set(0, -.15, .31);
+        h.add(leftEye); h.add(rightEye); h.add(mouth);
+
+        const lA=new THREE.Group(); lA.position.set(-.5,1.7,0); const a1=new THREE.Mesh(new THREE.BoxGeometry(.25,.8,.25),skin); a1.position.y=-.3; a1.castShadow=true; lA.add(a1); g.add(lA);
+        const rA=new THREE.Group(); rA.position.set(.5,1.7,0);  const a2=new THREE.Mesh(new THREE.BoxGeometry(.25,.8,.25),skin); a2.position.y=-.3; a2.castShadow=true; rA.add(a2); g.add(rA);
+        const lL=new THREE.Group(); lL.position.set(-.2,.8,0);  const l1=new THREE.Mesh(new THREE.BoxGeometry(.3,.8,.3),pants); l1.position.y=-.4; l1.castShadow=true; lL.add(l1); g.add(lL);
+        const rL=new THREE.Group(); rL.position.set(.2,.8,0);   const l2=new THREE.Mesh(new THREE.BoxGeometry(.3,.8,.3),pants); l2.position.y=-.4; l2.castShadow=true; rL.add(l2); g.add(rL);
+        g.userData={head:h,body:b,leftArm:lA,rightArm:rA,leftLeg:lL,rightLeg:rL, isMoving: false}; g.scale.set(.8,.8,.8); 
+        
+        if(isLocal) {
+            const fl = new THREE.SpotLight(0xddeeff, 3.5, 90, Math.PI/4, 0.6, 1.5); fl.position.set(0, 2.1, 0.4); fl.target.position.set(0, 2.1, 10); g.add(fl); g.add(fl.target); g.userData.flashlight = fl;
+        } else {
+            const pt = new THREE.PointLight(0xaaccff, 0.5, 10); pt.position.set(0,2,0); g.add(pt);
+        }
+        return g;
+    }
+    
+    let isAttacking = false, attackTimer = 0;
+    function performKnifeAttack() {
+        if(!isPlaying || isPaused || isAttacking || isDead || gameMode !== 'pvp_1v1' || pvpState !== 'playing') return;
+        isAttacking = true; attackTimer = 0;
+        if(audioInitialized && window.gameSettings.sound.sfx > 0) swingSynth.triggerAttackRelease('16n');
+        for(let id in remotePlayers) {
+            const enemyMesh = remoteMeshes[id]; const enemyData = remotePlayers[id];
+            if(enemyMesh && enemyData && enemyData.hp > 0) {
+                const dist = player.position.distanceTo(enemyMesh.position);
+                if(dist < 4.0) { 
+                    const dirToOpp = enemyMesh.position.clone().sub(player.position).normalize();
+                    const forward = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+                    if(forward.dot(dirToOpp) > 0.8) {
+                        raycaster.set(player.position.clone().add(new THREE.Vector3(0,1,0)), dirToOpp);
+                        const hits = raycaster.intersectObjects(wallsGroup.children);
+                        if(hits.length === 0 || hits[0].distance > dist) {
+                            if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C4', '16n');
+                            const newHp = Math.max(0, enemyData.hp - 25);
+                            window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${id}`), { hp: newHp });
+                            if (newHp <= 0) { myScore++; updatePvPScoreboard(); window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${mySessionId}`), { score: myScore }); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function endPvP(won) {
+        pvpState = 'victory'; if(won) playWinMelody();
+        document.getElementById('hud').classList.add('hidden'); 
+        document.exitPointerLock();
+        setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
+    }
+
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, logarithmicDepthBuffer:true});
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    wallColorTex.anisotropy = wallBumpTex.anisotropy = grassTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    wallColorTex.encoding = grassTex.encoding = THREE.sRGBEncoding;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100); scene.add(camera);
+    const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x112211, 0.6); scene.add(hemiLight);
+    const ambientLight = new THREE.AmbientLight(0x202530, 0.8); scene.add(ambientLight);
+
+    const SHADOW_FRUSTUM_SIZE = 25; 
+    const dirLight = new THREE.DirectionalLight(0x77aacc, 1.2);
+    dirLight.castShadow = true; dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 2048; 
+    dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 160;
+    dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE; dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
+    
+    // VSM settings to completely destroy the jagged chess pattern
+    dirLight.shadow.bias = -0.0005; 
+    dirLight.shadow.normalBias = 0.015; 
+    dirLight.shadow.radius = 4.0; 
+    dirLight.shadow.blurSamples = 25; 
+    
+    dirLight.target = new THREE.Object3D(); scene.add(dirLight.target); scene.add(dirLight);
+    let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 2048;
+
+    let player = createBoy(true); scene.add(player);
+    let wallsGroup = new THREE.Group(); scene.add(wallsGroup);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.9, metalness: 0 }));
+    ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+    let goalMesh;
+
+    const WALL_OVERLAP = 0.12, WALL_SINK = 0.5, CELL_SIZE = 3, WALL_H = CELL_SIZE * 1.3 + WALL_SINK;
+    const wallGeo = new THREE.BoxGeometry(CELL_SIZE + WALL_OVERLAP, WALL_H, CELL_SIZE + WALL_OVERLAP);
+    const wallMat = new THREE.MeshStandardMaterial({ map: wallColorTex, bumpMap: wallBumpTex, bumpScale: 0.15, roughness: 0.8, metalness: 0.1 });
+    let instancedWalls = null;
+
+    window.applySettingsToEngine = () => {
+        const s = window.gameSettings; renderer.toneMappingExposure = (s.display.brightness / 100) * 1.0;
+        scene.background = new THREE.Color(0x0b0c16); scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
+        const cssW = window.innerWidth, cssH = window.innerHeight; let targetW = cssW, targetH = cssH;
+        if (s.display.resolution !== 'native') { const tr = parseInt(s.display.resolution), asp = cssW / cssH; if (cssW >= cssH) { targetW = tr; targetH = Math.round(tr / asp); } else { targetH = tr; targetW = Math.round(tr * asp); } }
+        canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+        renderer.setPixelRatio(s.display.resolution === 'native' ? (window.devicePixelRatio||1) : 1);
+        
+        const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
+        renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
+        camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
+        
+        let sSize = s.graphics.texture==='high' ? 4096 : (s.graphics.texture==='medium' ? 2048 : 1024);
+        if(dirLight.shadow.mapSize.width !== sSize) { dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; }
+        renderer.shadowMap.enabled = s.graphics.shadows;
+        if(instancedWalls) { instancedWalls.castShadow = s.graphics.shadows; instancedWalls.receiveShadow = s.graphics.shadows; }
+        if(audioInitialized) { Tone.Destination.volume.value = Tone.gainToDb(s.sound.master/100); if(nightSynth) nightSynth.volume.value = Tone.gainToDb(s.sound.music/100) - 15; if(footstepSynth) footstepSynth.volume.value = Tone.gainToDb(s.sound.sfx/100) - 5; if(customAudio.src) customAudio.volume = (s.sound.music / 100) * (s.sound.master / 100); }
+        
+        const resSelect = document.getElementById('set-resolution');
+        if(resSelect.options.length === 0) {
+            const pr = window.devicePixelRatio || 1; const w = Math.round(window.innerWidth * pr), h = Math.round(window.innerHeight * pr); const longEdge = Math.max(w, h); resSelect.innerHTML = '';
+            [ { label: `Native (${w} x ${h})`, value: 'native' }, { label: `High (${Math.round(longEdge*0.75)}p)`, value: `${Math.round(longEdge*0.75)}` }, { label: `Medium (${Math.round(longEdge*0.5)}p)`, value: `${Math.round(longEdge*0.5)}` }, { label: `Low (${Math.round(longEdge*0.35)}p)`, value: `${Math.round(longEdge*0.35)}` }
+            ].forEach(opt => { const o = document.createElement('option'); o.value = opt.value; o.innerText = opt.label; resSelect.appendChild(o); });
+            if (!Array.from(resSelect.options).some(o => o.value === s.display.resolution)) s.display.resolution = 'native'; resSelect.value = s.display.resolution;
+        }
+        
+        mouseSensitivity = (s.controls.sensitivity || 50) * 0.00004;
+    };
+    
+    const bindUI = () => {
+        const s = window.gameSettings;
+        document.getElementById('set-brightness').value = s.display.brightness; document.getElementById('val-brightness').innerText = s.display.brightness+'%';
+        if(document.getElementById('set-quality')) document.getElementById('set-quality').value = s.graphics.quality || 'custom';
+        document.getElementById('set-scale').value = s.graphics.scale; document.getElementById('val-scale').innerText = s.graphics.scale+'%';
+        document.getElementById('set-shadows').innerText = s.graphics.shadows?'ON':'OFF'; document.getElementById('set-shadows').className = s.graphics.shadows ? 'gta-toggle active' : 'gta-toggle';
+        document.getElementById('set-fps').value = s.graphics.fps;
+        document.getElementById('set-master').value = s.sound.master; document.getElementById('val-master').innerText = s.sound.master+'%';
+        document.getElementById('set-music').value = s.sound.music; document.getElementById('val-music').innerText = s.sound.music+'%';
+        document.getElementById('set-sfx').value = s.sound.sfx; document.getElementById('val-sfx').innerText = s.sound.sfx+'%';
+        document.querySelectorAll('.keybind-btn').forEach(btn=>{ btn.innerText=s.controls[btn.dataset.action].toUpperCase(); btn.classList.remove('waiting'); });
+        
+        if(document.getElementById('set-sens')) {
+            document.getElementById('set-sens').value = s.controls.sensitivity || 50;
+            document.getElementById('val-sens').innerText = (s.controls.sensitivity || 50) + '%';
+        }
+    };
+
+    function generateMaze(width, height, hasExit = true) {
+        const w=width%2===0?width+1:width, h=height%2===0?height+1:height; let maze=Array(h).fill().map(()=>Array(w).fill(1));
+       // --- OPTIMIZED MAZE GENERATION FOR HIGH LEVELS ---
+        // Using an iterative stack instead of deep recursion to prevent browser lag/freeze on Level 30+
+        function carveIterative(startX, startY) {
+            let stack = [{x: startX, y: startY}];
+            maze[startY][startX] = 0;
+
+            while(stack.length > 0) {
+                let current = stack[stack.length - 1];
+                let dirs = deterministicShuffle([[0,-2],[0,2],[-2,0],[2,0]]);
+                let carved = false;
+
+                for(let [dx, dy] of dirs) {
+                    const nx = current.x + dx, ny = current.y + dy;
+                    if(nx > 0 && nx < w - 1 && ny > 0 && ny < h - 1 && maze[ny][nx] === 1) {
+                        maze[current.y + dy/2][current.x + dx/2] = 0;
+                        maze[ny][nx] = 0;
+                        stack.push({x: nx, y: ny});
+                        carved = true;
+                        break;
+                    }
+                }
+                if(!carved) stack.pop();
+            }
+        }
+        carveIterative(1, h-2);
+        // ---------------------------------------------------
+        
+        if (hasExit) {
+            const sides=[0,1,2,3];
+            function gcp(s){ if(s===0)return{y:0,x:1+Math.floor(deterministicRandom()*((w-2)/2))*2,rot:0}; if(s===1)return{x:w-1,y:1+Math.floor(deterministicRandom()*((h-2)/2))*2,rot:-Math.PI/2}; if(s===2)return{y:h-1,x:1+Math.floor(deterministicRandom()*((w-2)/2))*2,rot:Math.PI}; return{x:0,y:1+Math.floor(deterministicRandom()*((h-2)/2))*2,rot:Math.PI/2}; }
+            mazeStart=gcp(sides.splice(Math.floor(deterministicRandom()*sides.length),1)[0]); mazeEnd=gcp(sides.splice(Math.floor(deterministicRandom()*sides.length),1)[0]);
+            
+            for(let x=0; x<w; x++) { maze[0][x]=1; maze[h-1][x]=1; } for(let y=0; y<h; y++) { maze[y][0]=1; maze[y][w-1]=1; }
+            maze[mazeStart.y][mazeStart.x]=0; maze[mazeEnd.y][mazeEnd.x]=0;
+            
+            if(mazeStart.y<=0) mazeStart.y=1; if(mazeStart.y>=h-1) mazeStart.y=h-2; if(mazeStart.x<=0) mazeStart.x=1; if(mazeStart.x>=w-1) mazeStart.x=w-2;
+            if(mazeEnd.y<=0) mazeEnd.y=1; if(mazeEnd.y>=h-1) mazeEnd.y=h-2; if(mazeEnd.x<=0) mazeEnd.x=1; if(mazeEnd.x>=w-1) mazeEnd.x=w-2;
+
+            if (mazeStart.x === 1) maze[mazeStart.y][0] = 0;
+            else if (mazeStart.x === w-2) maze[mazeStart.y][w-1] = 0;
+            else if (mazeStart.y === 1) maze[0][mazeStart.x] = 0;
+            else if (mazeStart.y === h-2) maze[h-1][mazeStart.x] = 0;
+
+            if (mazeEnd.x === 1) maze[mazeEnd.y][0] = 0;
+            else if (mazeEnd.x === w-2) maze[mazeEnd.y][w-1] = 0;
+            else if (mazeEnd.y === 1) maze[0][mazeEnd.x] = 0;
+            else if (mazeEnd.y === h-2) maze[h-1][mazeEnd.x] = 0;
+        } else {
+            for(let x=0; x<w; x++) { maze[0][x]=1; maze[h-1][x]=1; }
+            for(let y=0; y<h; y++) { maze[y][0]=1; maze[y][w-1]=1; }
+            mazeStart = {x: 1, y: 1, rot: 0};
+            mazeEnd = {x: w-2, y: h-2, rot: Math.PI};
+            maze[mazeStart.y][mazeStart.x]=0;
+            maze[mazeEnd.y][mazeEnd.x]=0;
+        }
+        return maze;
+    }
+
+    let levelStartX = 0, levelStartZ = 0, levelEndX = 0, levelEndZ = 0;
+
+    function buildLevel(isBackgroundMenu = false, forceSpawnX, forceSpawnZ) {
+        if(instancedWalls) { wallsGroup.remove(instancedWalls); instancedWalls.dispose(); instancedWalls = null; }
+        if(goalMesh) scene.remove(goalMesh);
+        sprayMeshes.forEach(m => scene.remove(m)); sprayMeshes = [];
+        applySettingsToEngine();
+        
+        if (isBackgroundMenu) { mazeSeed = 1111; mazeWidth = 15; mazeHeight = 15; }
+        else if (gameMode === 'mmo') { mazeSeed = window.mmoSeed || 99999; mazeWidth = 41; mazeHeight = 41; } 
+        else if (gameMode === 'pvp_1v1') { mazeSeed = window.currentPvPSeed; mazeWidth = 15; mazeHeight = 15; } 
+        else { mazeWidth = Math.min(9+(currentLevel*2), 61); mazeHeight = Math.min(9+(currentLevel*2), 61); mazeSeed = Math.floor(Math.random() * 1000000); }
+        
+        mazeGrid = generateMaze(mazeWidth, mazeHeight, gameMode !== 'pvp_1v1');
+        
+        let wallCount = 0; for(let y=0; y<mazeHeight; y++) for(let x=0; x<mazeWidth; x++) { if(mazeGrid[y][x]===1) wallCount++; }
+        instancedWalls = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
+        instancedWalls.castShadow = window.gameSettings.graphics.shadows; instancedWalls.receiveShadow = window.gameSettings.graphics.shadows;
+        
+        const dummy = new THREE.Object3D(); let i = 0;
+        for(let y=0; y<mazeHeight; y++) {
+            for(let x=0; x<mazeWidth; x++) {
+                if(mazeGrid[y][x]===1) {
+                    dummy.position.set(x*CELL_SIZE, WALL_H/2 - WALL_SINK, y*CELL_SIZE);
+                    // Add tiny microscopic random scale jitter to permanently fix Z-fighting (flickering seams) on wall joints
+                    const jitter = 1.0 + (Math.random() * 0.015);
+                    dummy.scale.set(jitter, 1, jitter);
+                    dummy.updateMatrix(); instancedWalls.setMatrixAt(i++, dummy.matrix);
+                }
+            }
+        }
+        wallsGroup.add(instancedWalls);
+        
+        levelStartX = mazeStart.x; levelStartZ = mazeStart.y;
+        if(gameMode !== 'pvp_1v1' && !isBackgroundMenu) {
+            if (mazeStart.y === 1 && mazeGrid[0][mazeStart.x] === 0) levelStartZ = -1;
+            else if (mazeStart.y === mazeHeight-2 && mazeGrid[mazeHeight-1][mazeStart.x] === 0) levelStartZ = mazeHeight;
+            else if (mazeStart.x === 1 && mazeGrid[mazeStart.y][0] === 0) levelStartX = -1;
+            else if (mazeStart.x === mazeWidth-2 && mazeGrid[mazeStart.y][mazeWidth-1] === 0) levelStartX = mazeWidth;
+        }
+
+        if(forceSpawnX !== undefined) { player.position.set(forceSpawnX*CELL_SIZE, 0, forceSpawnZ*CELL_SIZE); player.rotation.y = 0; }
+        else { player.position.set(levelStartX*CELL_SIZE, 0, levelStartZ*CELL_SIZE); player.rotation.y = mazeStart.rot; }
+        player.rotation.z = 0; 
+
+        // Set initial camera to perfectly look where player looks
+        camAzimuth = player.rotation.y + Math.PI;
+        camElevation = -0.15;
+
+        levelEndX = mazeEnd.x; levelEndZ = mazeEnd.y;
+        if (gameMode !== 'pvp_1v1' && !isBackgroundMenu) { 
+            if (mazeEnd.y === 1 && mazeGrid[0][mazeEnd.x] === 0) levelEndZ = -1;
+            else if (mazeEnd.y === mazeHeight-2 && mazeGrid[mazeHeight-1][mazeEnd.x] === 0) levelEndZ = mazeHeight;
+            else if (mazeEnd.x === 1 && mazeGrid[mazeEnd.y][0] === 0) levelEndX = -1;
+            else if (mazeEnd.x === mazeWidth-2 && mazeGrid[mazeEnd.y][mazeWidth-1] === 0) levelEndX = mazeWidth;
+            
+            goalMesh = new THREE.Mesh(new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE), new THREE.MeshStandardMaterial({map: finishTex, roughness: 1}));
+            goalMesh.rotation.x = -Math.PI/2;
+            goalMesh.position.set(levelEndX*CELL_SIZE, 0.05, levelEndZ*CELL_SIZE);
+            scene.add(goalMesh); 
+        }
+
+        document.getElementById('hud-level-container').classList.add('hidden'); document.getElementById('hud-online-container').classList.add('hidden'); document.getElementById('hud-pvp-container').classList.add('hidden');
+        document.getElementById('hud-hp-container').classList.add('hidden'); document.getElementById('hud-hp-container').classList.remove('flex');
+        
+        if(!isBackgroundMenu) {
+            if(gameMode === 'mmo') { document.getElementById('hud-online-container').classList.remove('hidden'); document.getElementById('hud-online-container').classList.add('flex'); }
+            else if (gameMode === 'pvp_1v1') { document.getElementById('hud-pvp-container').classList.remove('hidden'); document.getElementById('hud-pvp-container').classList.add('flex'); document.getElementById('hud-hp-container').classList.remove('hidden'); document.getElementById('hud-hp-container').classList.add('flex'); }
+            else { document.getElementById('hud-level-container').classList.remove('hidden'); document.getElementById('hud-level').innerText = currentLevel; }
+        }
+
+        applyWeaponMesh(player, userProfile.equippedWeapon);
+        applyCharacterSkin(player, userProfile.equippedChar);
+        updateCamera(0);
+    }
+
+    const PLAYER_RADIUS = 0.5;
+    function checkCollision(tx, tz) {
+        if (isFlyMode) return false;
+        let gx=Math.round(tx/CELL_SIZE), gz=Math.round(tz/CELL_SIZE);
+        const halfCell = CELL_SIZE / 2;
+        for(let dz=-1;dz<=1;dz++) for(let dx=-1;dx<=1;dx++){
+            let cx=gx+dx, cz=gz+dz;
+            if(cz>=0&&cz<mazeHeight&&cx>=0&&cx<mazeWidth&&mazeGrid[cz][cx]===1){
+                const nearX = Math.max(cx*CELL_SIZE - halfCell, Math.min(tx, cx*CELL_SIZE + halfCell)), nearZ = Math.max(cz*CELL_SIZE - halfCell, Math.min(tz, cz*CELL_SIZE + halfCell));
+                const distX = tx - nearX, distZ = tz - nearZ; if(distX*distX + distZ*distZ < PLAYER_RADIUS*PLAYER_RADIUS) return true;
+            }
+        }
+        return false;
+    }
+
+    function resolveOverlap(px, pz) {
+        if (isFlyMode) return {x: px, z: pz};
+        let gx=Math.round(px/CELL_SIZE), gz=Math.round(pz/CELL_SIZE); let outX = px, outZ = pz;
+        for(let dz=-1;dz<=1;dz++) for(let dx=-1;dx<=1;dx++){
+            let cx=gx+dx, cz=gz+dz;
+            if(cz>=0&&cz<mazeHeight&&cx>=0&&cx<mazeWidth&&mazeGrid[cz][cx]===1){
+                const nearX = Math.max(cx*CELL_SIZE - CELL_SIZE/2, Math.min(outX, cx*CELL_SIZE + CELL_SIZE/2)), nearZ = Math.max(cz*CELL_SIZE - CELL_SIZE/2, Math.min(outZ, cz*CELL_SIZE + CELL_SIZE/2));
+                const distX = outX - nearX, distZ = outZ - nearZ, distSq = distX*distX + distZ*distZ;
+                if(distSq < PLAYER_RADIUS*PLAYER_RADIUS) { const dist = Math.sqrt(distSq) || 0.0001, push = (PLAYER_RADIUS - dist) + 0.001; outX += (distX/dist) * push; outZ += (distZ/dist) * push; }
+            }
+        }
+        return {x: outX, z: outZ};
+    }
+
+    let cameraMode = 'thirdPerson';
+    function updateCamera(dt) {
+        if(player.userData.head) player.userData.head.visible = (cameraMode!=='firstPerson');
+        
+        if (gameMode === 'pvp_1v1' && pvpState === 'intro') {
+            const target = player.position.clone().add(new THREE.Vector3(Math.sin(camAzimuth)*6,4,Math.cos(camAzimuth)*6));
+            if(camera.position.y < 5) { camera.position.set(player.position.x, 40, player.position.z); }
+            camera.position.lerp(target, dt*1.5); camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
+            if(camera.position.y < 6) { pvpState = 'playing'; } return;
+        }
+        if (gameMode === 'pvp_1v1' && pvpState === 'victory') {
+            camera.position.x = player.position.x + Math.sin(clock.getElapsedTime())*6; camera.position.z = player.position.z + Math.cos(clock.getElapsedTime())*6; camera.position.y = player.position.y + 4; camera.lookAt(player.position); return;
+        }
+        
+        if (isDead) {
+            camera.position.lerp(player.position.clone().add(new THREE.Vector3(0, 4, 0)), dt*3);
+            camera.lookAt(player.position.x, 0, player.position.z);
+            return;
+        }
+
+        if(cameraMode==='thirdPerson'){
+            // Place camera BEHIND the player dynamically based on mouse Look Angle
+            const target = player.position.clone().add(new THREE.Vector3(Math.sin(camAzimuth)*6, 4, Math.cos(camAzimuth)*6));
+            const origin = player.position.clone(); origin.y+=1.5; 
+            const dir = new THREE.Vector3().subVectors(target,origin).normalize();
+            raycaster.set(origin,dir); const hits = raycaster.intersectObjects(wallsGroup.children);
+            let fp = target; 
+            if(hits.length>0 && hits[0].distance < origin.distanceTo(target) && !isFlyMode) fp = origin.clone().add(dir.multiplyScalar(Math.max(.5,hits[0].distance-.5)));
+            camera.position.lerp(fp, dt===0?1:8*dt); camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
+        } else {
+            camera.position.set(player.position.x-Math.sin(camAzimuth)*.15, player.position.y+1.9, player.position.z-Math.cos(camAzimuth)*.15);
+            
+            const lookDir = new THREE.Vector3(
+                -Math.sin(camAzimuth) * Math.cos(camElevation),
+                -Math.sin(camElevation),
+                -Math.cos(camAzimuth) * Math.cos(camElevation)
+            );
+            camera.lookAt(camera.position.clone().add(lookDir));
+        }
+    }
+
+    let currentLevel = 1, isPlaying = false, isPaused = false, levelTimer = 0, lastFootstepTime = 0;
+    const keys = {up:false,down:false,left:false,right:false,jump:false,sprint:false,crouch:false,sprayTick:false,sprayCross:false};
+    let isRebinding=false, activeRebindAction=null;
+    let velocityY = 0, isGrounded = true;
+
+    let clock=new THREE.Clock(), frameTimeAcc=0;
+    
+    function animate(){
+        requestAnimationFrame(animate);
+        let dtRaw=clock.getDelta(); const fpsLimit=window.gameSettings.graphics.fps;
+        if(fpsLimit!=='uncapped'){ frameTimeAcc+=dtRaw; const tdt=1/parseInt(fpsLimit); if(frameTimeAcc<tdt)return; frameTimeAcc%=tdt; }
+        const dt=Math.min(dtRaw,.1), time=clock.getElapsedTime();
+        
+        if (mmoVictoryState) {
+            camera.position.x = player.position.x + Math.sin(time)*8;
+            camera.position.z = player.position.z + Math.cos(time)*8;
+            camera.position.y = player.position.y + 5;
+            camera.lookAt(player.position);
+            renderer.render(scene, camera);
+            return;
+        }
+
+        if(!isPlaying || isPaused) {
+            if (!isPlaying && !isDead && gameMode === 'campaign') {
+                camAzimuth += 0.2 * dt; updateCamera(dt);
+                const snappedX = Math.round(player.position.x / shadowTexelSize) * shadowTexelSize; const snappedZ = Math.round(player.position.z / shadowTexelSize) * shadowTexelSize;
+                dirLight.position.set(snappedX + 60, 70, snappedZ + 40); dirLight.target.position.set(snappedX, 0, snappedZ); dirLight.target.updateMatrixWorld();
+            }
+            if(gameMode === 'pvp_1v1' && pvpState === 'victory') updateCamera(dt);
+            if(gameMode === 'mmo' || gameMode === 'pvp_1v1') updateRemotePlayers(dt, time);
+            renderer.render(scene, camera); return;
+        }
+
+        if (isDead) { player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -Math.PI/2, dt*8); } 
+        else { player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, 0, dt*8); }
+        
+        if(gameMode === 'pvp_1v1' && pvpState === 'intro') { updateCamera(dt); updateRemotePlayers(dt, time); renderer.render(scene, camera); return; }
+
+        if(gameMode === 'pvp_1v1') {
+            pvpMatchTimer -= dt; document.getElementById('hud-timer').innerText=`${Math.floor(pvpMatchTimer/60).toString().padStart(2,'0')}:${Math.floor(pvpMatchTimer%60).toString().padStart(2,'0')}`;
+            if(pvpMatchTimer <= 0) endPvP(myScore >= enemyScore);
+        } else {
+            levelTimer+=dt; document.getElementById('hud-timer').innerText=`${Math.floor(levelTimer/60).toString().padStart(2,'0')}:${Math.floor(levelTimer%60).toString().padStart(2,'0')}`;
+        }
+
+        const snappedX = Math.round(player.position.x / shadowTexelSize) * shadowTexelSize; const snappedZ = Math.round(player.position.z / shadowTexelSize) * shadowTexelSize;
+        dirLight.position.set(snappedX + 60, 70, snappedZ + 40); dirLight.target.position.set(snappedX, 0, snappedZ); dirLight.target.updateMatrixWorld();
+        
+        const isTL=keys.left, isTR=keys.right, isUp=keys.up, isDn=keys.down;
+        const isSprinting = keys.sprint; 
+        let speedMult = isSprinting ? 2.5 : 1.0;
+
+        const targetScaleY = keys.crouch ? 0.6 : 0.8;
+        player.scale.y = THREE.MathUtils.lerp(player.scale.y, targetScaleY, dt*15);
+
+        if(!isDead) {
+            if (isFlyMode) {
+                velocityY = 0;
+                isGrounded = false;
+                if (keys.jump) player.position.y += 15 * dt;
+                else if (keys.crouch) player.position.y -= 15 * dt;
+            } else {
+                if (keys.jump && isGrounded && !keys.crouch) { velocityY = 12; isGrounded = false; }
+                player.position.y += velocityY * dt;
+                if (player.position.y > 0) { velocityY -= 35 * dt; isGrounded = false; } 
+                else { player.position.y = 0; velocityY = 0; isGrounded = true; }
+            }
+
+            let isMoving=false;
+            
+            // Correct Relative Movement to where Mouse Camera is aimed
+            const camDir = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+            const camRight = new THREE.Vector3(Math.cos(camAzimuth), 0, -Math.sin(camAzimuth)).normalize();
+            
+            const moveVec = new THREE.Vector3(0, 0, 0);
+            if (isUp) moveVec.add(camDir);
+            if (isDn) moveVec.sub(camDir);
+            if (isTL) moveVec.sub(camRight);
+            if (isTR) moveVec.add(camRight);
+            
+            if (moveVec.lengthSq() > 0.01) {
+                isMoving = true;
+                moveVec.normalize();
+                
+                const spd = (keys.crouch && !isFlyMode ? 3 : 7) * speedMult * (isFlyMode ? 2.0 : 1.0);
+                const nx = player.position.x + moveVec.x * spd * dt;
+                const nz = player.position.z + moveVec.z * spd * dt;
+                
+                if(!checkCollision(nx, player.position.z)) player.position.x = nx;
+                if(!checkCollision(player.position.x, nz)) player.position.z = nz;
+                
+                // Rotate body model so eyes face exactly where the player is walking
+                const targetRot = Math.atan2(moveVec.x, moveVec.z);
+                let diff = targetRot - player.rotation.y;
+                while(diff < -Math.PI) diff += Math.PI*2;
+                while(diff > Math.PI) diff -= Math.PI*2;
+                player.rotation.y += diff * 15 * dt;
+                
+                if(audioInitialized && window.gameSettings.sound.sfx > 0 && isGrounded) {
+                    if(time - lastFootstepTime > (isSprinting ? 0.25 : 0.35)){ footstepSynth.triggerAttackRelease('16n'); lastFootstepTime = time; }
+                }
+            }
+            
+            const resolved = resolveOverlap(player.position.x, player.position.z); player.position.x = resolved.x; player.position.z = resolved.z;
+            
+            if(gameMode !== 'pvp_1v1' && !isFlyMode) {
+                const px = player.position.x / CELL_SIZE; const pz = player.position.z / CELL_SIZE;
+                const distToStart = Math.sqrt(Math.pow(px - levelStartX, 2) + Math.pow(pz - levelStartZ, 2));
+                const distToEnd = Math.sqrt(Math.pow(px - levelEndX, 2) + Math.pow(pz - levelEndZ, 2));
+                
+                const isOutsideMazeBox = (px < -0.5 || px > mazeWidth - 0.5 || pz < -0.5 || pz > mazeHeight - 0.5);
+                if (isOutsideMazeBox && distToStart > 5 && distToEnd > 5) {
+                    player.position.set(levelStartX*CELL_SIZE, 0, levelStartZ*CELL_SIZE);
+                    gtaNotify("You can't escape man hahaha...", true);
+                }
+            }
+
+            if(isAttacking) {
+                attackTimer += dt * 15; player.userData.rightArm.rotation.x = -Math.sin(attackTimer) * 1.5;
+                if(attackTimer >= Math.PI) { isAttacking = false; player.userData.rightArm.rotation.x = 0; }
+            } else if(isMoving && isGrounded){
+                const sw=(isSprinting?1.2:.8)*(isDn?-1:1);
+                player.userData.leftArm.rotation.x=Math.sin(time*(isSprinting?15:10))*sw; player.userData.rightArm.rotation.x=-Math.sin(time*(isSprinting?15:10))*sw;
+                player.userData.leftLeg.rotation.x=-Math.sin(time*(isSprinting?15:10))*sw; player.userData.rightLeg.rotation.x=Math.sin(time*(isSprinting?15:10))*sw;
+                const bounce = Math.sin(time*(isSprinting?22:15)) * (isSprinting?0.12:0.08); 
+                if(player.userData.flashlight) { player.userData.flashlight.position.y = 2.1 + bounce; player.userData.flashlight.target.position.y = 2.1 + bounce; }
+            } else {
+                ['leftArm','rightArm','leftLeg','rightLeg'].forEach(p=>player.userData[p].rotation.x=THREE.MathUtils.lerp(player.userData[p].rotation.x,0,10*dt));
+                if(player.userData.flashlight) { player.userData.flashlight.position.y = THREE.MathUtils.lerp(player.userData.flashlight.position.y, 2.1, 10*dt); player.userData.flashlight.target.position.y = THREE.MathUtils.lerp(player.userData.flashlight.target.position.y, 2.1, 10*dt); }
+            }
+        }
+        
+        updateCamera(dt);
+        
+        // Fixed victory logic by calculating 2D distance to finish line (ignore Y coordinate for jumping bypass)
+        if(goalMesh && (gameMode === 'campaign' || gameMode === 'mmo')){
+            const distXZ = Math.sqrt(Math.pow(player.position.x - goalMesh.position.x, 2) + Math.pow(player.position.z - goalMesh.position.z, 2));
+            if(distXZ < 1.5 && !isDead){
+                if(gameMode === 'mmo') { 
+                    isPlaying=false; 
+                    try { playWinMelody(); } catch(e){}
+                    mmoVictoryState = true;
+                    document.exitPointerLock();
+                    document.getElementById('hud').classList.add('hidden');
+                    document.getElementById('mmo-victory-screen').classList.remove('hidden'); document.getElementById('mmo-victory-screen').classList.add('flex');
+                    setTimeout(() => { document.getElementById('mmo-victory-screen').classList.add('hidden'); document.getElementById('mmo-victory-screen').classList.remove('flex'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }, 5000);
+                }
+                else {
+                    isPlaying=false; 
+                    try { playWinMelody(); } catch(e){} 
+                    if(window.saveGameProgress) window.saveGameProgress(currentLevel+1);
+                    document.exitPointerLock();
+                    document.getElementById('hud').classList.add('hidden'); 
+                    document.getElementById('level-menu').classList.remove('hidden'); 
+                    document.getElementById('end-title').innerText = "LEVEL CLEARED"; document.getElementById('end-title').style.color = "#4CAF50";
+                }
+            }
+        }
+
+        if(gameMode === 'mmo' || gameMode === 'pvp_1v1') updateRemotePlayers(dt, time);
+        
+        renderer.render(scene, camera);
+    }
+
+    function updateRemotePlayers(dt, time) {
+        for(let id in remoteMeshes) {
+            const mesh = remoteMeshes[id], data = remotePlayers[id];
+            if(mesh && data) {
+                const tx = (data.x !== undefined && !isNaN(data.x)) ? data.x : (mesh.position.x || 0);
+                const tz = (data.z !== undefined && !isNaN(data.z)) ? data.z : (mesh.position.z || 0);
+                const ty = (data.y !== undefined && !isNaN(data.y)) ? data.y : (mesh.position.y || 0);
+                
+                mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, tx, dt * 10); 
+                mesh.position.z = THREE.MathUtils.lerp(mesh.position.z, tz, dt * 10);
+                mesh.position.y = THREE.MathUtils.lerp(mesh.position.y, ty, dt * 10);
+                mesh.scale.y = THREE.MathUtils.lerp(mesh.scale.y, data.crouch ? 0.6 : 0.8, dt * 10);
+                
+                const isRemoteDead = data.hp !== undefined && data.hp <= 0;
+                mesh.rotation.z = THREE.MathUtils.lerp(mesh.rotation.z, isRemoteDead ? -Math.PI/2 : 0, dt * 8);
+
+                let diff = (data.rot || 0) - mesh.rotation.y; while(diff < -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
+                mesh.rotation.y += diff * dt * 10;
+                
+                const dx = tx - (mesh.userData.lastX || tx); const dz = tz - (mesh.userData.lastZ || tz);
+                const distMoved = Math.sqrt(dx*dx + dz*dz); mesh.userData.lastX = tx; mesh.userData.lastZ = tz;
+                if(distMoved > 0.01 && !isRemoteDead) {
+                    const sw = 0.8; mesh.userData.leftArm.rotation.x = Math.sin(time*10)*sw; mesh.userData.rightArm.rotation.x = -Math.sin(time*10)*sw;
+                    mesh.userData.leftLeg.rotation.x = -Math.sin(time*10)*sw; mesh.userData.rightLeg.rotation.x = Math.sin(time*10)*sw;
+                } else {
+                    ['leftArm','rightArm','leftLeg','rightLeg'].forEach(p=>mesh.userData[p].rotation.x = THREE.MathUtils.lerp(mesh.userData[p].rotation.x, 0, dt*10));
+                }
+                if(gameMode === 'pvp_1v1' && data.isAttacking && !isRemoteDead) mesh.userData.rightArm.rotation.x = -1.5;
+            }
+        }
+        if (voiceChat.isActive) voiceChat.updateVolumes(player.position, remoteMeshes);
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === canvas) {
+            camAzimuth -= e.movementX * mouseSensitivity;
+            camElevation -= e.movementY * mouseSensitivity;
+            // Heavily clamp vertical look angle (pitch) to prevent top-down/bottom-up 2D look
+            camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
+        }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+        if (document.pointerLockElement !== canvas) {
+            if (isPlaying && !isDead && !mmoVictoryState && !isPaused && pvpState !== 'intro') {
+                document.getElementById('btn-hud-pause').click();
+            }
+        }
+    });
+
+    window.addEventListener('keydown', e=>{
+        const k=e.key.toLowerCase(); 
+        if(isRebinding){
+            window.gameSettings.controls[activeRebindAction]=k; 
+            isRebinding=false; 
+            activeRebindAction=null; 
+            bindUI(); 
+            saveSettings();
+            return;
+        }
+        const c=window.gameSettings.controls;
+        
+        if (k === 'n' && isDeveloper) toggleDeveloperFlyMode();
+        if (k === 'v') cameraMode = cameraMode === 'thirdPerson' ? 'firstPerson' : 'thirdPerson';
+
+        if(k===c.up||k==='arrowup')keys.up=true; if(k===c.down||k==='arrowdown')keys.down=true;
+        if(k===c.left||k==='arrowleft')keys.left=true; if(k===c.right||k==='arrowright')keys.right=true;
+        if(k===c.jump||e.code==='Space')keys.jump=true; if(k===c.sprint||e.key==='Shift')keys.sprint=true;
+        if(k===c.crouch)keys.crouch=true;
+        if(k===c.sprayTick) sprayPaint('tick'); if(k===c.sprayCross) sprayPaint('cross');
+        if((k===c.attack || e.code==='KeyE') && gameMode==='pvp_1v1') performKnifeAttack();
+    });
+    
+    window.addEventListener('mousedown', e=>{ 
+        if (isPlaying && !isPaused && !isDead) {
+            if (document.pointerLockElement !== canvas) {
+                canvas.requestPointerLock();
+            } else {
+                if (gameMode === 'pvp_1v1') {
+                    if (e.button === 0) performKnifeAttack();
+                } else {
+                    if (e.button === 0) sprayPaint('tick');
+                    if (e.button === 2) sprayPaint('cross');
+                }
+            }
+        }
+    });
+
+    window.addEventListener('contextmenu', e => {
+        if (isPlaying && document.pointerLockElement === canvas) e.preventDefault();
+    });
+
+    window.addEventListener('keyup', e=>{
+        const k=e.key.toLowerCase(), c=window.gameSettings.controls;
+        if(k===c.up||k==='arrowup')keys.up=false; if(k===c.down||k==='arrowdown')keys.down=false;
+        if(k===c.left||k==='arrowleft')keys.left=false; if(k===c.right||k==='arrowright')keys.right=false;
+        if(k===c.jump||e.code==='Space')keys.jump=false; if(k===c.sprint||e.key==='Shift')keys.sprint=false;
+        if(k===c.crouch)keys.crouch=false;
+    });
+
+    let audioInitialized = false; let footstepSynth, nightSynth, swingSynth, hitSynth;
+    async function initAudio() {
+        if(audioInitialized) return; await Tone.start();
+        footstepSynth = new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.01,decay:0.05,sustain:0,release:0.05}}).toDestination();
+        swingSynth = new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.01,decay:0.1,sustain:0,release:0.1}}).toDestination();
+        hitSynth = new Tone.MembraneSynth({pitchDecay: 0.1, octaves: 4, oscillator: {type: 'sine'}, envelope: {attack: 0.001, decay: 0.2, sustain: 0, release: 0.1}}).toDestination();
+        nightSynth = new Tone.FMSynth({ harmonicity: 0.5, modulationIndex: 5, oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 1 } }).toDestination();
+        let noteIdx = 0; const nightMelody = ['C2', 'D#2', 'G2', 'A#2']; 
+        Tone.Transport.scheduleRepeat(time => {
+            if(isPlaying && !isPaused && customPlaylist.length === 0) { if(noteIdx % 4 === 0) { const note = nightMelody[(noteIdx/4) % nightMelody.length]; if(note) nightSynth.triggerAttackRelease(note, '4n', time); } }
+            noteIdx++;
+        }, '16n'); Tone.Transport.start(); audioInitialized = true; applySettingsToEngine();
+    }
+    
+    function playWinMelody() {
+        if(!audioInitialized || window.gameSettings.sound.sfx <= 0) return;
+        const vol = Tone.gainToDb(window.gameSettings.sound.sfx / 100) - 8;
+        const lead = new Tone.Synth({ oscillator: { type: 'triangle8' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.28, release: 0.7 }, volume: vol }).toDestination();
+        const notes = ['C5','E5','G5','C6','B5','G5','E5','C6']; const step = 0.14; const t0 = Tone.now();
+        notes.forEach((n, i) => lead.triggerAttackRelease(n, '8n', t0 + i * step));
+        const chord = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine4' }, envelope: { attack: 0.06, decay: 0.5, sustain: 0.35, release: 1.4 }, volume: vol - 5 }).toDestination();
+        chord.triggerAttackRelease(['C5','E5','G5','C6'], '2n', t0 + notes.length * step + 0.06);
+    }
+
+    async function startGamePlay(spawnX, spawnZ) {
+        closeAllSubmenus(); document.getElementById('main-menu-layer').classList.add('hidden');
+        await initAudio(); if(Tone.context.state!=='running') await Tone.start(); Tone.Transport.start(); playCustomAudio();
+        if(gameMode === 'campaign' && window.initGameSave) currentLevel=await window.initGameSave();
+        lastFootstepTime=0; levelTimer=0; document.getElementById('hud').classList.remove('hidden');
+        setMyStatus('In-Game');
+        
+        if (gameMode === 'mmo') {
+            const seedRef = window.FB.ref(db, 'session/seed');
+            const snap = await window.FB.get(seedRef);
+            if(snap.exists()) { window.mmoSeed = snap.val(); } 
+            else { window.mmoSeed = Math.floor(Math.random() * 1000000); window.FB.set(seedRef, window.mmoSeed); }
+        }
+
+        buildLevel(false, spawnX, spawnZ); isPlaying = true; isPaused = false; isDead = false; 
+    }
+
+    document.getElementById('btn-cancel-matchmaking').onclick = () => { cancelMatchmaking(); toggleLeftSub('sub-play'); document.getElementById('main-menu-layer').classList.remove('hidden'); };
+    
+    document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); canvas.requestPointerLock(); };
+    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; joinOnlineLobby(); canvas.requestPointerLock(); };
+    document.getElementById('btn-pvp-open').onclick = () => { toggleLeftSub('sub-pvp'); };
+    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); canvas.requestPointerLock(); };
+    
+    document.getElementById('btn-hud-pause').onclick  = ()=>{
+        isPaused=true; if(customAudio.src) customAudio.pause(); document.getElementById('pause-menu').classList.remove('hidden');
+        document.exitPointerLock();
+        if(gameMode === 'mmo') {
+            document.getElementById('session-players-container').classList.remove('hidden');
+            const list = document.getElementById('pause-player-list'); list.innerHTML = '';
+            for(let id in remotePlayers) {
+                const p = remotePlayers[id];
+                list.innerHTML += `
+                    <div class="flex items-center justify-between bg-white/10 px-3 py-2 rounded">
+                        <div class="flex items-center gap-2"><span class="font-bold text-white text-sm uppercase">${p.name}</span>${p.mic ? '<span class="text-xs">🎤</span>' : ''}</div>
+                        <button class="bg-green-500 hover:bg-green-400 text-white font-black px-2 rounded" onclick="sendFriendRequestByUid('${p.uidNum}')">+</button>
+                    </div>`;
+            }
+            if(Object.keys(remotePlayers).length === 0) list.innerHTML = '<span class="text-gray-500 text-xs font-bold uppercase">No other players here.</span>';
+
+        } else { 
+            document.getElementById('session-players-container').classList.add('hidden'); 
+        }
+    };
+    
+    document.getElementById('btn-hud-camera').onclick = ()=>{cameraMode=cameraMode==='thirdPerson'?'firstPerson':'thirdPerson';};
+    document.getElementById('btn-hud-mic').onclick = ()=> voiceChat.toggleMic();
+    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); };
+    
+    document.getElementById('btn-quit').onclick = async()=>{
+        isPlaying=false; lastFootstepTime=0; if(customAudio.src) customAudio.pause(); 
+        if(gameMode !== 'campaign') leaveOnlineSession();
+        document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
+        document.getElementById('main-menu-layer').classList.remove('hidden');
+        document.getElementById('btn-mode-online').innerHTML = 'Online Session <span>></span>';
+        setMyStatus('Online');
+        document.exitPointerLock();
+        buildLevel(true);
+    };
+    
+    document.getElementById('next-level-btn').onclick = async()=>{
+        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; canvas.requestPointerLock();}
+    };
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = e => {
+            const p = e.target.parentElement; p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+            p.parentElement.querySelectorAll('.settings-panel').forEach(pan=>pan.classList.add('hidden'));
+            e.target.classList.add('active'); document.getElementById(`tab-${e.target.dataset.tab}`).classList.remove('hidden');
+        };
+    });
+    
+    document.getElementById('set-resolution').onchange = e => { window.gameSettings.display.resolution=e.target.value; bindUI(); saveSettings(); applySettingsToEngine(); };
+    
+    document.getElementById('set-quality').onchange = e => { 
+        const q = e.target.value; window.gameSettings.graphics.quality = q;
+        if(q === 'ultra') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = true; window.gameSettings.graphics.fps = 'uncapped'; }
+        else if(q === 'high') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = true; window.gameSettings.graphics.fps = '60'; }
+        else if(q === 'medium') { window.gameSettings.graphics.scale = 75; window.gameSettings.graphics.shadows = false; window.gameSettings.graphics.fps = '60'; }
+        else if(q === 'low') { window.gameSettings.graphics.scale = 50; window.gameSettings.graphics.shadows = false; window.gameSettings.graphics.fps = '30'; }
+        bindUI(); saveSettings(); applySettingsToEngine();
+    };
+    
+    document.getElementById('set-scale').oninput = e => { window.gameSettings.graphics.scale = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('val-scale').innerText = e.target.value + '%'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-fps').onchange = e => { window.gameSettings.graphics.fps = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-shadows').onclick = e => { window.gameSettings.graphics.shadows = !window.gameSettings.graphics.shadows; window.gameSettings.graphics.quality = 'custom'; bindUI(); saveSettings(); applySettingsToEngine(); };
+    
+    document.getElementById('set-brightness').oninput = e => { window.gameSettings.display.brightness = e.target.value; document.getElementById('val-brightness').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-master').oninput = e => { window.gameSettings.sound.master = e.target.value; document.getElementById('val-master').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-music').oninput = e => { window.gameSettings.sound.music = e.target.value; document.getElementById('val-music').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-sfx').oninput = e => { window.gameSettings.sound.sfx = e.target.value; document.getElementById('val-sfx').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
+
+    document.getElementById('set-sens').addEventListener('input', (e) => {
+        window.gameSettings.controls.sensitivity = parseInt(e.target.value);
+        document.getElementById('val-sens').innerText = e.target.value + '%';
+        mouseSensitivity = parseInt(e.target.value) * 0.00004;
+        saveSettings();
+    });
+
+    document.getElementById('custom-music-upload').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length > 0) {
+            customPlaylist = [];
+            for (let i = 0; i < files.length; i++) {
+                customPlaylist.push(URL.createObjectURL(files[i]));
+            }
+            currentPlaylistIndex = 0;
+            customAudio.src = customPlaylist[0];
+            playCustomAudio();
+            gtaNotify("Custom Playlist Loaded!");
+            document.getElementById('btn-clear-music').classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('btn-clear-music').addEventListener('click', () => {
+        customPlaylist = ["https://www.dropbox.com/scl/fi/s19la3xygk253t36170g8/Creating-Modern-Latin-Dance-Pop.mp3?rlkey=mq1fslnrv1cngcrg5wy01w457&st=2pstyob0&raw=1"];
+        currentPlaylistIndex = 0;
+        customAudio.src = customPlaylist[0];
+        document.getElementById('custom-music-upload').value = '';
+        document.getElementById('btn-clear-music').classList.add('hidden');
+        gtaNotify("Custom track cleared.");
+        if(isPlaying && !isPaused) playCustomAudio();
+    });
+
+    document.querySelectorAll('.keybind-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            isRebinding = true;
+            activeRebindAction = e.target.dataset.action;
+            document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('waiting'));
+            e.target.classList.add('waiting');
+            e.target.innerText = '...';
+        };
+    });
+
+    window.addEventListener('resize', () => { if (renderer && camera) applySettingsToEngine(); });
+
+    bindUI();
+    window.onload = () => { loadAppAuth(); };
+    </script>
+<!-- Scripts -->
+    <script src="mobilecontrols.js"></script>
+</body>
+</html>
