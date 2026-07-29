@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Title that shows up on Google and browser tabs -->
     <title>Maze Escape - 3D Multiplayer Game</title>
-    
-    <!-- Meta Description that shows up under my link on Google -->
     <meta name="description" content="Play Maze Escape, a thrilling 3D multiplayer maze game built by AstraX Games. Navigate procedural mazes, join online lobbies, and battle friends in real-time." />
+    
+    <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -20,6 +19,7 @@
             --font-scale-base: 16px;
         }
 
+        /* Dynamically shrink everything on smaller screens */
         @media (max-width: 768px) {
             :root {
                 --menu-max-width: 90vw;
@@ -31,84 +31,38 @@
         body { margin: 0; overflow: hidden; background-color: #0b0c16; touch-action: none; font-family: 'Inter', sans-serif; font-size: var(--font-scale-base); }
         #game-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         
-        /* Overlay and Container Fixes */
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; /* Enable scrolling if content is too tall */ }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; }
         .hidden { display: none !important; opacity: 0; pointer-events: none; }
         
-        /* Responsive Typography */
+        /* Clamp ensures text naturally shrinks on small screens without breaking layout */
         .title-text { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: clamp(1rem, 5vh, 2rem); font-size: clamp(2rem, 8vw, 3.5rem); color: #fff; text-shadow: 2px 2px 0 #000; text-align: center; }
         
-        /* Responsive Menu Container */
-        .gta-menu { width: 100%; max-width: var(--menu-max-width); background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; max-height: 90vh; /* Prevent menu from exceeding viewport height */ display: flex; flex-direction: column;}
+        .gta-menu { width: 100%; max-width: var(--menu-max-width); background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; max-height: 85vh; display: flex; flex-direction: column;}
         .gta-menu-header { background: linear-gradient(90deg, #fff, #ddd); color: #000; padding: clamp(12px, 3vh, 18px) clamp(15px, 4vw, 20px); font-weight: 900; font-size: clamp(1.1rem, 4vw, 1.4rem); letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #000; flex-shrink: 0;}
         .gta-btn { width: 100%; padding: clamp(10px, 2.5vh, 14px) clamp(15px, 4vw, 20px); font-weight: 800; font-size: clamp(0.9rem, 3vw, 1.1rem); text-align: left; cursor: pointer; transition: all 0.1s; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent; color: #fff; display: flex; justify-content: space-between; align-items: center; user-select: none; flex-shrink: 0;}
         .gta-btn:hover { background: rgba(255,255,255,0.1); padding-left: clamp(20px, 5vw, 25px); border-left: 4px solid #fff; }
         
-        /* Responsive Submenu Main Buttons */
-        .btn-main { width: 100%; padding: clamp(16px, 4vh, 24px) clamp(20px, 5vw, 30px); display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(1.2rem, 4vw, 1.5rem); text-transform: uppercase; cursor: pointer; transition: 0.15s; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;}
-        .btn-main:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; padding-left: clamp(26px, 6vw, 36px); border-left: 6px solid #22d3ee; }
+        .btn-main { width: 100%; padding: clamp(12px, 3vh, 24px) clamp(16px, 4vw, 30px); display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.5rem); text-transform: uppercase; cursor: pointer; transition: 0.15s; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;}
+        .btn-main:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; padding-left: clamp(20px, 5vw, 36px); border-left: 6px solid #22d3ee; }
         .btn-main:hover span { color: #22d3ee !important; }
         
-        /* Responsive Submenu Sub Buttons */
-        .btn-sub { width: 100%; display: flex; align-items: stretch; font-weight: 900; font-size: clamp(1.2rem, 4vw, 1.5rem); text-transform: uppercase; cursor: pointer; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.15s; flex-shrink: 0;}
+        .btn-sub { width: 100%; display: flex; align-items: stretch; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.5rem); text-transform: uppercase; cursor: pointer; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.15s; flex-shrink: 0;}
         .btn-sub:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; }
-        .btn-sub-arrow { width: clamp(50px, 15vw, 70px); display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.05); transition: 0.15s; }
+        .btn-sub-arrow { width: clamp(40px, 12vw, 70px); display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.05); transition: 0.15s; }
         .btn-sub:hover .btn-sub-arrow { color: #22d3ee !important; padding-right: 10px; }
-        .btn-sub-text { flex: 1; padding: clamp(16px, 4vh, 24px) clamp(20px, 5vw, 30px); }
+        .btn-sub-text { flex: 1; padding: clamp(12px, 3vh, 24px) clamp(16px, 4vw, 30px); }
 
-        /* Responsive Submenu Panel */
-        .submenu-panel { background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; pointer-events: auto; max-height: 80vh; width: 100%; max-width: var(--menu-max-width);}
-        
-        /* Layout adjustments for smaller screens */
-        @media (max-width: 1024px) {
-            #left-submenus {
-                left: 0 !important;
-                top: auto !important;
-                bottom: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: 50vh !important;
-                border-radius: 8px 8px 0 0;
-            }
-            .absolute.top-32.left-8 {
-                top: auto;
-                bottom: 1rem;
-                left: 50%;
-                transform: translateX(-50%);
-                z-index: 75; /* Ensure it stays above other elements */
-                width: 90%;
-            }
-            .w-\[320px\] {
-               width: 100% !important;
-            }
-
-            #right-submenus {
-                right: 0 !important;
-                bottom: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: 50vh !important;
-                border-radius: 8px 8px 0 0;
-            }
-            .absolute.bottom-10.right-8 {
-                 bottom: auto;
-                 top: 5rem; /* Give space for top left profile */
-                 right: 50%;
-                 transform: translateX(50%);
-                 z-index: 75;
-                 width: 90%;
-            }
-        }
+        .submenu-panel { background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; pointer-events: auto; max-height: 70vh; width: 100%; }
 
         .gta-input { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
         .gta-input:disabled { opacity: 0.5; cursor: not-allowed; background: rgba(0,0,0,0.8); }
         .gta-textarea { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; min-height: 100px; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
-        .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 15px; }
+        .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; padding: 15px; }
         .store-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; }
         .store-item.equipped { border-color: #4CAF50; background: rgba(76, 175, 80, 0.2); }
-        .store-item-title { font-weight: 900; text-transform: uppercase; font-size: clamp(0.7rem, 2vw, 0.9rem); margin-top: 8px; }
+        .store-item-title { font-weight: 900; text-transform: uppercase; font-size: clamp(0.6rem, 2vw, 0.8rem); margin-top: 8px; }
 
-        .tab-btn { color: #fff; font-size: clamp(0.75rem, 2vw, 0.95rem); padding: 12px; flex: 1; text-align: center; font-weight: 800; border-bottom: 3px solid transparent; opacity: 0.4; cursor: pointer; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .tab-btn { color: #fff; font-size: clamp(0.7rem, 2vw, 0.9rem); padding: 10px; flex: 1; text-align: center; font-weight: 800; border-bottom: 3px solid transparent; opacity: 0.4; cursor: pointer; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid #fff; }
         .settings-panel { padding: clamp(1rem, 3vh, 1.5rem) clamp(10px, 4vw, 20px); width: 100%; flex-grow: 1; overflow-y: auto;}
         .gta-toggle { background: transparent; border: 2px solid #fff; padding: 4px clamp(8px, 2vw, 16px); font-size: clamp(0.7rem, 2vw, 0.9rem); color: #fff; font-weight: 900; cursor: pointer; border-radius: 4px; }
@@ -147,12 +101,16 @@
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
         
-        /* Flex improvements for Profile Menu */
-        #profile-menu .gta-menu {
-             max-height: 95vh;
-        }
-    </style
+        #profile-menu .gta-menu { max-height: 95vh; }
 
+        /* Styles applied only during mobile HUD customization */
+        .drag-item.customizing {
+            border: 2px dashed #00ffff !important;
+            background-color: rgba(34, 211, 238, 0.2) !important;
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+            z-index: 90 !important;
+        }
+    </style>
 </head>
 <body>
     <div id="initial-loader">
@@ -160,9 +118,40 @@
         <h2 class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
     </div>
 
+    <!-- Crosshair for PC Mouse Look -->
+    <div id="crosshair" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-40">
+        <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_5px_#22d3ee]"></div>
+    </div>
+
     <canvas id="game-canvas"></canvas>
     <div id="voice-chat-audio"></div>
     <div id="damage-overlay"></div>
+
+    <!-- Mobile Touch Controls HUD -->
+    <div id="mobile-hud" class="fixed inset-0 z-[45] pointer-events-none touch-none select-none hidden">
+        <div id="look-zone" class="absolute inset-0 pointer-events-auto"></div>
+        
+        <div id="hud-edit-overlay" class="absolute inset-0 bg-black/70 hidden pointer-events-none z-50">
+            <div class="absolute top-10 left-1/2 -translate-x-1/2 text-center pointer-events-auto w-full max-w-sm px-4">
+                <h2 class="text-2xl md:text-3xl font-black text-cyan-400 tracking-widest mb-2 uppercase drop-shadow-lg">Customize HUD</h2>
+                <p class="text-xs md:text-sm text-gray-200 mb-6 uppercase drop-shadow-md">Drag buttons to reposition them</p>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="saveCustomHUD()" class="bg-green-500 hover:bg-green-400 text-black px-6 py-2 font-black uppercase rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] border border-green-300">Save</button>
+                    <button onclick="resetCustomHUD()" class="bg-red-500 hover:bg-red-400 text-white px-6 py-2 font-black uppercase rounded shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-300">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls-container" class="absolute inset-0 pointer-events-none">
+            <div id="joystick-zone" class="absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-white/20 bg-black/20 flex items-center justify-center pointer-events-auto drag-item transition-colors" data-id="joystick" style="left: 10%; bottom: 15%;">
+                <div id="joystick-knob" class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white/50 backdrop-blur pointer-events-none shadow-lg transition-transform duration-75"></div>
+            </div>
+            <div id="btn-m-jump" class="absolute w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.65rem] md:text-xs shadow-lg drag-item transition-all" data-id="jump" style="right: 10%; bottom: 35%;">JUMP</div>
+            <div id="btn-m-attack" class="absolute w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-500/30 border border-red-500/50 flex items-center justify-center pointer-events-auto text-white font-black text-xs md:text-sm shadow-[0_0_15px_rgba(239,68,68,0.4)] drag-item transition-all" data-id="attack" style="right: 25%; bottom: 15%;">ATK</div>
+            <div id="btn-m-crouch" class="absolute w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.6rem] md:text-xs shadow-lg drag-item transition-all" data-id="crouch" style="right: 10%; bottom: 15%;">SIT</div>
+            <div id="btn-m-sprint" class="absolute w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.55rem] md:text-[0.6rem] shadow-lg drag-item transition-all" data-id="sprint" style="right: 35%; bottom: 30%;">RUN</div>
+        </div>
+    </div>
 
     <div id="invite-popup">
         <div class="font-black text-white uppercase text-sm truncate"><span id="invite-sender-name" class="text-cyan-400">Player</span> invited you!</div>
@@ -172,8 +161,8 @@
         </div>
     </div>
 
-    <div id="main-menu-layer" class="absolute top-0 left-0 w-full h-full pointer-events-none z-[60] hidden">
-        <div class="absolute top-4 left-4 pointer-events-auto z-10">
+    <div id="main-menu-layer" class="absolute inset-0 w-full h-full pointer-events-none z-[60] hidden">
+        <div class="fixed lg:absolute top-4 left-4 pointer-events-auto z-30">
             <div class="bg-black/90 border border-white/10 rounded-md p-2 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition shadow-2xl" onclick="openMenu('profile-menu')">
                 <img id="widget-pfp" src="" class="w-10 h-10 rounded-full border border-white/20 object-cover bg-gray-800">
                 <div class="flex flex-col">
@@ -193,21 +182,23 @@
             </div>
         </div>
         
-        <div class="absolute top-32 left-8 pointer-events-none z-[65]">
-            <div class="relative pointer-events-auto flex flex-col md:flex-row h-full max-h-[70vh]">
-                <div class="w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10">
+        <div class="absolute inset-0 w-full h-full pt-24 pb-8 overflow-y-auto lg:overflow-hidden flex flex-col lg:block items-center pointer-events-auto lg:pointer-events-none gap-6">
+            
+            <div class="relative lg:absolute lg:top-32 lg:left-8 w-[90%] sm:max-w-md lg:max-w-none lg:w-auto flex flex-col lg:flex-row pointer-events-none gap-4 z-20 mt-4 lg:mt-0 flex-shrink-0">
+                <div class="w-full lg:w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10 pointer-events-auto">
                     <div onclick="toggleLeftSub('sub-play')" class="btn-main text-cyan-400">PLAY GAME <span class="text-cyan-400">&gt;</span></div>
                     <div onclick="toggleLeftSub('sub-store')" class="btn-main text-white">STORE <span class="text-white">&gt;</span></div>
-                    <div onclick="toggleLeftSub('sub-settings')" class="btn-main text-white border-none">SETTINGS <span class="text-white">&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-settings')" class="btn-main text-white border-b border-white/20">SETTINGS <span class="text-white">&gt;</span></div>
+                    <div onclick="window.close()" class="btn-main text-red-500 border-none">EXIT GAME <span class="text-red-500">&gt;</span></div>
                 </div>
                 
-                <div id="left-submenus" class="md:absolute md:top-0 md:left-[340px] w-full md:w-[460px] hidden submenu-panel flex flex-col mt-4 md:mt-0">
+                <div id="left-submenus" class="hidden lg:absolute lg:top-0 lg:left-[340px] w-full lg:w-[460px] submenu-panel flex flex-col pointer-events-auto">
                     <div id="sub-play" class="hidden w-full flex-col">
                         <div class="gta-menu-header">Game Modes</div>
                         <div class="flex-grow overflow-y-auto">
                             <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
                             <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online Session <span>></span></div>
-                            <div id="btn-pvp-open" class="gta-btn text-red-500 font-black">PvP Arena <span>></span></div>
+                            <div id="btn-pvp-open" class="gta-btn text-red-500 font-black" onclick="toggleLeftSub('sub-pvp')">PvP Arena <span>></span></div>
                         </div>
                         <div class="gta-btn mt-auto border-t border-white/20" onclick="closeAllSubmenus()">Close</div>
                     </div>
@@ -250,6 +241,7 @@
                         <div class="gta-btn border-t border-white/20 mt-auto justify-center flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
                     </div>
 
+                    <!-- Settings Menu -->
                     <div id="sub-settings" class="hidden w-full flex-col">
                         <div class="gta-menu-header">Settings</div>
                         <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
@@ -312,7 +304,6 @@
                                     <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-400 uppercase">Paint (❌)</span><button class="keybind-btn" data-action="sprayCross">G</button></div>
                                     <div class="flex justify-between items-center col-span-2"><span class="text-xs font-bold text-gray-400 uppercase">PvP Melee Attack</span><button class="keybind-btn" data-action="attack">E</button></div>
                                     
-                                    <!-- Mouse Sensitivity Control -->
                                     <div class="mb-4 col-span-2 pt-4 border-t border-white/20 mt-2">
                                         <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Mouse Sensitivity: <span id="val-sens" class="text-white">50%</span></label>
                                         <input type="range" id="set-sens" min="1" max="100" value="50">
@@ -344,11 +335,9 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="absolute bottom-10 right-8 pointer-events-none z-[65]">
-            <div class="relative pointer-events-auto flex flex-col md:flex-row h-full max-h-[70vh]">
-                <div id="right-submenus" class="md:absolute md:bottom-0 md:right-[340px] w-full md:w-[460px] hidden submenu-panel flex flex-col mb-4 md:mb-0">
+            <div class="relative lg:absolute lg:bottom-10 lg:right-8 w-[90%] sm:max-w-md lg:max-w-none lg:w-auto flex flex-col lg:flex-row pointer-events-none gap-4 z-10 pb-10 lg:pb-0 flex-shrink-0">
+                <div id="right-submenus" class="hidden lg:absolute lg:bottom-0 lg:right-[340px] w-full lg:w-[460px] submenu-panel flex flex-col pointer-events-auto order-2 lg:order-1">
                     <div id="sub-friends" class="hidden w-full flex-col">
                         <div class="gta-menu-header">Friends</div>
                         <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
@@ -377,7 +366,7 @@
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v2.50</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.0.2 (Optimized)</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -395,7 +384,7 @@
                     </div>
                 </div>
 
-                <div class="w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10">
+                <div class="w-full lg:w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10 pointer-events-auto order-1 lg:order-2">
                     <div class="btn-sub text-white" onclick="toggleRightSub('sub-friends')">
                         <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">FRIENDS</div>
                     </div>
@@ -482,7 +471,6 @@
                 <span id="dev-msg-indicator" class="hidden text-xs bg-cyan-400 text-black px-2 py-0.5 rounded font-black">DEV ACTIVE</span>
             </div>
 
-            <!-- Developer Broadcast Input Box -->
             <div id="dev-broadcast-panel" class="hidden p-4 border-b border-white/20 bg-cyan-950/40 flex-shrink-0">
                 <label class="block text-xs font-black text-cyan-400 mb-1 uppercase tracking-widest">📢 Developer Broadcast (Publish to All)</label>
                 <input type="text" id="dev-broadcast-title" class="gta-input mb-2 text-xs" placeholder="Announcement Title...">
@@ -499,27 +487,7 @@
         </div>
     </div>
 
-    <div id="play-menu" class="overlay hidden z-[70]">
-        <h1 class="title-text">SELECT MODE</h1>
-        <div class="gta-menu">
-            <div class="gta-menu-header">Game Modes</div>
-            <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
-            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online Session <span>></span></div>
-            <div id="btn-pvp-open" class="gta-btn text-red-500 font-black">PvP Arena <span>></span></div>
-            <div id="btn-play-back" class="gta-btn mt-4 border-t border-white/20">Back</div>
-        </div>
-    </div>
-
-    <div id="pvp-menu" class="overlay hidden z-[70]">
-        <h1 class="title-text text-red-500">PvP ARENA</h1>
-        <div class="gta-menu">
-            <div class="gta-menu-header">Select Match Type</div>
-            <div id="btn-mode-pvp1v1" class="gta-btn font-black">1v1 Matchmaking <span>></span></div>
-            <div id="btn-mode-pvp4v4" class="gta-btn text-gray-500">4v4 Squads <span class="text-xs">(Coming Soon)</span></div>
-            <div id="btn-pvp-back" class="gta-btn mt-4 border-t border-white/20">Back</div>
-        </div>
-    </div>
-
+    <!-- Matchmaking Screen -->
     <div id="matchmaking-screen" class="overlay hidden items-center justify-center bg-black/90 z-[70]">
         <div class="text-center">
             <h2 class="text-3xl md:text-4xl font-black text-white tracking-widest mb-4 animate-pulse">SEARCHING...</h2>
@@ -531,7 +499,6 @@
     <div id="pause-menu" class="overlay hidden bg-black/80 backdrop-blur-md z-[70]">
         <h2 class="title-text">PAUSED</h2>
         <div class="gta-menu mb-4">
-            <!-- Developer Controls in Pause Menu -->
             <div id="dev-pause-controls" class="hidden p-3 border-b border-cyan-500/30 bg-cyan-950/30">
                 <div class="text-xs font-black text-cyan-400 uppercase mb-2 text-center">⚡ Developer Options</div>
                 <div class="flex gap-2">
@@ -540,7 +507,9 @@
                 </div>
             </div>
 
-            <div id="btn-resume" class="gta-btn">Resume Game</div>
+            <!-- Mobile Only HUD Edit Button (Appended Here via JS) -->
+
+            <div id="btn-resume" class="gta-btn">Resume Game <span class="text-xs text-gray-400 ml-2">(Click to focus)</span></div>
             <div id="btn-quit" class="gta-btn" style="color: #ff4444;">Quit to Menu</div>
         </div>
         
@@ -562,6 +531,7 @@
         <h3 class="text-xl md:text-2xl font-bold text-cyan-300 uppercase tracking-widest text-center">Session Conquered</h3>
     </div>
 
+    <!-- HUD Elements -->
     <div id="pvp-scoreboard" class="hidden">
         <div class="score-you">YOU: <span id="score-val-you">0</span></div>
         <div class="text-gray-500">|</div>
@@ -576,7 +546,6 @@
             <div class="w-px h-4 md:h-5 bg-white/30"></div>
             <div class="text-xs md:text-sm font-black text-white flex items-center font-mono">⏱ <span id="hud-timer" class="text-base md:text-lg ml-2">00:00</span></div>
             
-            <!-- Dev HUD Indicator -->
             <div id="dev-hud-fly-indicator" class="hidden bg-cyan-400 text-black font-black text-[0.6rem] md:text-xs px-2 py-1 rounded tracking-wider animate-pulse ml-2 whitespace-nowrap">🚀 FLY ON [N]</div>
         </div>
         <div class="flex gap-2 pointer-events-auto">
@@ -602,7 +571,6 @@
     <script>
     const DEFAULT_PFP = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==";
     
-    // Arrays for dynamic cool name generation
     const coolAdjectives = ["Neon", "Cyber", "Shadow", "Quantum", "Void", "Crimson", "Electric", "Phantom", "Astral", "Nova", "Toxic", "Ghost", "Stealth", "Iron", "Zero"];
     const coolNouns = ["Viper", "Ninja", "Samurai", "Wolf", "Dragon", "Specter", "Rogue", "Phoenix", "Striker", "Reaper", "Glitch", "Titan", "Wraith", "Venom", "Hunter"];
 
@@ -618,6 +586,19 @@
     
     // Orbital Camera State Variables
     let camAzimuth = Math.PI, camElevation = -0.15, mouseSensitivity = 0.002;
+
+    // Mobile specific state
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
+    let isCustomizingHUD = false;
+
+    // --- FULLSCREEN FUNCTION ---
+    function requestFullScreen() {
+        try {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(e => console.warn("Fullscreen error:", e));
+            }
+        } catch(e) {}
+    }
 
     function closeAllSubmenus() {
         document.getElementById('left-submenus').classList.add('hidden');
@@ -1065,7 +1046,6 @@
                     window.FB.onChildAdded(signalRef, (snap) => { const data = snap.val(); if(data) this.handleSignal(data); });
                 }
 
-                // Add tracks to existing peers and renegotiate, or create new peers
                 for(let id in remotePlayers) {
                     if(id === mySessionId) continue;
                     let peer = this.peers[id];
@@ -1161,7 +1141,7 @@
 
     async function joinOnlineLobby() {
         gtaNotify("Connecting to Session...");
-        document.getElementById('main-menu-layer').classList.add('hidden'); document.getElementById('play-menu').classList.add('hidden');
+        document.getElementById('main-menu-layer').classList.add('hidden');
         gameMode = 'mmo'; document.getElementById('btn-hud-mic').classList.remove('hidden'); 
 
         const playersRef = window.FB.ref(db, 'session/players');
@@ -1173,7 +1153,7 @@
             const data = snap.val() || {}; let count = 0; const activeIds = Object.keys(data); 
             activeIds.forEach(id => { count++; });
             
-            if(!onlineSyncInterval && count >= 30) { gtaNotify("Session Full (30/30). Try later.", true); leaveOnlineSession(); document.getElementById('main-menu-layer').classList.remove('hidden'); document.getElementById('play-menu').classList.add('hidden'); return; }
+            if(!onlineSyncInterval && count >= 30) { gtaNotify("Session Full (30/30). Try later.", true); leaveOnlineSession(); document.getElementById('main-menu-layer').classList.remove('hidden'); return; }
             activePlayerCount = count === 0 ? 1 : count; document.getElementById('hud-players').innerText = `${activePlayerCount}/30`;
             
             if (!onlineSyncInterval) {
@@ -1202,8 +1182,12 @@
     }
 
     let pvpMatchTimer = 7 * 60;
+    
     async function startPvPMatchmaking() {
-        document.getElementById('pvp-menu').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('hidden'); document.getElementById('matchmaking-screen').classList.add('flex');
+        document.getElementById('main-menu-layer').classList.add('hidden');
+        document.getElementById('matchmaking-screen').classList.remove('hidden'); 
+        document.getElementById('matchmaking-screen').classList.add('flex');
+        
         gameMode = 'pvp_1v1'; myHP = 100; isDead = false; myScore = 0; enemyScore = 0; pvpState = 'intro'; pvpMatchTimer = 7 * 60; player.rotation.z = 0;
         updatePvPScoreboard(); setMyStatus('In-PvP');
 
@@ -1280,6 +1264,8 @@
         
         let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
         startGamePlay(sx, sy);
+        
+        if(!isMobileDevice) canvas.requestPointerLock();
     }
 
     function triggerDamageFlash() { const flash = document.getElementById('damage-overlay'); flash.style.opacity = '1'; if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); setTimeout(() => { flash.style.opacity = '0'; }, 200); }
@@ -1288,7 +1274,12 @@
     function cancelMatchmaking() {
         if(pvpStateUnsub) pvpStateUnsub();
         if(myDBUid) window.FB.remove(window.FB.ref(db, 'pvp/waiting')).catch(()=>{});
-        document.getElementById('matchmaking-screen').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('flex'); document.getElementById('pvp-menu').classList.remove('hidden'); setMyStatus('Online');
+        
+        document.getElementById('matchmaking-screen').classList.add('hidden'); 
+        document.getElementById('matchmaking-screen').classList.remove('flex'); 
+        
+        gameMode = 'campaign'; 
+        setMyStatus('Online');
     }
 
     function leaveOnlineSession() {
@@ -1315,12 +1306,20 @@
 
     let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: true, texture: 'high', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
     window.gameSettings = defaultSettings;
+    
+    // Automatically reduce default graphics on mobile
+    if (!localStorage.getItem('maze_settings') && isMobileDevice) {
+        window.gameSettings.graphics.quality = 'low';
+        window.gameSettings.graphics.scale = 75;
+        window.gameSettings.graphics.shadows = false;
+        window.gameSettings.graphics.texture = 'low';
+    }
+
     try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
     if(!window.gameSettings.controls.crouch) window.gameSettings.controls.crouch = 'c';
     if(!window.gameSettings.controls.sensitivity) window.gameSettings.controls.sensitivity = 50;
     mouseSensitivity = window.gameSettings.controls.sensitivity * 0.00004;
     
-    // Save settings correctly
     window.saveSettings = () => { localStorage.setItem('maze_settings', JSON.stringify(window.gameSettings)); };
     window.initGameSave = async () => { let s = localStorage.getItem('maze_escape_level'); return s ? parseInt(s) : 1; };
     
@@ -1366,18 +1365,33 @@
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         return tex;
     }
-    const finishTex = makeFinishTexture();
 
-    const wallTexData = makeHDWallTextures(); const wallColorTex = wallTexData.map; const wallBumpTex = wallTexData.bumpMap;
+    const finishTex = makeFinishTexture();
+    const wallTexData = makeHDWallTextures(); 
+    const wallColorTex = wallTexData.map; 
+    const wallBumpTex = wallTexData.bumpMap;
     const grassTex = makeGrassTexture();
     const tickMat = new THREE.MeshBasicMaterial({ map: makeTickTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const crossMat = new THREE.MeshBasicMaterial({ map: makeCrossTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
-    const sprayGeo = new THREE.PlaneGeometry(1.5, 1.5); let sprayMeshes = [];
+    const sprayGeo = new THREE.PlaneGeometry(1.5, 1.5); 
+    let sprayMeshes = [];
+
+    // GLOBAL VECTORS FOR GC OPTIMIZATION
+    const _v1 = new THREE.Vector3();
+    const _v2 = new THREE.Vector3();
+    const _v3 = new THREE.Vector3();
+    const _dir = new THREE.Vector3();
+    const _origin = new THREE.Vector3();
+    const _moveVec = new THREE.Vector3();
+    const _camDir = new THREE.Vector3();
+    const _camRight = new THREE.Vector3();
+    const _target = new THREE.Vector3();
+    const _dirToOpp = new THREE.Vector3();
 
     function addSprayToScene(data) {
         if (!data || !data.type || !data.ts || Date.now() - data.ts > 3600000) return; 
         const mat = data.type === 'cross' ? crossMat : tickMat; const mesh = new THREE.Mesh(sprayGeo, mat); mesh.position.set(data.px, data.py, data.pz);
-        const norm = new THREE.Vector3(data.nx, data.ny, data.nz); mesh.position.add(norm.clone().multiplyScalar(0.015)); mesh.lookAt(mesh.position.clone().add(norm)); scene.add(mesh); sprayMeshes.push(mesh);
+        const norm = _v1.set(data.nx, data.ny, data.nz); mesh.position.add(norm.clone().multiplyScalar(0.015)); mesh.lookAt(mesh.position.clone().add(norm)); scene.add(mesh); sprayMeshes.push(mesh);
     }
     
     const raycaster = new THREE.Raycaster();
@@ -1385,10 +1399,9 @@
         if(!isPlaying || isPaused || isDead) return;
         if(gameMode === 'pvp_1v1') { return; }
         
-        // Exact center screen aiming
-        const origin = player.position.clone(); origin.y += 1.5; 
-        const dir = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
-        raycaster.set(origin, dir); 
+        _origin.copy(player.position); _origin.y += 1.5; 
+        _dir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+        raycaster.set(_origin, _dir); 
         const hits = raycaster.intersectObjects(wallsGroup.children);
         
         if(hits.length > 0 && hits[0].distance < 4.0) {
@@ -1451,7 +1464,7 @@
         }
         return g;
     }
-    
+
     let isAttacking = false, attackTimer = 0;
     function performKnifeAttack() {
         if(!isPlaying || isPaused || isAttacking || isDead || gameMode !== 'pvp_1v1' || pvpState !== 'playing') return;
@@ -1462,10 +1475,11 @@
             if(enemyMesh && enemyData && enemyData.hp > 0) {
                 const dist = player.position.distanceTo(enemyMesh.position);
                 if(dist < 4.0) { 
-                    const dirToOpp = enemyMesh.position.clone().sub(player.position).normalize();
-                    const forward = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
-                    if(forward.dot(dirToOpp) > 0.8) {
-                        raycaster.set(player.position.clone().add(new THREE.Vector3(0,1,0)), dirToOpp);
+                    _dirToOpp.copy(enemyMesh.position).sub(player.position).normalize();
+                    _dir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+                    if(_dir.dot(_dirToOpp) > 0.8) {
+                        _origin.copy(player.position).add(_v1.set(0,1,0));
+                        raycaster.set(_origin, _dirToOpp);
                         const hits = raycaster.intersectObjects(wallsGroup.children);
                         if(hits.length === 0 || hits[0].distance > dist) {
                             if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C4', '16n');
@@ -1482,12 +1496,16 @@
     function endPvP(won) {
         pvpState = 'victory'; if(won) playWinMelody();
         document.getElementById('hud').classList.add('hidden'); 
-        document.exitPointerLock();
+        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
         setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
     }
 
     const canvas = document.getElementById('game-canvas');
-    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, logarithmicDepthBuffer:true});
+    const renderer = new THREE.WebGLRenderer({
+        canvas, 
+        antialias: !isMobileDevice, // Performance saver on mobile
+        powerPreference: "high-performance" // Instructs browser to use dGPU if available
+    });
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     wallColorTex.anisotropy = wallBumpTex.anisotropy = grassTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -1500,18 +1518,18 @@
 
     const SHADOW_FRUSTUM_SIZE = 25; 
     const dirLight = new THREE.DirectionalLight(0x77aacc, 1.2);
-    dirLight.castShadow = true; dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 2048; 
+    dirLight.castShadow = true; 
+    dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024; // Optimised baseline
     dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 160;
     dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE; dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
     
-    // VSM settings to completely destroy the jagged chess pattern
     dirLight.shadow.bias = -0.0005; 
     dirLight.shadow.normalBias = 0.015; 
     dirLight.shadow.radius = 4.0; 
     dirLight.shadow.blurSamples = 25; 
     
     dirLight.target = new THREE.Object3D(); scene.add(dirLight.target); scene.add(dirLight);
-    let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 2048;
+    let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 1024;
 
     let player = createBoy(true); scene.add(player);
     let wallsGroup = new THREE.Group(); scene.add(wallsGroup);
@@ -1530,16 +1548,21 @@
         const cssW = window.innerWidth, cssH = window.innerHeight; let targetW = cssW, targetH = cssH;
         if (s.display.resolution !== 'native') { const tr = parseInt(s.display.resolution), asp = cssW / cssH; if (cssW >= cssH) { targetW = tr; targetH = Math.round(tr / asp); } else { targetH = tr; targetW = Math.round(tr * asp); } }
         canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
-        renderer.setPixelRatio(s.display.resolution === 'native' ? (window.devicePixelRatio||1) : 1);
+        
+        // Optimisation: Cap pixel ratio to prevent extreme frame drops on 3x/4x density screens (mobile)
+        const maxDPR = isMobileDevice ? 1.5 : 2.0; 
+        renderer.setPixelRatio(s.display.resolution === 'native' ? Math.min(window.devicePixelRatio || 1, maxDPR) : 1);
         
         const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
         renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
         camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
         
-        let sSize = s.graphics.texture==='high' ? 4096 : (s.graphics.texture==='medium' ? 2048 : 1024);
+        let sSize = s.graphics.texture==='high' ? 2048 : (s.graphics.texture==='medium' ? 1024 : 512);
         if(dirLight.shadow.mapSize.width !== sSize) { dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; }
+        
         renderer.shadowMap.enabled = s.graphics.shadows;
         if(instancedWalls) { instancedWalls.castShadow = s.graphics.shadows; instancedWalls.receiveShadow = s.graphics.shadows; }
+        
         if(audioInitialized) { Tone.Destination.volume.value = Tone.gainToDb(s.sound.master/100); if(nightSynth) nightSynth.volume.value = Tone.gainToDb(s.sound.music/100) - 15; if(footstepSynth) footstepSynth.volume.value = Tone.gainToDb(s.sound.sfx/100) - 5; if(customAudio.src) customAudio.volume = (s.sound.music / 100) * (s.sound.master / 100); }
         
         const resSelect = document.getElementById('set-resolution');
@@ -1573,8 +1596,6 @@
 
     function generateMaze(width, height, hasExit = true) {
         const w=width%2===0?width+1:width, h=height%2===0?height+1:height; let maze=Array(h).fill().map(()=>Array(w).fill(1));
-       // --- OPTIMIZED MAZE GENERATION FOR HIGH LEVELS ---
-        // Using an iterative stack instead of deep recursion to prevent browser lag/freeze on Level 30+
         function carveIterative(startX, startY) {
             let stack = [{x: startX, y: startY}];
             maze[startY][startX] = 0;
@@ -1598,7 +1619,6 @@
             }
         }
         carveIterative(1, h-2);
-        // ---------------------------------------------------
         
         if (hasExit) {
             const sides=[0,1,2,3];
@@ -1655,7 +1675,6 @@
             for(let x=0; x<mazeWidth; x++) {
                 if(mazeGrid[y][x]===1) {
                     dummy.position.set(x*CELL_SIZE, WALL_H/2 - WALL_SINK, y*CELL_SIZE);
-                    // Add tiny microscopic random scale jitter to permanently fix Z-fighting (flickering seams) on wall joints
                     const jitter = 1.0 + (Math.random() * 0.015);
                     dummy.scale.set(jitter, 1, jitter);
                     dummy.updateMatrix(); instancedWalls.setMatrixAt(i++, dummy.matrix);
@@ -1676,7 +1695,6 @@
         else { player.position.set(levelStartX*CELL_SIZE, 0, levelStartZ*CELL_SIZE); player.rotation.y = mazeStart.rot; }
         player.rotation.z = 0; 
 
-        // Set initial camera to perfectly look where player looks
         camAzimuth = player.rotation.y + Math.PI;
         camElevation = -0.15;
 
@@ -1741,9 +1759,9 @@
         if(player.userData.head) player.userData.head.visible = (cameraMode!=='firstPerson');
         
         if (gameMode === 'pvp_1v1' && pvpState === 'intro') {
-            const target = player.position.clone().add(new THREE.Vector3(Math.sin(camAzimuth)*6,4,Math.cos(camAzimuth)*6));
+            _target.copy(player.position).add(_v1.set(Math.sin(camAzimuth)*6,4,Math.cos(camAzimuth)*6));
             if(camera.position.y < 5) { camera.position.set(player.position.x, 40, player.position.z); }
-            camera.position.lerp(target, dt*1.5); camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
+            camera.position.lerp(_target, dt*1.5); camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
             if(camera.position.y < 6) { pvpState = 'playing'; } return;
         }
         if (gameMode === 'pvp_1v1' && pvpState === 'victory') {
@@ -1751,29 +1769,33 @@
         }
         
         if (isDead) {
-            camera.position.lerp(player.position.clone().add(new THREE.Vector3(0, 4, 0)), dt*3);
+            camera.position.lerp(_v1.copy(player.position).add(_v2.set(0, 4, 0)), dt*3);
             camera.lookAt(player.position.x, 0, player.position.z);
             return;
         }
 
         if(cameraMode==='thirdPerson'){
-            // Place camera BEHIND the player dynamically based on mouse Look Angle
-            const target = player.position.clone().add(new THREE.Vector3(Math.sin(camAzimuth)*6, 4, Math.cos(camAzimuth)*6));
-            const origin = player.position.clone(); origin.y+=1.5; 
-            const dir = new THREE.Vector3().subVectors(target,origin).normalize();
-            raycaster.set(origin,dir); const hits = raycaster.intersectObjects(wallsGroup.children);
-            let fp = target; 
-            if(hits.length>0 && hits[0].distance < origin.distanceTo(target) && !isFlyMode) fp = origin.clone().add(dir.multiplyScalar(Math.max(.5,hits[0].distance-.5)));
-            camera.position.lerp(fp, dt===0?1:8*dt); camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
+            _target.copy(player.position).add(_v1.set(Math.sin(camAzimuth)*6, 4, Math.cos(camAzimuth)*6));
+            _origin.copy(player.position); _origin.y += 1.5; 
+            _dir.subVectors(_target,_origin).normalize();
+            
+            raycaster.set(_origin,_dir); 
+            const hits = raycaster.intersectObjects(wallsGroup.children);
+            
+            if(hits.length>0 && hits[0].distance < _origin.distanceTo(_target) && !isFlyMode) {
+                _target.copy(_origin).add(_dir.multiplyScalar(Math.max(.5, hits[0].distance-.5)));
+            }
+            camera.position.lerp(_target, dt===0?1:8*dt); 
+            camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
         } else {
             camera.position.set(player.position.x-Math.sin(camAzimuth)*.15, player.position.y+1.9, player.position.z-Math.cos(camAzimuth)*.15);
             
-            const lookDir = new THREE.Vector3(
+            _dir.set(
                 -Math.sin(camAzimuth) * Math.cos(camElevation),
                 -Math.sin(camElevation),
                 -Math.cos(camAzimuth) * Math.cos(camElevation)
             );
-            camera.lookAt(camera.position.clone().add(lookDir));
+            camera.lookAt(_v1.copy(camera.position).add(_dir));
         }
     }
 
@@ -1847,29 +1869,27 @@
 
             let isMoving=false;
             
-            // Correct Relative Movement to where Mouse Camera is aimed
-            const camDir = new THREE.Vector3(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
-            const camRight = new THREE.Vector3(Math.cos(camAzimuth), 0, -Math.sin(camAzimuth)).normalize();
+            _camDir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+            _camRight.set(Math.cos(camAzimuth), 0, -Math.sin(camAzimuth)).normalize();
             
-            const moveVec = new THREE.Vector3(0, 0, 0);
-            if (isUp) moveVec.add(camDir);
-            if (isDn) moveVec.sub(camDir);
-            if (isTL) moveVec.sub(camRight);
-            if (isTR) moveVec.add(camRight);
+            _moveVec.set(0, 0, 0);
+            if (isUp) _moveVec.add(_camDir);
+            if (isDn) _moveVec.sub(_camDir);
+            if (isTL) _moveVec.sub(_camRight);
+            if (isTR) _moveVec.add(_camRight);
             
-            if (moveVec.lengthSq() > 0.01) {
+            if (_moveVec.lengthSq() > 0.01) {
                 isMoving = true;
-                moveVec.normalize();
+                _moveVec.normalize();
                 
                 const spd = (keys.crouch && !isFlyMode ? 3 : 7) * speedMult * (isFlyMode ? 2.0 : 1.0);
-                const nx = player.position.x + moveVec.x * spd * dt;
-                const nz = player.position.z + moveVec.z * spd * dt;
+                const nx = player.position.x + _moveVec.x * spd * dt;
+                const nz = player.position.z + _moveVec.z * spd * dt;
                 
                 if(!checkCollision(nx, player.position.z)) player.position.x = nx;
                 if(!checkCollision(player.position.x, nz)) player.position.z = nz;
                 
-                // Rotate body model so eyes face exactly where the player is walking
-                const targetRot = Math.atan2(moveVec.x, moveVec.z);
+                const targetRot = Math.atan2(_moveVec.x, _moveVec.z);
                 let diff = targetRot - player.rotation.y;
                 while(diff < -Math.PI) diff += Math.PI*2;
                 while(diff > Math.PI) diff -= Math.PI*2;
@@ -1911,7 +1931,6 @@
         
         updateCamera(dt);
         
-        // Fixed victory logic by calculating 2D distance to finish line (ignore Y coordinate for jumping bypass)
         if(goalMesh && (gameMode === 'campaign' || gameMode === 'mmo')){
             const distXZ = Math.sqrt(Math.pow(player.position.x - goalMesh.position.x, 2) + Math.pow(player.position.z - goalMesh.position.z, 2));
             if(distXZ < 1.5 && !isDead){
@@ -1919,7 +1938,7 @@
                     isPlaying=false; 
                     try { playWinMelody(); } catch(e){}
                     mmoVictoryState = true;
-                    document.exitPointerLock();
+                    if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden');
                     document.getElementById('mmo-victory-screen').classList.remove('hidden'); document.getElementById('mmo-victory-screen').classList.add('flex');
                     setTimeout(() => { document.getElementById('mmo-victory-screen').classList.add('hidden'); document.getElementById('mmo-victory-screen').classList.remove('flex'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }, 5000);
@@ -1928,7 +1947,7 @@
                     isPlaying=false; 
                     try { playWinMelody(); } catch(e){} 
                     if(window.saveGameProgress) window.saveGameProgress(currentLevel+1);
-                    document.exitPointerLock();
+                    if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden'); 
                     document.getElementById('level-menu').classList.remove('hidden'); 
                     document.getElementById('end-title').innerText = "LEVEL CLEARED"; document.getElementById('end-title').style.color = "#4CAF50";
@@ -1975,16 +1994,15 @@
     }
 
     document.addEventListener('mousemove', (e) => {
-        if (document.pointerLockElement === canvas) {
+        if (!isMobileDevice && document.pointerLockElement === canvas) {
             camAzimuth -= e.movementX * mouseSensitivity;
             camElevation -= e.movementY * mouseSensitivity;
-            // Heavily clamp vertical look angle (pitch) to prevent top-down/bottom-up 2D look
             camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
         }
     });
 
     document.addEventListener('pointerlockchange', () => {
-        if (document.pointerLockElement !== canvas) {
+        if (!isMobileDevice && document.pointerLockElement !== canvas) {
             if (isPlaying && !isDead && !mmoVictoryState && !isPaused && pvpState !== 'intro') {
                 document.getElementById('btn-hud-pause').click();
             }
@@ -2015,7 +2033,7 @@
     });
     
     window.addEventListener('mousedown', e=>{ 
-        if (isPlaying && !isPaused && !isDead) {
+        if (isPlaying && !isPaused && !isDead && !isMobileDevice) {
             if (document.pointerLockElement !== canvas) {
                 canvas.requestPointerLock();
             } else {
@@ -2030,7 +2048,7 @@
     });
 
     window.addEventListener('contextmenu', e => {
-        if (isPlaying && document.pointerLockElement === canvas) e.preventDefault();
+        if (isPlaying && (document.pointerLockElement === canvas || isMobileDevice)) e.preventDefault();
     });
 
     window.addEventListener('keyup', e=>{
@@ -2066,6 +2084,7 @@
     }
 
     async function startGamePlay(spawnX, spawnZ) {
+        requestFullScreen();
         closeAllSubmenus(); document.getElementById('main-menu-layer').classList.add('hidden');
         await initAudio(); if(Tone.context.state!=='running') await Tone.start(); Tone.Transport.start(); playCustomAudio();
         if(gameMode === 'campaign' && window.initGameSave) currentLevel=await window.initGameSave();
@@ -2080,18 +2099,27 @@
         }
 
         buildLevel(false, spawnX, spawnZ); isPlaying = true; isPaused = false; isDead = false; 
+        
+        if (isMobileDevice) {
+            document.getElementById('mobile-hud').classList.remove('hidden');
+            loadCustomHUD();
+        }
     }
 
-    document.getElementById('btn-cancel-matchmaking').onclick = () => { cancelMatchmaking(); toggleLeftSub('sub-play'); document.getElementById('main-menu-layer').classList.remove('hidden'); };
+    document.getElementById('btn-cancel-matchmaking').onclick = () => { 
+        cancelMatchmaking(); 
+        document.getElementById('main-menu-layer').classList.remove('hidden'); 
+        toggleLeftSub('sub-pvp'); 
+    };
     
-    document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); canvas.requestPointerLock(); };
-    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; joinOnlineLobby(); canvas.requestPointerLock(); };
-    document.getElementById('btn-pvp-open').onclick = () => { toggleLeftSub('sub-pvp'); };
-    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); canvas.requestPointerLock(); };
+    document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); if(!isMobileDevice) canvas.requestPointerLock(); };
+    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; requestFullScreen(); joinOnlineLobby(); if(!isMobileDevice) canvas.requestPointerLock(); };
+    
+    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); requestFullScreen(); };
     
     document.getElementById('btn-hud-pause').onclick  = ()=>{
         isPaused=true; if(customAudio.src) customAudio.pause(); document.getElementById('pause-menu').classList.remove('hidden');
-        document.exitPointerLock();
+        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
         if(gameMode === 'mmo') {
             document.getElementById('session-players-container').classList.remove('hidden');
             const list = document.getElementById('pause-player-list'); list.innerHTML = '';
@@ -2112,21 +2140,22 @@
     
     document.getElementById('btn-hud-camera').onclick = ()=>{cameraMode=cameraMode==='thirdPerson'?'firstPerson':'thirdPerson';};
     document.getElementById('btn-hud-mic').onclick = ()=> voiceChat.toggleMic();
-    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); };
+    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); if(!isMobileDevice) canvas.requestPointerLock(); };
     
     document.getElementById('btn-quit').onclick = async()=>{
         isPlaying=false; lastFootstepTime=0; if(customAudio.src) customAudio.pause(); 
         if(gameMode !== 'campaign') leaveOnlineSession();
         document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
+        if(isMobileDevice) document.getElementById('mobile-hud').classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
         document.getElementById('btn-mode-online').innerHTML = 'Online Session <span>></span>';
         setMyStatus('Online');
-        document.exitPointerLock();
+        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
         buildLevel(true);
     };
     
     document.getElementById('next-level-btn').onclick = async()=>{
-        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; canvas.requestPointerLock();}
+        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; if(!isMobileDevice) canvas.requestPointerLock();}
     };
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2201,10 +2230,215 @@
 
     window.addEventListener('resize', () => { if (renderer && camera) applySettingsToEngine(); });
 
+    let touchLookActive = false;
+    let lastTouchX = 0, lastTouchY = 0;
+    
+    function setupTouchLook() {
+        const lookZone = document.getElementById('look-zone');
+        if (!lookZone) return;
+
+        lookZone.addEventListener('touchstart', e => {
+            if (isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            touchLookActive = true;
+            const touch = Array.from(e.touches).find(t => t.target === lookZone) || e.changedTouches[0];
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
+        }, {passive: false});
+
+        lookZone.addEventListener('touchmove', e => {
+            if (!touchLookActive || isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            e.preventDefault(); 
+            const touch = Array.from(e.touches).find(t => t.target === lookZone) || e.changedTouches[0];
+            if(!touch) return;
+
+            const deltaX = touch.clientX - lastTouchX;
+            const deltaY = touch.clientY - lastTouchY;
+            
+            const mobileSens = mouseSensitivity * 150; 
+            
+            camAzimuth -= deltaX * mobileSens;
+            camElevation -= deltaY * mobileSens;
+            camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
+            
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
+        }, {passive: false});
+
+        lookZone.addEventListener('touchend', () => { touchLookActive = false; });
+        lookZone.addEventListener('touchcancel', () => { touchLookActive = false; });
+    }
+
+    let joyActive = false, joyCenterX = 0, joyCenterY = 0;
+    function setupJoystick() {
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        if (!joyZone || !joyKnob) return;
+
+        let touchId = null;
+
+        joyZone.addEventListener('touchstart', e => {
+            if (isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            touchId = touch.identifier;
+            
+            const rect = joyZone.getBoundingClientRect();
+            joyCenterX = rect.left + rect.width / 2;
+            joyCenterY = rect.top + rect.height / 2;
+            joyActive = true;
+            handleJoystickMove(touch);
+        }, {passive: false});
+
+        joyZone.addEventListener('touchmove', e => {
+            if (!joyActive || isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            e.preventDefault();
+            const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
+            if (touch) handleJoystickMove(touch);
+        }, {passive: false});
+
+        const resetJoystick = (e) => {
+            const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
+            if (touch || e.type === 'touchcancel') {
+                joyActive = false;
+                touchId = null;
+                joyKnob.style.transform = `translate(0px, 0px)`;
+                keys.up = false; keys.down = false; keys.left = false; keys.right = false;
+            }
+        };
+
+        joyZone.addEventListener('touchend', resetJoystick);
+        joyZone.addEventListener('touchcancel', resetJoystick);
+
+        function handleJoystickMove(touch) {
+            const dx = touch.clientX - joyCenterX;
+            const dy = touch.clientY - joyCenterY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const maxRadius = joyZone.offsetWidth / 2.5; 
+            
+            let knobX = dx, knobY = dy;
+            if (distance > maxRadius) {
+                knobX = (dx / distance) * maxRadius;
+                knobY = (dy / distance) * maxRadius;
+            }
+            joyKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+            
+            keys.up = dy < -10;
+            keys.down = dy > 10;
+            keys.left = dx < -10;
+            keys.right = dx > 10;
+        }
+    }
+
+    function bindMobileBtn(id, actionKey, isAttack = false) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart', (e) => {
+            if(isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            e.preventDefault();
+            btn.style.transform = 'scale(0.85)';
+            btn.style.backgroundColor = isAttack ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255,255,255,0.4)';
+            if (isAttack) {
+                if (gameMode === 'pvp_1v1') performKnifeAttack();
+                else sprayPaint('tick');
+            } else { keys[actionKey] = true; }
+        }, {passive: false});
+        btn.addEventListener('touchend', (e) => {
+            if(isCustomizingHUD || !isPlaying || isPaused || isDead) return;
+            e.preventDefault();
+            btn.style.transform = 'scale(1)';
+            btn.style.backgroundColor = '';
+            if (!isAttack) keys[actionKey] = false;
+        });
+    }
+
+    let dragTarget = null, dragOffsetX = 0, dragOffsetY = 0;
+
+    window.startHUDCustomization = () => {
+        document.getElementById('pause-menu').classList.add('hidden');
+        document.getElementById('hud-edit-overlay').classList.remove('hidden');
+        isCustomizingHUD = true;
+        document.querySelectorAll('.drag-item').forEach(el => { el.classList.add('customizing'); });
+    };
+
+    window.saveCustomHUD = () => {
+        const layout = {};
+        document.querySelectorAll('.drag-item').forEach(el => {
+            layout[el.dataset.id] = { left: el.style.left, top: el.style.top, right: el.style.right, bottom: el.style.bottom };
+            el.classList.remove('customizing');
+        });
+        localStorage.setItem('maze_hud_layout', JSON.stringify(layout));
+        document.getElementById('hud-edit-overlay').classList.add('hidden');
+        isCustomizingHUD = false;
+        document.getElementById('pause-menu').classList.remove('hidden');
+        gtaNotify("HUD Layout Saved!", false);
+    };
+
+    window.resetCustomHUD = () => {
+        localStorage.removeItem('maze_hud_layout');
+        document.getElementById('joystick-zone').style.cssText = 'left: 10%; bottom: 15%;';
+        document.getElementById('btn-m-jump').style.cssText = 'right: 10%; bottom: 35%;';
+        document.getElementById('btn-m-attack').style.cssText = 'right: 25%; bottom: 15%;';
+        document.getElementById('btn-m-crouch').style.cssText = 'right: 10%; bottom: 15%;';
+        document.getElementById('btn-m-sprint').style.cssText = 'right: 35%; bottom: 30%;';
+        window.saveCustomHUD();
+    };
+
+    function loadCustomHUD() {
+        const layoutRaw = localStorage.getItem('maze_hud_layout');
+        if(layoutRaw) {
+            const layout = JSON.parse(layoutRaw);
+            document.querySelectorAll('.drag-item').forEach(el => {
+                const saved = layout[el.dataset.id];
+                if(saved) { el.style.left = saved.left; el.style.top = saved.top; el.style.right = saved.right; el.style.bottom = saved.bottom; }
+            });
+        }
+    }
+
+    function setupHUDDragging() {
+        document.querySelectorAll('.drag-item').forEach(el => {
+            el.addEventListener('touchstart', e => {
+                if(!isCustomizingHUD) return;
+                e.preventDefault(); dragTarget = el;
+                const touch = e.touches[0]; const rect = el.getBoundingClientRect();
+                dragOffsetX = touch.clientX - rect.left; dragOffsetY = touch.clientY - rect.top;
+            }, {passive: false});
+        });
+
+        document.addEventListener('touchmove', e => {
+            if(isCustomizingHUD && dragTarget) {
+                e.preventDefault(); const touch = e.touches[0];
+                let newLeft = touch.clientX - dragOffsetX; let newTop = touch.clientY - dragOffsetY;
+                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - dragTarget.offsetWidth));
+                newTop = Math.max(0, Math.min(newTop, window.innerHeight - dragTarget.offsetHeight));
+                dragTarget.style.left = newLeft + 'px'; dragTarget.style.top = newTop + 'px';
+                dragTarget.style.bottom = 'auto'; dragTarget.style.right = 'auto';
+            }
+        }, {passive: false});
+
+        document.addEventListener('touchend', () => { if(isCustomizingHUD && dragTarget) dragTarget = null; });
+    }
+    
     bindUI();
-    window.onload = () => { loadAppAuth(); };
+    window.onload = () => { 
+        loadAppAuth(); 
+        if (isMobileDevice) {
+            const pauseMenu = document.getElementById('pause-menu').querySelector('.gta-menu');
+            if (pauseMenu) {
+                const customizeBtnHtml = `<button id="btn-customize-hud" class="gta-btn bg-cyan-600/30 hover:bg-cyan-500/50 text-cyan-300 font-black text-xs justify-center rounded py-2 border border-cyan-400/40 mb-2" onclick="startHUDCustomization()">Customize HUD (Mobile)</button>`;
+                document.getElementById('dev-pause-controls').insertAdjacentHTML('afterend', customizeBtnHtml);
+            }
+
+            const crosshair = document.getElementById('crosshair');
+            if(crosshair) crosshair.style.display = 'none';
+            setupTouchLook();
+            setupJoystick();
+            bindMobileBtn('btn-m-jump', 'jump');
+            bindMobileBtn('btn-m-crouch', 'crouch');
+            bindMobileBtn('btn-m-sprint', 'sprint');
+            bindMobileBtn('btn-m-attack', 'attack', true);
+            setupHUDDragging();
+        }
+    };
     </script>
-<!-- Scripts -->
-    <script src="mobilecontrols.js"></script>
 </body>
 </html>

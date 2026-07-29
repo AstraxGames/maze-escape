@@ -7,7 +7,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder --win --publish always"
   },
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.astraxgames.mazeescape",
     "icon": "icon.ico",
+     "asar": true,
     "publish": [
       {
         "provider": "github",
