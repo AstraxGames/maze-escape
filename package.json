@@ -1,7 +1,7 @@
 {
   "name": "maze-escape",
   "productName": "Maze Escape",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "3D Multiplayer Maze Escape game built with Electron and Three.js.",
   "author": "AstraX Games",
   "main": "main.js",
