@@ -28,8 +28,8 @@
             }
         }
 
-        body { margin: 0; overflow: hidden; background-color: #0b0c16; touch-action: none; font-family: 'Inter', sans-serif; font-size: var(--font-scale-base); }
-        #game-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+        body { margin: 0; overflow: hidden; background-color: #0b0c16; font-family: 'Inter', sans-serif; font-size: var(--font-scale-base); }
+        #game-canvas { width: 100vw; height: 100vh; display: block; }
         
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; }
         .hidden { display: none !important; opacity: 0; pointer-events: none; }
@@ -102,17 +102,17 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
         
         #profile-menu .gta-menu { max-height: 95vh; }
-
-        /* Styles applied only during mobile HUD customization */
-        .drag-item.customizing {
-            border: 2px dashed #00ffff !important;
-            background-color: rgba(34, 211, 238, 0.2) !important;
-            box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
-            z-index: 90 !important;
-        }
     </style>
 </head>
 <body>
+
+    <!-- MOBILE BLOCKER OVERLAY -->
+    <div id="mobile-blocker" class="fixed inset-0 bg-[#050508] z-[9999] hidden flex-col items-center justify-center text-center p-6">
+        <h1 class="text-4xl md:text-5xl font-black text-cyan-400 mb-6 tracking-widest uppercase">PC ONLY</h1>
+        <p class="text-gray-300 font-bold uppercase tracking-widest leading-relaxed max-w-md mx-auto">Maze Escape is a heavy 3D experience designed strictly for desktop and laptop computers.</p>
+        <p class="text-gray-500 text-xs font-black uppercase tracking-widest mt-8 border border-gray-700 rounded px-4 py-2">Please return using a PC keyboard and mouse.</p>
+    </div>
+
     <div id="initial-loader">
         <div class="spinner"></div>
         <h2 class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
@@ -126,32 +126,6 @@
     <canvas id="game-canvas"></canvas>
     <div id="voice-chat-audio"></div>
     <div id="damage-overlay"></div>
-
-    <!-- Mobile Touch Controls HUD -->
-    <div id="mobile-hud" class="fixed inset-0 z-[45] pointer-events-none touch-none select-none hidden">
-        <div id="look-zone" class="absolute inset-0 pointer-events-auto"></div>
-        
-        <div id="hud-edit-overlay" class="absolute inset-0 bg-black/70 hidden pointer-events-none z-50">
-            <div class="absolute top-10 left-1/2 -translate-x-1/2 text-center pointer-events-auto w-full max-w-sm px-4">
-                <h2 class="text-2xl md:text-3xl font-black text-cyan-400 tracking-widest mb-2 uppercase drop-shadow-lg">Customize HUD</h2>
-                <p class="text-xs md:text-sm text-gray-200 mb-6 uppercase drop-shadow-md">Drag buttons to reposition them</p>
-                <div class="flex gap-4 justify-center">
-                    <button onclick="saveCustomHUD()" class="bg-green-500 hover:bg-green-400 text-black px-6 py-2 font-black uppercase rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] border border-green-300">Save</button>
-                    <button onclick="resetCustomHUD()" class="bg-red-500 hover:bg-red-400 text-white px-6 py-2 font-black uppercase rounded shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-300">Reset</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="controls-container" class="absolute inset-0 pointer-events-none">
-            <div id="joystick-zone" class="absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-white/20 bg-black/20 flex items-center justify-center pointer-events-auto drag-item transition-colors" data-id="joystick" style="left: 10%; bottom: 15%;">
-                <div id="joystick-knob" class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white/50 backdrop-blur pointer-events-none shadow-lg transition-transform duration-75"></div>
-            </div>
-            <div id="btn-m-jump" class="absolute w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.65rem] md:text-xs shadow-lg drag-item transition-all" data-id="jump" style="right: 10%; bottom: 35%;">JUMP</div>
-            <div id="btn-m-attack" class="absolute w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-500/30 border border-red-500/50 flex items-center justify-center pointer-events-auto text-white font-black text-xs md:text-sm shadow-[0_0_15px_rgba(239,68,68,0.4)] drag-item transition-all" data-id="attack" style="right: 25%; bottom: 15%;">ATK</div>
-            <div id="btn-m-crouch" class="absolute w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.6rem] md:text-xs shadow-lg drag-item transition-all" data-id="crouch" style="right: 10%; bottom: 15%;">SIT</div>
-            <div id="btn-m-sprint" class="absolute w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 border border-white/40 flex items-center justify-center pointer-events-auto text-white font-black text-[0.55rem] md:text-[0.6rem] shadow-lg drag-item transition-all" data-id="sprint" style="right: 35%; bottom: 30%;">RUN</div>
-        </div>
-    </div>
 
     <div id="invite-popup">
         <div class="font-black text-white uppercase text-sm truncate"><span id="invite-sender-name" class="text-cyan-400">Player</span> invited you!</div>
@@ -366,7 +340,7 @@
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.0.2 (Optimized)</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.0.2</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -507,8 +481,6 @@
                 </div>
             </div>
 
-            <!-- Mobile Only HUD Edit Button (Appended Here via JS) -->
-
             <div id="btn-resume" class="gta-btn">Resume Game <span class="text-xs text-gray-400 ml-2">(Click to focus)</span></div>
             <div id="btn-quit" class="gta-btn" style="color: #ff4444;">Quit to Menu</div>
         </div>
@@ -587,18 +559,7 @@
     // Orbital Camera State Variables
     let camAzimuth = Math.PI, camElevation = -0.15, mouseSensitivity = 0.002;
 
-    // Mobile specific state
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
-    let isCustomizingHUD = false;
-
-    // --- FULLSCREEN FUNCTION ---
-    function requestFullScreen() {
-        try {
-            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(e => console.warn("Fullscreen error:", e));
-            }
-        } catch(e) {}
-    }
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     function closeAllSubmenus() {
         document.getElementById('left-submenus').classList.add('hidden');
@@ -1265,7 +1226,7 @@
         let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
         startGamePlay(sx, sy);
         
-        if(!isMobileDevice) canvas.requestPointerLock();
+        canvas.requestPointerLock();
     }
 
     function triggerDamageFlash() { const flash = document.getElementById('damage-overlay'); flash.style.opacity = '1'; if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); setTimeout(() => { flash.style.opacity = '0'; }, 200); }
@@ -1306,14 +1267,6 @@
 
     let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: true, texture: 'high', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
     window.gameSettings = defaultSettings;
-    
-    // Automatically reduce default graphics on mobile
-    if (!localStorage.getItem('maze_settings') && isMobileDevice) {
-        window.gameSettings.graphics.quality = 'low';
-        window.gameSettings.graphics.scale = 75;
-        window.gameSettings.graphics.shadows = false;
-        window.gameSettings.graphics.texture = 'low';
-    }
 
     try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
     if(!window.gameSettings.controls.crouch) window.gameSettings.controls.crouch = 'c';
@@ -1376,7 +1329,6 @@
     const sprayGeo = new THREE.PlaneGeometry(1.5, 1.5); 
     let sprayMeshes = [];
 
-    // GLOBAL VECTORS FOR GC OPTIMIZATION
     const _v1 = new THREE.Vector3();
     const _v2 = new THREE.Vector3();
     const _v3 = new THREE.Vector3();
@@ -1496,15 +1448,15 @@
     function endPvP(won) {
         pvpState = 'victory'; if(won) playWinMelody();
         document.getElementById('hud').classList.add('hidden'); 
-        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
+        if(document.pointerLockElement) document.exitPointerLock();
         setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
     }
 
     const canvas = document.getElementById('game-canvas');
     const renderer = new THREE.WebGLRenderer({
         canvas, 
-        antialias: !isMobileDevice, // Performance saver on mobile
-        powerPreference: "high-performance" // Instructs browser to use dGPU if available
+        antialias: true,
+        powerPreference: "high-performance" 
     });
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1519,7 +1471,7 @@
     const SHADOW_FRUSTUM_SIZE = 25; 
     const dirLight = new THREE.DirectionalLight(0x77aacc, 1.2);
     dirLight.castShadow = true; 
-    dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024; // Optimised baseline
+    dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 160;
     dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE; dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
     
@@ -1549,9 +1501,7 @@
         if (s.display.resolution !== 'native') { const tr = parseInt(s.display.resolution), asp = cssW / cssH; if (cssW >= cssH) { targetW = tr; targetH = Math.round(tr / asp); } else { targetH = tr; targetW = Math.round(tr * asp); } }
         canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
         
-        // Optimisation: Cap pixel ratio to prevent extreme frame drops on 3x/4x density screens (mobile)
-        const maxDPR = isMobileDevice ? 1.5 : 2.0; 
-        renderer.setPixelRatio(s.display.resolution === 'native' ? Math.min(window.devicePixelRatio || 1, maxDPR) : 1);
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
         
         const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
         renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
@@ -1938,7 +1888,7 @@
                     isPlaying=false; 
                     try { playWinMelody(); } catch(e){}
                     mmoVictoryState = true;
-                    if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
+                    if(document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden');
                     document.getElementById('mmo-victory-screen').classList.remove('hidden'); document.getElementById('mmo-victory-screen').classList.add('flex');
                     setTimeout(() => { document.getElementById('mmo-victory-screen').classList.add('hidden'); document.getElementById('mmo-victory-screen').classList.remove('flex'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }, 5000);
@@ -1947,7 +1897,7 @@
                     isPlaying=false; 
                     try { playWinMelody(); } catch(e){} 
                     if(window.saveGameProgress) window.saveGameProgress(currentLevel+1);
-                    if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
+                    if(document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden'); 
                     document.getElementById('level-menu').classList.remove('hidden'); 
                     document.getElementById('end-title').innerText = "LEVEL CLEARED"; document.getElementById('end-title').style.color = "#4CAF50";
@@ -1994,7 +1944,7 @@
     }
 
     document.addEventListener('mousemove', (e) => {
-        if (!isMobileDevice && document.pointerLockElement === canvas) {
+        if (document.pointerLockElement === canvas) {
             camAzimuth -= e.movementX * mouseSensitivity;
             camElevation -= e.movementY * mouseSensitivity;
             camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
@@ -2002,7 +1952,7 @@
     });
 
     document.addEventListener('pointerlockchange', () => {
-        if (!isMobileDevice && document.pointerLockElement !== canvas) {
+        if (document.pointerLockElement !== canvas) {
             if (isPlaying && !isDead && !mmoVictoryState && !isPaused && pvpState !== 'intro') {
                 document.getElementById('btn-hud-pause').click();
             }
@@ -2033,7 +1983,7 @@
     });
     
     window.addEventListener('mousedown', e=>{ 
-        if (isPlaying && !isPaused && !isDead && !isMobileDevice) {
+        if (isPlaying && !isPaused && !isDead) {
             if (document.pointerLockElement !== canvas) {
                 canvas.requestPointerLock();
             } else {
@@ -2048,7 +1998,7 @@
     });
 
     window.addEventListener('contextmenu', e => {
-        if (isPlaying && (document.pointerLockElement === canvas || isMobileDevice)) e.preventDefault();
+        if (isPlaying && document.pointerLockElement === canvas) e.preventDefault();
     });
 
     window.addEventListener('keyup', e=>{
@@ -2084,7 +2034,6 @@
     }
 
     async function startGamePlay(spawnX, spawnZ) {
-        requestFullScreen();
         closeAllSubmenus(); document.getElementById('main-menu-layer').classList.add('hidden');
         await initAudio(); if(Tone.context.state!=='running') await Tone.start(); Tone.Transport.start(); playCustomAudio();
         if(gameMode === 'campaign' && window.initGameSave) currentLevel=await window.initGameSave();
@@ -2099,11 +2048,6 @@
         }
 
         buildLevel(false, spawnX, spawnZ); isPlaying = true; isPaused = false; isDead = false; 
-        
-        if (isMobileDevice) {
-            document.getElementById('mobile-hud').classList.remove('hidden');
-            loadCustomHUD();
-        }
     }
 
     document.getElementById('btn-cancel-matchmaking').onclick = () => { 
@@ -2112,14 +2056,14 @@
         toggleLeftSub('sub-pvp'); 
     };
     
-    document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); if(!isMobileDevice) canvas.requestPointerLock(); };
-    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; requestFullScreen(); joinOnlineLobby(); if(!isMobileDevice) canvas.requestPointerLock(); };
+    document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); canvas.requestPointerLock(); };
+    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; joinOnlineLobby(); canvas.requestPointerLock(); };
     
-    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); requestFullScreen(); };
+    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); };
     
     document.getElementById('btn-hud-pause').onclick  = ()=>{
         isPaused=true; if(customAudio.src) customAudio.pause(); document.getElementById('pause-menu').classList.remove('hidden');
-        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
+        if(document.pointerLockElement) document.exitPointerLock();
         if(gameMode === 'mmo') {
             document.getElementById('session-players-container').classList.remove('hidden');
             const list = document.getElementById('pause-player-list'); list.innerHTML = '';
@@ -2140,22 +2084,21 @@
     
     document.getElementById('btn-hud-camera').onclick = ()=>{cameraMode=cameraMode==='thirdPerson'?'firstPerson':'thirdPerson';};
     document.getElementById('btn-hud-mic').onclick = ()=> voiceChat.toggleMic();
-    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); if(!isMobileDevice) canvas.requestPointerLock(); };
+    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); };
     
     document.getElementById('btn-quit').onclick = async()=>{
         isPlaying=false; lastFootstepTime=0; if(customAudio.src) customAudio.pause(); 
         if(gameMode !== 'campaign') leaveOnlineSession();
         document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
-        if(isMobileDevice) document.getElementById('mobile-hud').classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
         document.getElementById('btn-mode-online').innerHTML = 'Online Session <span>></span>';
         setMyStatus('Online');
-        if(!isMobileDevice && document.pointerLockElement) document.exitPointerLock();
+        if(document.pointerLockElement) document.exitPointerLock();
         buildLevel(true);
     };
     
     document.getElementById('next-level-btn').onclick = async()=>{
-        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; if(!isMobileDevice) canvas.requestPointerLock();}
+        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; canvas.requestPointerLock();}
     };
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2230,215 +2173,20 @@
 
     window.addEventListener('resize', () => { if (renderer && camera) applySettingsToEngine(); });
 
-    let touchLookActive = false;
-    let lastTouchX = 0, lastTouchY = 0;
-    
-    function setupTouchLook() {
-        const lookZone = document.getElementById('look-zone');
-        if (!lookZone) return;
-
-        lookZone.addEventListener('touchstart', e => {
-            if (isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            touchLookActive = true;
-            const touch = Array.from(e.touches).find(t => t.target === lookZone) || e.changedTouches[0];
-            lastTouchX = touch.clientX;
-            lastTouchY = touch.clientY;
-        }, {passive: false});
-
-        lookZone.addEventListener('touchmove', e => {
-            if (!touchLookActive || isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            e.preventDefault(); 
-            const touch = Array.from(e.touches).find(t => t.target === lookZone) || e.changedTouches[0];
-            if(!touch) return;
-
-            const deltaX = touch.clientX - lastTouchX;
-            const deltaY = touch.clientY - lastTouchY;
-            
-            const mobileSens = mouseSensitivity * 150; 
-            
-            camAzimuth -= deltaX * mobileSens;
-            camElevation -= deltaY * mobileSens;
-            camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
-            
-            lastTouchX = touch.clientX;
-            lastTouchY = touch.clientY;
-        }, {passive: false});
-
-        lookZone.addEventListener('touchend', () => { touchLookActive = false; });
-        lookZone.addEventListener('touchcancel', () => { touchLookActive = false; });
-    }
-
-    let joyActive = false, joyCenterX = 0, joyCenterY = 0;
-    function setupJoystick() {
-        const joyZone = document.getElementById('joystick-zone');
-        const joyKnob = document.getElementById('joystick-knob');
-        if (!joyZone || !joyKnob) return;
-
-        let touchId = null;
-
-        joyZone.addEventListener('touchstart', e => {
-            if (isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            e.preventDefault();
-            const touch = e.changedTouches[0];
-            touchId = touch.identifier;
-            
-            const rect = joyZone.getBoundingClientRect();
-            joyCenterX = rect.left + rect.width / 2;
-            joyCenterY = rect.top + rect.height / 2;
-            joyActive = true;
-            handleJoystickMove(touch);
-        }, {passive: false});
-
-        joyZone.addEventListener('touchmove', e => {
-            if (!joyActive || isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            e.preventDefault();
-            const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
-            if (touch) handleJoystickMove(touch);
-        }, {passive: false});
-
-        const resetJoystick = (e) => {
-            const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
-            if (touch || e.type === 'touchcancel') {
-                joyActive = false;
-                touchId = null;
-                joyKnob.style.transform = `translate(0px, 0px)`;
-                keys.up = false; keys.down = false; keys.left = false; keys.right = false;
-            }
-        };
-
-        joyZone.addEventListener('touchend', resetJoystick);
-        joyZone.addEventListener('touchcancel', resetJoystick);
-
-        function handleJoystickMove(touch) {
-            const dx = touch.clientX - joyCenterX;
-            const dy = touch.clientY - joyCenterY;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            const maxRadius = joyZone.offsetWidth / 2.5; 
-            
-            let knobX = dx, knobY = dy;
-            if (distance > maxRadius) {
-                knobX = (dx / distance) * maxRadius;
-                knobY = (dy / distance) * maxRadius;
-            }
-            joyKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-            
-            keys.up = dy < -10;
-            keys.down = dy > 10;
-            keys.left = dx < -10;
-            keys.right = dx > 10;
-        }
-    }
-
-    function bindMobileBtn(id, actionKey, isAttack = false) {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        btn.addEventListener('touchstart', (e) => {
-            if(isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            e.preventDefault();
-            btn.style.transform = 'scale(0.85)';
-            btn.style.backgroundColor = isAttack ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255,255,255,0.4)';
-            if (isAttack) {
-                if (gameMode === 'pvp_1v1') performKnifeAttack();
-                else sprayPaint('tick');
-            } else { keys[actionKey] = true; }
-        }, {passive: false});
-        btn.addEventListener('touchend', (e) => {
-            if(isCustomizingHUD || !isPlaying || isPaused || isDead) return;
-            e.preventDefault();
-            btn.style.transform = 'scale(1)';
-            btn.style.backgroundColor = '';
-            if (!isAttack) keys[actionKey] = false;
-        });
-    }
-
-    let dragTarget = null, dragOffsetX = 0, dragOffsetY = 0;
-
-    window.startHUDCustomization = () => {
-        document.getElementById('pause-menu').classList.add('hidden');
-        document.getElementById('hud-edit-overlay').classList.remove('hidden');
-        isCustomizingHUD = true;
-        document.querySelectorAll('.drag-item').forEach(el => { el.classList.add('customizing'); });
-    };
-
-    window.saveCustomHUD = () => {
-        const layout = {};
-        document.querySelectorAll('.drag-item').forEach(el => {
-            layout[el.dataset.id] = { left: el.style.left, top: el.style.top, right: el.style.right, bottom: el.style.bottom };
-            el.classList.remove('customizing');
-        });
-        localStorage.setItem('maze_hud_layout', JSON.stringify(layout));
-        document.getElementById('hud-edit-overlay').classList.add('hidden');
-        isCustomizingHUD = false;
-        document.getElementById('pause-menu').classList.remove('hidden');
-        gtaNotify("HUD Layout Saved!", false);
-    };
-
-    window.resetCustomHUD = () => {
-        localStorage.removeItem('maze_hud_layout');
-        document.getElementById('joystick-zone').style.cssText = 'left: 10%; bottom: 15%;';
-        document.getElementById('btn-m-jump').style.cssText = 'right: 10%; bottom: 35%;';
-        document.getElementById('btn-m-attack').style.cssText = 'right: 25%; bottom: 15%;';
-        document.getElementById('btn-m-crouch').style.cssText = 'right: 10%; bottom: 15%;';
-        document.getElementById('btn-m-sprint').style.cssText = 'right: 35%; bottom: 30%;';
-        window.saveCustomHUD();
-    };
-
-    function loadCustomHUD() {
-        const layoutRaw = localStorage.getItem('maze_hud_layout');
-        if(layoutRaw) {
-            const layout = JSON.parse(layoutRaw);
-            document.querySelectorAll('.drag-item').forEach(el => {
-                const saved = layout[el.dataset.id];
-                if(saved) { el.style.left = saved.left; el.style.top = saved.top; el.style.right = saved.right; el.style.bottom = saved.bottom; }
-            });
-        }
-    }
-
-    function setupHUDDragging() {
-        document.querySelectorAll('.drag-item').forEach(el => {
-            el.addEventListener('touchstart', e => {
-                if(!isCustomizingHUD) return;
-                e.preventDefault(); dragTarget = el;
-                const touch = e.touches[0]; const rect = el.getBoundingClientRect();
-                dragOffsetX = touch.clientX - rect.left; dragOffsetY = touch.clientY - rect.top;
-            }, {passive: false});
-        });
-
-        document.addEventListener('touchmove', e => {
-            if(isCustomizingHUD && dragTarget) {
-                e.preventDefault(); const touch = e.touches[0];
-                let newLeft = touch.clientX - dragOffsetX; let newTop = touch.clientY - dragOffsetY;
-                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - dragTarget.offsetWidth));
-                newTop = Math.max(0, Math.min(newTop, window.innerHeight - dragTarget.offsetHeight));
-                dragTarget.style.left = newLeft + 'px'; dragTarget.style.top = newTop + 'px';
-                dragTarget.style.bottom = 'auto'; dragTarget.style.right = 'auto';
-            }
-        }, {passive: false});
-
-        document.addEventListener('touchend', () => { if(isCustomizingHUD && dragTarget) dragTarget = null; });
-    }
-    
     bindUI();
+    
+    // PC ONLY BLOCKER INITIALIZATION
     window.onload = () => { 
-        loadAppAuth(); 
         if (isMobileDevice) {
-            const pauseMenu = document.getElementById('pause-menu').querySelector('.gta-menu');
-            if (pauseMenu) {
-                const customizeBtnHtml = `<button id="btn-customize-hud" class="gta-btn bg-cyan-600/30 hover:bg-cyan-500/50 text-cyan-300 font-black text-xs justify-center rounded py-2 border border-cyan-400/40 mb-2" onclick="startHUDCustomization()">Customize HUD (Mobile)</button>`;
-                document.getElementById('dev-pause-controls').insertAdjacentHTML('afterend', customizeBtnHtml);
-            }
-
-            const crosshair = document.getElementById('crosshair');
-            if(crosshair) crosshair.style.display = 'none';
-            setupTouchLook();
-            setupJoystick();
-            bindMobileBtn('btn-m-jump', 'jump');
-            bindMobileBtn('btn-m-crouch', 'crouch');
-            bindMobileBtn('btn-m-sprint', 'sprint');
-            bindMobileBtn('btn-m-attack', 'attack', true);
-            setupHUDDragging();
+            document.getElementById('mobile-blocker').classList.remove('hidden');
+            document.getElementById('mobile-blocker').classList.add('flex');
+            return; // Halt all game logic immediately
         }
+        
+        loadAppAuth(); 
     };
     </script>
+<!-- AstraX Cinematic Splash Screen -->
+<script src="astrax_splash.js"></script>
 </body>
 </html>
