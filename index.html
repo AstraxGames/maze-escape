@@ -10,16 +10,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Post-processing pipeline (bloom / grade / AA) for HD visual pass -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/Pass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
     
     <style>
-        /* CSS Variables for Responsive Scaling */
         :root {
             --menu-max-width: 420px;
             --menu-padding: 1.5rem;
             --font-scale-base: 16px;
         }
 
-        /* Dynamically shrink everything on smaller screens */
         @media (max-width: 768px) {
             :root {
                 --menu-max-width: 90vw;
@@ -34,34 +40,31 @@
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; }
         .hidden { display: none !important; opacity: 0; pointer-events: none; }
         
-        /* Clamp ensures text naturally shrinks on small screens without breaking layout */
         .title-text { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: clamp(1rem, 5vh, 2rem); font-size: clamp(2rem, 8vw, 3.5rem); color: #fff; text-shadow: 2px 2px 0 #000; text-align: center; }
         
-        .gta-menu { width: 100%; max-width: var(--menu-max-width); background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; max-height: 85vh; display: flex; flex-direction: column;}
-        .gta-menu-header { background: linear-gradient(90deg, #fff, #ddd); color: #000; padding: clamp(12px, 3vh, 18px) clamp(15px, 4vw, 20px); font-weight: 900; font-size: clamp(1.1rem, 4vw, 1.4rem); letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #000; flex-shrink: 0;}
-        .gta-btn { width: 100%; padding: clamp(10px, 2.5vh, 14px) clamp(15px, 4vw, 20px); font-weight: 800; font-size: clamp(0.9rem, 3vw, 1.1rem); text-align: left; cursor: pointer; transition: all 0.1s; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent; color: #fff; display: flex; justify-content: space-between; align-items: center; user-select: none; flex-shrink: 0;}
-        .gta-btn:hover { background: rgba(255,255,255,0.1); padding-left: clamp(20px, 5vw, 25px); border-left: 4px solid #fff; }
+        /* GTA 5 Menu Styling */
+        .gta-menu { width: 100%; max-width: var(--menu-max-width); background: transparent; border: 2px solid #000; box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 0px; overflow-y: auto; max-height: 85vh; display: flex; flex-direction: column;}
+        .gta-menu-header { background: #000; color: #fff; padding: clamp(12px, 3vh, 18px) clamp(15px, 4vw, 20px); font-weight: 900; font-size: clamp(1.1rem, 4vw, 1.4rem); letter-spacing: 2px; text-transform: uppercase; border-bottom: 3px solid #22d3ee; flex-shrink: 0;}
+        .gta-btn { width: 100%; padding: clamp(10px, 2.5vh, 14px) clamp(15px, 4vw, 20px); font-weight: 800; font-size: clamp(0.9rem, 3vw, 1.1rem); text-align: left; cursor: pointer; text-transform: uppercase; border-bottom: 2px solid #000; background: rgba(0,0,0,0.75); color: #fff; display: flex; justify-content: space-between; align-items: center; user-select: none; flex-shrink: 0;}
+        .gta-btn:hover { background: #fff; color: #000 !important; }
+        .gta-btn:hover span { color: #000 !important; }
         
-        .btn-main { width: 100%; padding: clamp(12px, 3vh, 24px) clamp(16px, 4vw, 30px); display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.5rem); text-transform: uppercase; cursor: pointer; transition: 0.15s; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;}
-        .btn-main:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; padding-left: clamp(20px, 5vw, 36px); border-left: 6px solid #22d3ee; }
-        .btn-main:hover span { color: #22d3ee !important; }
+        .btn-main { width: 100%; padding: clamp(12px, 3vh, 18px) clamp(16px, 4vw, 20px); display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.2rem); text-transform: uppercase; cursor: pointer; background: rgba(0,0,0,0.75); border-bottom: 2px solid #000; color: #fff; flex-shrink: 0;}
+        .btn-main:hover { background: #fff; color: #000 !important; }
+        .btn-main:hover span { color: #000 !important; }
         
-        .btn-sub { width: 100%; display: flex; align-items: stretch; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.5rem); text-transform: uppercase; cursor: pointer; background: rgba(10,12,20,0.95); border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.15s; flex-shrink: 0;}
-        .btn-sub:hover { background: rgba(255,255,255,0.1); color: #22d3ee !important; }
-        .btn-sub-arrow { width: clamp(40px, 12vw, 70px); display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.05); transition: 0.15s; }
-        .btn-sub:hover .btn-sub-arrow { color: #22d3ee !important; padding-right: 10px; }
-        .btn-sub-text { flex: 1; padding: clamp(12px, 3vh, 24px) clamp(16px, 4vw, 30px); }
+        .btn-sub { width: 100%; display: flex; align-items: stretch; font-weight: 900; font-size: clamp(1rem, 3.5vw, 1.2rem); text-transform: uppercase; cursor: pointer; background: rgba(0,0,0,0.75); border-bottom: 2px solid #000; color: #fff; flex-shrink: 0;}
+        .btn-sub:hover { background: #fff; color: #000 !important; }
+        .btn-sub-arrow { width: clamp(40px, 12vw, 70px); display: flex; justify-content: center; align-items: center; border-right: 2px solid #000; }
+        .btn-sub:hover .btn-sub-arrow { color: #000 !important; }
+        .btn-sub-text { flex: 1; padding: clamp(12px, 3vh, 18px) clamp(16px, 4vw, 20px); }
 
-        .submenu-panel { background: rgba(10,12,20,0.95); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 8px; overflow-y: auto; pointer-events: auto; max-height: 70vh; width: 100%; }
+        .submenu-panel { background: rgba(5,5,8,0.95); backdrop-filter: blur(8px); border: 2px solid #000; box-shadow: 0 10px 40px rgba(0,0,0,0.9); border-radius: 0px; overflow-y: auto; pointer-events: auto; max-height: 70vh; width: 100%; }
 
         .gta-input { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
         .gta-input:disabled { opacity: 0.5; cursor: not-allowed; background: rgba(0,0,0,0.8); }
         .gta-textarea { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 12px; width: 100%; font-weight: bold; outline: none; min-height: 100px; border-radius: 4px; font-size: clamp(0.8rem, 2.5vw, 1rem);}
-        .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; padding: 15px; }
-        .store-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; }
-        .store-item.equipped { border-color: #4CAF50; background: rgba(76, 175, 80, 0.2); }
-        .store-item-title { font-weight: 900; text-transform: uppercase; font-size: clamp(0.6rem, 2vw, 0.8rem); margin-top: 8px; }
-
+        
         .tab-btn { color: #fff; font-size: clamp(0.7rem, 2vw, 0.9rem); padding: 10px; flex: 1; text-align: center; font-weight: 800; border-bottom: 3px solid transparent; opacity: 0.4; cursor: pointer; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid #fff; }
         .settings-panel { padding: clamp(1rem, 3vh, 1.5rem) clamp(10px, 4vw, 20px); width: 100%; flex-grow: 1; overflow-y: auto;}
@@ -102,11 +105,38 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
         
         #profile-menu .gta-menu { max-height: 95vh; }
+
+        .aaa-store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; padding: 16px 8px; }
+        .aaa-store-card { background: linear-gradient(145deg, rgba(20,20,30,0.9), rgba(10,10,15,0.9)); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px 12px; text-align: center; position: relative; overflow: hidden; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; min-height: 170px; }
+        .aaa-store-card:hover { border-color: #22d3ee; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(34, 211, 238, 0.15); }
+        .aaa-store-card.owned { border-color: #10b981; background: linear-gradient(145deg, rgba(16,185,129,0.1), rgba(10,10,15,0.9)); }
+        .aaa-store-card.equipped { border-color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); background: linear-gradient(145deg, rgba(245,158,11,0.1), rgba(10,10,15,0.9));}
+        .aaa-icon-wrapper { font-size: 3rem; margin-bottom: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .aaa-item-title { font-weight: 900; text-transform: uppercase; font-size: 0.8rem; color: #fff; letter-spacing: 1px; margin-bottom: 12px; line-height: 1.2; }
+        .aaa-btn-buy { background: #f59e0b; color: #000; font-weight: 900; font-size: 0.75rem; padding: 8px; border-radius: 4px; cursor: pointer; text-transform: uppercase; width: 100%; transition: 0.2s; border: none; letter-spacing: 1px;}
+        .aaa-btn-buy:hover { background: #fbbf24; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+        .aaa-btn-equip { background: rgba(255,255,255,0.1); color: #fff; font-weight: 900; font-size: 0.75rem; padding: 8px; border-radius: 4px; cursor: pointer; text-transform: uppercase; width: 100%; transition: 0.2s; border: 1px solid rgba(255,255,255,0.2); letter-spacing: 1px;}
+        .aaa-btn-equip:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
+        .aaa-btn-equipped { background: transparent; color: #f59e0b; font-weight: 900; font-size: 0.75rem; padding: 8px; border-radius: 4px; text-transform: uppercase; width: 100%; border: 1px solid #f59e0b; cursor: default; letter-spacing: 1px;}
+        .aaa-coin-display { background: rgba(0,0,0,0.6); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; font-weight: 900; padding: 6px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; letter-spacing: 1px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.1); }
+
+        /* MMO Powerup Inventory UI */
+        #powerup-inventory { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; pointer-events: none; z-index: 50; }
+        .powerup-slot { width: clamp(40px, 10vw, 55px); height: clamp(40px, 10vw, 55px); background: rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: clamp(1.2rem, 3vw, 1.8rem); position: relative; cursor: pointer; transition: all 0.2s; pointer-events: auto; }
+        .powerup-slot:hover { background: rgba(255,255,255,0.15); border-color: #fff; transform: scale(1.05); }
+        .powerup-slot:active { transform: scale(0.95); }
+        .powerup-count { position: absolute; bottom: -8px; right: -8px; background: #fff; color: #000; font-size: clamp(0.65rem, 1.5vw, 0.8rem); font-weight: 900; padding: 2px 8px; border-radius: 12px; border: 2px solid #000; }
+        .powerup-slot.disabled { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+        .powerup-key { position: absolute; top: -6px; left: -6px; background: #22d3ee; color: #000; font-size: 0.6rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; border: 1px solid #000;}
+        
+        .glow-blue { box-shadow: 0 0 15px rgba(59,130,246,0.6); border-color: #3b82f6 !important; }
+        .glow-green { box-shadow: 0 0 15px rgba(34,197,94,0.6); border-color: #22c55e !important; }
+        .glow-yellow { box-shadow: 0 0 15px rgba(234,179,8,0.6); border-color: #eab308 !important; }
+        .glow-purple { box-shadow: 0 0 15px rgba(168,85,247,0.6); border-color: #a855f7 !important; }
     </style>
 </head>
 <body>
 
-    <!-- MOBILE BLOCKER OVERLAY -->
     <div id="mobile-blocker" class="fixed inset-0 bg-[#050508] z-[9999] hidden flex-col items-center justify-center text-center p-6">
         <h1 class="text-4xl md:text-5xl font-black text-cyan-400 mb-6 tracking-widest uppercase">PC ONLY</h1>
         <p class="text-gray-300 font-bold uppercase tracking-widest leading-relaxed max-w-md mx-auto">Maze Escape is a heavy 3D experience designed strictly for desktop and laptop computers.</p>
@@ -149,7 +179,13 @@
             </div>
         </div>
 
-        <div class="absolute top-4 right-4 pointer-events-auto z-10">
+        <div class="absolute top-4 right-4 pointer-events-auto z-10 flex gap-3">
+            <div class="bg-black/90 border border-amber-500/40 rounded-md px-4 py-2 cursor-pointer hover:bg-white/10 transition flex items-center justify-center shadow-2xl relative gap-2" onclick="openMenu('ax-coins-menu')" title="Get AX Coins">
+                <span class="text-amber-500 font-black">🪙</span>
+                <span id="top-coin-display" class="text-white font-black text-sm">0</span>
+                <span class="text-[0.6rem] text-amber-500 font-bold uppercase tracking-widest mt-0.5">+ Get</span>
+            </div>
+            <!-- Message Center -->
             <div class="bg-black/90 border border-white/10 rounded-md p-3 cursor-pointer hover:bg-white/10 transition flex items-center justify-center shadow-2xl relative" onclick="openMenu('messages-menu')" title="Message Center">
                 <svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                 <span class="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border border-black"></span>
@@ -159,11 +195,12 @@
         <div class="absolute inset-0 w-full h-full pt-24 pb-8 overflow-y-auto lg:overflow-hidden flex flex-col lg:block items-center pointer-events-auto lg:pointer-events-none gap-6">
             
             <div class="relative lg:absolute lg:top-32 lg:left-8 w-[90%] sm:max-w-md lg:max-w-none lg:w-auto flex flex-col lg:flex-row pointer-events-none gap-4 z-20 mt-4 lg:mt-0 flex-shrink-0">
-                <div class="w-full lg:w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10 pointer-events-auto">
-                    <div onclick="toggleLeftSub('sub-play')" class="btn-main text-cyan-400">PLAY GAME <span class="text-cyan-400">&gt;</span></div>
-                    <div onclick="toggleLeftSub('sub-store')" class="btn-main text-white">STORE <span class="text-white">&gt;</span></div>
-                    <div onclick="toggleLeftSub('sub-settings')" class="btn-main text-white border-b border-white/20">SETTINGS <span class="text-white">&gt;</span></div>
-                    <div onclick="window.close()" class="btn-main text-red-500 border-none">EXIT GAME <span class="text-red-500">&gt;</span></div>
+                <div class="w-full lg:w-[320px] overflow-hidden border-2 border-black shadow-2xl bg-transparent flex-shrink-0 relative z-10 pointer-events-auto">
+                    <div class="gta-menu-header text-center">MAZE ESCAPE</div>
+                    <div onclick="toggleLeftSub('sub-play')" class="btn-main">PLAY GAME <span>&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-store')" class="btn-main">STORE <span>&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-inventory')" class="btn-main">INVENTORY <span>&gt;</span></div>
+                    <div onclick="toggleLeftSub('sub-settings')" class="btn-main border-none">SETTINGS <span>&gt;</span></div>
                 </div>
                 
                 <div id="left-submenus" class="hidden lg:absolute lg:top-0 lg:left-[340px] w-full lg:w-[460px] submenu-panel flex flex-col pointer-events-auto">
@@ -171,7 +208,7 @@
                         <div class="gta-menu-header">Game Modes</div>
                         <div class="flex-grow overflow-y-auto">
                             <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
-                            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online Session <span>></span></div>
+                            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online<span>></span></div>
                             <div id="btn-pvp-open" class="gta-btn text-red-500 font-black" onclick="toggleLeftSub('sub-pvp')">PvP Arena <span>></span></div>
                         </div>
                         <div class="gta-btn mt-auto border-t border-white/20" onclick="closeAllSubmenus()">Close</div>
@@ -188,34 +225,43 @@
                     </div>
 
                     <div id="sub-store" class="hidden w-full flex-col">
-                        <div class="gta-menu-header">Store</div>
+                        <div class="gta-menu-header flex justify-between items-center pr-4">
+                            <span>Store Catalog</span>
+                            <div class="aaa-coin-display" title="AX Coins">🪙 <span id="store-coin-balance">0</span></div>
+                        </div>
                         <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
-                            <button class="tab-btn active text-white" data-tab="store-weapons">Weapons</button>
-                            <button class="tab-btn text-white" data-tab="store-characters">Characters</button>
+                            <button class="tab-btn active text-white" data-tab="store-weapons" onclick="renderStore('weapons')">Weapons</button>
+                            <button class="tab-btn text-white" data-tab="store-chars" onclick="renderStore('chars')">Characters</button>
                         </div>
                         
                         <div id="tab-store-weapons" class="settings-panel flex-grow">
-                            <div class="store-grid">
-                                <div class="store-item" data-weapon="knife" onclick="equipWeapon('knife')"><div class="text-4xl py-2">🔪</div><div class="store-item-title">Knife</div></div>
-                                <div class="store-item" data-weapon="bat" onclick="equipWeapon('bat')"><div class="text-4xl py-2">🏏</div><div class="store-item-title">Baseball Bat</div></div>
-                                <div class="store-item" data-weapon="sword" onclick="equipWeapon('sword')"><div class="text-4xl py-2">🗡️</div><div class="store-item-title">Sword</div></div>
-                                <div class="store-item" data-weapon="chappal" onclick="equipWeapon('chappal')"><div class="text-4xl py-2">🩴</div><div class="store-item-title">Chappal</div></div>
-                            </div>
-                            <p class="text-xs text-gray-500 text-center mt-2 uppercase pb-2">*Weapons are only visible in PvP Arena</p>
+                            <div id="dynamic-store-weapons" class="aaa-store-grid"></div>
+                            <p class="text-[0.65rem] text-cyan-400 text-center mt-4 uppercase pb-2 font-black tracking-widest bg-cyan-900/20 p-2 rounded border border-cyan-500/20 mx-2">* Weapons are visible exclusively in the PvP Arena</p>
                         </div>
                         
-                        <div id="tab-store-characters" class="settings-panel hidden flex-grow">
-                            <div class="store-grid">
-                                <div class="store-item" data-char="default" onclick="equipCharacter('default')"><div class="w-10 h-10 mx-auto rounded-full bg-blue-600 mb-2 border-2 border-white"></div><div class="store-item-title">Default</div></div>
-                                <div class="store-item" data-char="ninja" onclick="equipCharacter('ninja')"><div class="w-10 h-10 mx-auto rounded-full bg-gray-900 mb-2 border-2 border-white"></div><div class="store-item-title">Ninja</div></div>
-                                <div class="store-item" data-char="soldier" onclick="equipCharacter('soldier')"><div class="w-10 h-10 mx-auto rounded-full bg-green-700 mb-2 border-2 border-white"></div><div class="store-item-title">Soldier</div></div>
-                                <div class="store-item" data-char="gold" onclick="equipCharacter('gold')"><div class="w-10 h-10 mx-auto rounded-full bg-yellow-400 mb-2 border-2 border-white"></div><div class="store-item-title">Gold</div></div>
-                            </div>
+                        <div id="tab-store-chars" class="settings-panel hidden flex-grow">
+                            <div id="dynamic-store-chars" class="aaa-store-grid"></div>
                         </div>
                         <div class="gta-btn border-t border-white/20 mt-auto justify-center flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
                     </div>
 
-                    <!-- Settings Menu -->
+                    <div id="sub-inventory" class="hidden w-full flex-col">
+                        <div class="gta-menu-header pr-4 text-cyan-400">My Inventory</div>
+                        <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
+                            <button class="tab-btn active text-white" data-tab="inv-weapons" onclick="renderInventory('weapons')">Weapons</button>
+                            <button class="tab-btn text-white" data-tab="inv-characters" onclick="renderInventory('chars')">Characters</button>
+                        </div>
+                        
+                        <div id="tab-inv-weapons" class="settings-panel flex-grow">
+                            <div id="dynamic-inv-weapons" class="aaa-store-grid"></div>
+                        </div>
+                        
+                        <div id="tab-inv-characters" class="settings-panel hidden flex-grow">
+                            <div id="dynamic-inv-chars" class="aaa-store-grid"></div>
+                        </div>
+                        <div class="gta-btn border-t border-white/20 mt-auto justify-center flex-shrink-0" onclick="closeAllSubmenus()">Close</div>
+                    </div>
+
                     <div id="sub-settings" class="hidden w-full flex-col">
                         <div class="gta-menu-header">Settings</div>
                         <div class="flex border-b border-white/20 bg-black/50 flex-shrink-0">
@@ -340,7 +386,7 @@
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.0.2</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.0</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -358,18 +404,26 @@
                     </div>
                 </div>
 
-                <div class="w-full lg:w-[320px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/90 flex-shrink-0 relative z-10 pointer-events-auto order-1 lg:order-2">
-                    <div class="btn-sub text-white" onclick="toggleRightSub('sub-friends')">
+                <div class="w-full lg:w-[320px] overflow-hidden border-2 border-black shadow-2xl bg-transparent flex-shrink-0 relative z-10 pointer-events-auto order-1 lg:order-2">
+                    <div class="gta-menu-header text-center">NETWORK</div>
+                    <div class="btn-sub" onclick="toggleRightSub('sub-friends')">
                         <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">FRIENDS</div>
                     </div>
-                    <div class="btn-sub text-white" onclick="toggleRightSub('sub-credits')">
+                    <div class="btn-sub" onclick="toggleRightSub('sub-credits')">
                         <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">CREDITS</div>
                     </div>
-                    <div class="btn-sub text-white border-none" onclick="toggleRightSub('sub-support')">
-                        <div class="btn-sub-arrow text-cyan-400">&lt;</div><div class="btn-sub-text text-cyan-400">SUPPORT</div>
+                    <div class="btn-sub border-none" onclick="toggleRightSub('sub-support')">
+                        <div class="btn-sub-arrow">&lt;</div><div class="btn-sub-text">SUPPORT</div>
                     </div>
                 </div>
             </div>
+            
+            <button onclick="window.close()" class="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto z-50 bg-black/90 border-2 border-black hover:border-red-500 hover:bg-red-500/10 text-gray-300 hover:text-red-500 transition-all p-3 md:p-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.9)] flex items-center justify-center group" title="Exit Game">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+            </button>
+            
         </div>
     </div>
 
@@ -437,6 +491,38 @@
         </div>
     </div>
 
+    <div id="ax-coins-menu" class="overlay hidden z-[70]">
+        <h2 class="title-text text-amber-500">AX COIN BANK</h2>
+        <div class="gta-menu w-full max-w-md">
+            <div class="gta-menu-header bg-gradient-to-r from-amber-500 to-yellow-300 text-black">Acquire Currency</div>
+            
+            <div class="p-6 flex flex-col items-center border-b border-white/10 bg-black/40">
+                <div class="text-5xl mb-2 drop-shadow-md">🪙</div>
+                <div class="text-3xl font-black text-white"><span id="modal-coin-display">0</span> <span class="text-lg text-amber-500 tracking-widest">AX COINS</span></div>
+            </div>
+
+            <div class="p-4 space-y-4 flex-grow">
+                <div class="bg-black/50 border border-white/10 p-4 rounded-lg flex justify-between items-center hover:border-cyan-500/50 transition-colors">
+                    <div>
+                        <h3 class="font-black text-white text-sm uppercase">Watch Sponsored Ad</h3>
+                        <p class="text-[0.65rem] text-gray-400 font-bold uppercase mt-1">Reward: +50 AX Coins.</p>
+                        <p class="text-[0.6rem] text-cyan-400 font-bold uppercase mt-1 tracking-widest"><span id="ad-count-display">0</span> / 10 Daily Limit</p>
+                    </div>
+                    <button id="btn-watch-ad" onclick="watchAd()" class="bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs px-4 py-3 rounded uppercase tracking-wider transition-colors shadow-[0_0_10px_rgba(34,211,238,0.3)]">Watch</button>
+                </div>
+                <div class="bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/30 p-4 rounded-lg flex justify-between items-center hover:border-amber-500 transition-colors">
+                    <div>
+                        <h3 class="font-black text-white text-sm uppercase">Buy Coins</h3>
+                        <p class="text-[0.65rem] text-gray-400 font-bold uppercase mt-1">Instantly get +1500 AX Coins.</p>
+                        <p class="text-[0.6rem] text-amber-500 font-bold uppercase mt-1 tracking-widest">Coming Soon</p>
+                    </div>
+                    <button onclick="buyCoinsPremium()" class="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-5 py-3 rounded uppercase tracking-wider transition-colors shadow-[0_0_10px_rgba(245,158,11,0.3)]">₹29</button>
+                </div>
+            </div>
+            <div class="gta-btn justify-center border-t border-white/20 mt-auto flex-shrink-0" onclick="closeMenu('ax-coins-menu')">Close Bank</div>
+        </div>
+    </div>
+
     <div id="messages-menu" class="overlay hidden z-[70]">
         <h2 class="title-text">MESSAGE CENTER</h2>
         <div class="gta-menu w-full max-w-lg">
@@ -461,7 +547,6 @@
         </div>
     </div>
 
-    <!-- Matchmaking Screen -->
     <div id="matchmaking-screen" class="overlay hidden items-center justify-center bg-black/90 z-[70]">
         <div class="text-center">
             <h2 class="text-3xl md:text-4xl font-black text-white tracking-widest mb-4 animate-pulse">SEARCHING...</h2>
@@ -500,10 +585,9 @@
     
     <div id="mmo-victory-screen" class="overlay hidden bg-transparent z-[70]">
         <h2 class="text-4xl md:text-5xl font-black text-white tracking-widest text-shadow-xl animate-pulse text-center mb-8" style="text-shadow: 0 0 20px #22d3ee;">ESCAPED!</h2>
-        <h3 class="text-xl md:text-2xl font-bold text-cyan-300 uppercase tracking-widest text-center">Session Conquered</h3>
+        <h3 class="text-xl md:text-2xl font-bold text-cyan-300 uppercase tracking-widest text-center">Giant Session Conquered</h3>
     </div>
 
-    <!-- HUD Elements -->
     <div id="pvp-scoreboard" class="hidden">
         <div class="score-you">YOU: <span id="score-val-you">0</span></div>
         <div class="text-gray-500">|</div>
@@ -513,7 +597,7 @@
     <div id="hud" class="absolute top-0 left-0 w-full h-full z-10 hidden pointer-events-none p-4 md:p-6 flex justify-between items-start">
         <div class="bg-black/80 px-3 md:px-4 py-2 md:py-3 border-l-4 border-white pointer-events-auto flex items-center gap-3 md:gap-4 shadow-lg min-w-[180px] md:min-w-[220px] rounded-r-md">
             <div id="hud-level-container" class="text-xs md:text-sm font-black text-white flex items-center uppercase">LVL <span id="hud-level" class="text-base md:text-lg ml-2">1</span></div>
-            <div id="hud-online-container" class="text-xs md:text-sm font-black text-cyan-300 hidden items-center uppercase">ONLINE <span id="hud-players" class="text-base md:text-lg ml-2">1/30</span></div>
+            <div id="hud-online-container" class="text-xs md:text-sm font-black text-cyan-300 hidden items-center uppercase">GIANT MAZE <span id="hud-players" class="text-base md:text-lg ml-2">1/30</span></div>
             <div id="hud-pvp-container" class="text-xs md:text-sm font-black text-red-500 hidden items-center uppercase">PvP 1v1</div>
             <div class="w-px h-4 md:h-5 bg-white/30"></div>
             <div class="text-xs md:text-sm font-black text-white flex items-center font-mono">⏱ <span id="hud-timer" class="text-base md:text-lg ml-2">00:00</span></div>
@@ -528,6 +612,30 @@
             <div id="btn-hud-camera" class="hud-icon">🎥</div>
             <div id="btn-hud-pause" class="hud-icon">⏸</div>
         </div>
+
+        <!-- NEW MMO POWERUP UI -->
+        <div id="powerup-inventory" class="hidden">
+            <div class="powerup-slot disabled" id="slot-map" onclick="usePowerup('map')" title="Reveal Map (Press 1)">
+                <span class="powerup-key">1</span>
+                <span class="icon">🗺️</span>
+                <span class="powerup-count" id="count-map">0</span>
+            </div>
+            <div class="powerup-slot disabled" id="slot-superjump" onclick="usePowerup('superjump')" title="Super Jump (Press 2)">
+                <span class="powerup-key">2</span>
+                <span class="icon">🦘</span>
+                <span class="powerup-count" id="count-superjump">0</span>
+            </div>
+            <div class="powerup-slot disabled" id="slot-pathfinder" onclick="usePowerup('pathfinder')" title="Pathfinder (Press 3)">
+                <span class="powerup-key">3</span>
+                <span class="icon">✨</span>
+                <span class="powerup-count" id="count-pathfinder">0</span>
+            </div>
+            <div class="powerup-slot disabled" id="slot-walljumper" onclick="usePowerup('walljumper')" title="Wall Phase (Press 4)">
+                <span class="powerup-key">4</span>
+                <span class="icon">👻</span>
+                <span class="powerup-count" id="count-walljumper">0</span>
+            </div>
+        </div>
     </div>
     
     <div id="hud-hp-container"><div id="hud-hp-fill"></div></div>
@@ -536,8 +644,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getDatabase, ref, set, onValue, onDisconnect, remove, push, onChildAdded, update, get } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
-        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getDatabase, ref, set, onValue, onDisconnect, remove, push, onChildAdded, update, get };
+        import { getDatabase, ref, set, get, update, push, onValue, onChildAdded, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        
+        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getDatabase, ref, set, get, update, push, onValue, onChildAdded, onDisconnect, remove };
     </script>
 
     <script>
@@ -552,11 +661,8 @@
         return adj + noun;
     }
 
-    // Developer Privileges State
     let isDeveloper = false;
     let isFlyMode = false;
-    
-    // Orbital Camera State Variables
     let camAzimuth = Math.PI, camElevation = -0.15, mouseSensitivity = 0.002;
 
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -564,7 +670,7 @@
     function closeAllSubmenus() {
         document.getElementById('left-submenus').classList.add('hidden');
         document.getElementById('right-submenus').classList.add('hidden');
-        ['sub-play', 'sub-pvp', 'sub-store', 'sub-settings', 'sub-friends', 'sub-credits', 'sub-support'].forEach(id => {
+        ['sub-play', 'sub-pvp', 'sub-store', 'sub-inventory', 'sub-settings', 'sub-friends', 'sub-credits', 'sub-support'].forEach(id => {
             const el = document.getElementById(id); if(el) el.classList.add('hidden');
         });
     }
@@ -575,6 +681,9 @@
         closeAllSubmenus();
         document.getElementById('left-submenus').classList.remove('hidden');
         content.classList.remove('hidden');
+        
+        if (id === 'sub-store') renderStore('weapons');
+        if (id === 'sub-inventory') renderInventory('weapons');
     }
 
     function toggleRightSub(id) {
@@ -615,77 +724,20 @@
         document.getElementById('astrax-link-modal').classList.remove('flex');
     };
     
-    window.submitAstraXLink = async () => {
-        const email = document.getElementById('ax-email').value;
-        const pass = document.getElementById('ax-pass').value;
-        if(!email || !pass) return gtaNotify("Enter email and password", true);
-        
-        document.getElementById('btn-ax-link').innerText = "Linking...";
-        try {
-            const res = await fetch('https://astrax-auth.ranjanroushan5.workers.dev', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({action: 'login', email: email, password: pass})
-            });
-            const data = await res.json();
-            
-            if(data.success) {
-                const newAstraXUid = data.uid;
-
-                if (!localStorage.getItem('ax_uid')) {
-                    const guestDataSnap = await window.FB.get(window.FB.ref(db, 'users/' + myDBUid));
-                    const astraxDataSnap = await window.FB.get(window.FB.ref(db, 'users/' + newAstraXUid));
-                    
-                    if (guestDataSnap.exists() && !astraxDataSnap.exists()) {
-                        let transferData = guestDataSnap.val();
-                        transferData.profile.name = data.name;
-                        if(data.pfp) transferData.profile.pfp = data.pfp;
-                        
-                        transferData.profile.level = parseInt(localStorage.getItem('maze_escape_level') || 1);
-                        
-                        await window.FB.set(window.FB.ref(db, 'users/' + newAstraXUid), transferData);
-                        if(transferData.profile && transferData.profile.uidNum) {
-                            await window.FB.set(window.FB.ref(db, 'uids/' + transferData.profile.uidNum), newAstraXUid);
-                        }
-                        await window.FB.remove(window.FB.ref(db, 'users/' + myDBUid));
-                        
-                    } else if (guestDataSnap.exists() && astraxDataSnap.exists()) {
-                        await window.FB.remove(window.FB.ref(db, 'users/' + myDBUid));
-                    }
-                }
-                
-                localStorage.setItem('ax_uid', data.uid);
-                localStorage.setItem('ax_email', data.email);
-                localStorage.setItem('ax_name', data.name);
-                if (data.pfp) localStorage.setItem('ax_pfp', data.pfp);
-
-                gtaNotify("AstraX ID Linked! Synchronizing...");
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                gtaNotify(data.error || "Login failed", true);
-                document.getElementById('btn-ax-link').innerText = "Link Account";
-            }
-        } catch(e) {
-            gtaNotify("Server error connecting to Cloudflare.", true);
-            document.getElementById('btn-ax-link').innerText = "Link Account";
-        }
-    };
-
-    function submitSupport() {
-        const txt = document.getElementById('support-text').value;
-        if(txt.length < 5) { gtaNotify("Please enter details.", true); return; }
-        if(window.FB && db && myDBUid) window.FB.push(window.FB.ref(db, 'feedback'), { uid: myDBUid, msg: txt, ts: Date.now() });
-        document.getElementById('support-text').value = '';
-        gtaNotify("Report Submitted. Thank you!"); closeAllSubmenus();
-    }
-
     const MY_FIREBASE_CONFIG = { apiKey: "AIzaSyAXwPgUZosfl8A8b7xdyOBhRvb6OhS1b5U", authDomain: "astrax-games.firebaseapp.com", databaseURL: "https://astrax-games-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "astrax-games", storageBucket: "astrax-games.firebasestorage.app", messagingSenderId: "34977949864", appId: "1:34977949864:web:80dccbf1b3230e8bf03a9d", measurementId: "G-JXLYFP05T4" };
     
     let db, auth, currentUser, myDBUid, onlineUnsub, onlineSyncInterval, sprayUnsub, pvpStateUnsub;
     
-    let userProfile = { name: "Player", uidNum: "------", changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: 1 };
+    let userProfile = { 
+        name: "Player", uidNum: "------", changesLeft: 2, pfp: DEFAULT_PFP, 
+        equippedWeapon: "knife", equippedChar: "default", level: 1,
+        coins: 0, dailyAdsWatched: 0, lastAdDate: "",
+        inventory: { weapons: ['knife'], chars: ['default'] }
+    };
     
     let mySessionId = Math.random().toString(36).substring(2, 10);
     let myStatusRef = null;
+    let globalStoreCatalog = { weapons: {}, chars: {} };
     
     async function loadAppAuth() {
         if(!window.FB || !MY_FIREBASE_CONFIG.apiKey) {
@@ -693,6 +745,17 @@
         }
         const app = window.FB.initializeApp(MY_FIREBASE_CONFIG);
         db = window.FB.getDatabase(app); auth = window.FB.getAuth(app);
+        
+        try {
+            const res = await fetch('https://astrax-auth.ranjanroushan5.workers.dev/store');
+            if(res.ok) globalStoreCatalog = await res.json();
+        } catch(e) {
+            console.error("Store fetch failed, using fallback", e);
+            globalStoreCatalog = {
+                weapons: { 'knife': { name: 'Combat Knife', icon: '🔪', price: 0 }, 'bat': { name: 'Baseball Bat', icon: '🏏', price: 200 } },
+                chars: { 'default': { name: 'Rookie Blue', icon: '🟦', price: 0 } }
+            };
+        }
         
         window.FB.onAuthStateChanged(auth, async (user) => {
             if (user) { 
@@ -719,12 +782,15 @@
         const userRef = window.FB.ref(db, 'users/' + myDBUid + '/profile');
         const snap = await window.FB.get(userRef);
         if (snap.exists()) {
-            userProfile = snap.val();
-            if(!userProfile.equippedWeapon) userProfile.equippedWeapon = 'knife';
-            if(!userProfile.equippedChar) userProfile.equippedChar = 'default';
-            if(!userProfile.level) userProfile.level = 1;
-            if(!userProfile.pfp || userProfile.pfp.includes('placehold.co')) userProfile.pfp = DEFAULT_PFP;
+            const val = snap.val();
+            userProfile = { ...userProfile, ...val };
             
+            if(!userProfile.inventory) userProfile.inventory = { weapons: ['knife'], chars: ['default'] };
+            if(!userProfile.inventory.chars) userProfile.inventory.chars = ['default'];
+            if(userProfile.coins === undefined) userProfile.coins = 0;
+            if(userProfile.dailyAdsWatched === undefined) userProfile.dailyAdsWatched = 0;
+            if(userProfile.lastAdDate === undefined) userProfile.lastAdDate = "";
+
             localStorage.setItem('maze_escape_level', userProfile.level);
             currentLevel = parseInt(userProfile.level);
 
@@ -734,9 +800,8 @@
             }
         } else {
             const randomID = Math.floor(100000 + Math.random() * 900000);
-            
             const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
-            userProfile = { name: generateCoolName(), uidNum: randomID, changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: localLevel };
+            userProfile = { name: generateCoolName(), uidNum: randomID, changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: localLevel, coins: 0, dailyAdsWatched: 0, lastAdDate: "", inventory: { weapons: ['knife'], chars: ['default'] } };
             
             await window.FB.set(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
             await window.FB.set(window.FB.ref(db, 'uids/' + randomID), myDBUid);
@@ -751,6 +816,163 @@
         clock.start(); isPlaying = false; isPaused = false; buildLevel(true); animate();
     }
 
+    window.watchAd = async function() {
+        if(!myDBUid || !db || !window.FB) return;
+        
+        const today = new Date().toLocaleDateString();
+        if (userProfile.lastAdDate !== today) {
+            userProfile.dailyAdsWatched = 0;
+            userProfile.lastAdDate = today;
+        }
+
+        if (userProfile.dailyAdsWatched >= 10) {
+            gtaNotify("Daily limit reached! Come back tomorrow.", true);
+            return;
+        }
+
+        const btn = document.getElementById('btn-watch-ad');
+        btn.disabled = true;
+        btn.innerText = "PLAYING AD...";
+        
+        setTimeout(async () => {
+            userProfile.dailyAdsWatched++;
+            userProfile.coins += 5;
+            
+            await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), {
+                dailyAdsWatched: userProfile.dailyAdsWatched,
+                lastAdDate: userProfile.lastAdDate,
+                coins: userProfile.coins
+            });
+
+            updateProfileUI(); 
+            gtaNotify("+50 AX Coins Added to Bank!");
+            
+            btn.disabled = false;
+            btn.innerText = "WATCH";
+        }, 3000);
+    };
+
+    window.buyCoinsPremium = function() {
+        gtaNotify("Secure Checkout Starting...", false);
+        setTimeout(() => { alert("Razorpay/UPI checkout for ₹29 to buy 1500 coins."); }, 800);
+    };
+
+   window.renderStore = function(category) {
+    const catKey = (category === 'chars' || category === 'characters') ? 'chars' : 'weapons';
+    const tabKey = catKey === 'chars' ? 'store-chars' : 'store-weapons';
+    const panelKey = catKey === 'chars' ? 'tab-store-chars' : 'tab-store-weapons';
+
+    document.querySelectorAll('#sub-store .tab-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`#sub-store .tab-btn[data-tab="${tabKey}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    const weaponsPanel = document.getElementById('tab-store-weapons');
+    const charsPanel = document.getElementById('tab-store-chars');
+    if (weaponsPanel) weaponsPanel.classList.add('hidden');
+    if (charsPanel) charsPanel.classList.add('hidden');
+    
+    const targetPanel = document.getElementById(panelKey);
+    if (targetPanel) targetPanel.classList.remove('hidden');
+
+    const grid = document.getElementById(`dynamic-store-${catKey}`);
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const items = globalStoreCatalog[catKey] || {};
+    for(let id in items) {
+        const item = items[id];
+        const isOwned = userProfile.inventory && userProfile.inventory[catKey] && userProfile.inventory[catKey].includes(id);
+        
+        grid.innerHTML += `
+            <div class="aaa-store-card ${isOwned ? 'owned' : ''}">
+                <div class="aaa-icon-wrapper">${item.icon}</div>
+                <div class="aaa-item-title">${item.name}</div>
+                ${isOwned 
+                    ? `<button class="aaa-btn-equipped" disabled>Owned</button>` 
+                    : `<button class="aaa-btn-buy" onclick="buyStoreItem('${catKey}', '${id}')">Buy (${item.price})</button>`
+                }
+            </div>
+        `;
+    }
+};
+
+    window.buyStoreItem = async function(category, id) {
+        const item = globalStoreCatalog[category][id];
+        if(!item) return;
+
+        if(userProfile.coins >= item.price) {
+            userProfile.coins -= item.price;
+            if(!userProfile.inventory[category]) userProfile.inventory[category] = [];
+            if(!userProfile.inventory[category].includes(id)) {
+                userProfile.inventory[category].push(id);
+            }
+            
+            await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), {
+                coins: userProfile.coins,
+                inventory: userProfile.inventory
+            });
+            
+            updateProfileUI();
+            renderStore(category);
+            gtaNotify(`Purchased ${item.name}!`, false);
+        } else {
+            gtaNotify("Not enough AX Coins!", true);
+        }
+    };
+
+    window.renderInventory = function(category) {
+        document.querySelectorAll('#sub-inventory .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`#sub-inventory .tab-btn[data-tab="inv-${category === 'weapons' ? 'weapons' : 'characters'}"]`).classList.add('active');
+        
+        document.getElementById('tab-inv-weapons').classList.add('hidden');
+        document.getElementById('tab-inv-characters').classList.add('hidden');
+        document.getElementById(`tab-inv-${category === 'weapons' ? 'weapons' : 'characters'}`).classList.remove('hidden');
+
+        const grid = document.getElementById(`dynamic-inv-${category}`);
+        grid.innerHTML = '';
+        
+        const ownedIds = userProfile.inventory[category] || [];
+        const equippedId = category === 'weapons' ? userProfile.equippedWeapon : userProfile.equippedChar;
+
+        if (ownedIds.length === 0) {
+            grid.innerHTML = `<p class="text-xs text-gray-500 font-bold uppercase col-span-full text-center py-4">No items owned.</p>`;
+            return;
+        }
+
+        ownedIds.forEach(id => {
+            const item = globalStoreCatalog[category][id] || { name: 'Unknown', icon: '❓' };
+            const isEquipped = (equippedId === id);
+
+            grid.innerHTML += `
+                <div class="aaa-store-card ${isEquipped ? 'equipped' : ''}">
+                    <div class="aaa-icon-wrapper">${item.icon}</div>
+                    <div class="aaa-item-title">${item.name}</div>
+                    ${isEquipped 
+                        ? `<button class="aaa-btn-equipped" disabled>Equipped</button>` 
+                        : `<button class="aaa-btn-equip" onclick="equipInventoryItem('${category}', '${id}')">Equip</button>`
+                    }
+                </div>
+            `;
+        });
+    };
+
+    window.equipInventoryItem = async function(category, id) {
+        if(category === 'weapons') {
+            userProfile.equippedWeapon = id;
+            applyWeaponMesh(player, id);
+        } else {
+            userProfile.equippedChar = id;
+            applyCharacterSkin(player, id);
+        }
+        
+        const updates = category === 'weapons' ? { equippedWeapon: id } : { equippedChar: id };
+        await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), updates);
+        
+        updateProfileUI();
+        renderInventory(category);
+        gtaNotify("Item Equipped!");
+    };
+
     function updateProfileUI() {
         document.getElementById('widget-name').innerText = userProfile.name;
         document.getElementById('widget-uid').innerText = "UID: " + userProfile.uidNum;
@@ -760,6 +982,18 @@
         document.getElementById('edit-uid-display').innerText = userProfile.uidNum;
         document.getElementById('name-changes-left').innerText = userProfile.changesLeft;
         document.getElementById('edit-pfp').src = userProfile.pfp;
+
+        const today = new Date().toLocaleDateString();
+        if (userProfile.lastAdDate !== today) userProfile.dailyAdsWatched = 0;
+
+        const topCoin = document.getElementById('top-coin-display');
+        if (topCoin) topCoin.innerText = userProfile.coins || 0;
+        const modalCoin = document.getElementById('modal-coin-display');
+        if (modalCoin) modalCoin.innerText = userProfile.coins || 0;
+        const storeCoin = document.getElementById('store-coin-balance');
+        if (storeCoin) storeCoin.innerText = userProfile.coins || 0;
+        const adCount = document.getElementById('ad-count-display');
+        if (adCount) adCount.innerText = userProfile.dailyAdsWatched || 0;
 
         if (isDeveloper) {
             document.getElementById('dev-badge').classList.remove('hidden');
@@ -782,12 +1016,6 @@
             document.getElementById('ax-locked-warning').classList.remove('hidden');
             document.getElementById('btn-save-profile').classList.add('hidden');
         }
-        
-        document.querySelectorAll('.store-item').forEach(el => el.classList.remove('equipped'));
-        const activeWpn = document.querySelector(`.store-item[data-weapon="${userProfile.equippedWeapon}"]`);
-        if(activeWpn) activeWpn.classList.add('equipped');
-        const activeChar = document.querySelector(`.store-item[data-char="${userProfile.equippedChar}"]`);
-        if(activeChar) activeChar.classList.add('equipped');
         
         applyWeaponMesh(player, userProfile.equippedWeapon);
         applyCharacterSkin(player, userProfile.equippedChar);
@@ -872,17 +1100,6 @@
         }
         await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
         updateProfileUI(); closeMenu('profile-menu'); gtaNotify("Profile Saved!");
-    };
-
-    window.equipWeapon = async (w) => {
-        userProfile.equippedWeapon = w;
-        if(myDBUid && db) await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { equippedWeapon: w });
-        updateProfileUI(); gtaNotify("Weapon Equipped!");
-    };
-    window.equipCharacter = async (c) => {
-        userProfile.equippedChar = c;
-        if(myDBUid && db) await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { equippedChar: c });
-        updateProfileUI(); gtaNotify("Character Equipped!");
     };
 
     let myFriends = {}; let myFriendRequests = {}; let friendStatuses = {};
@@ -1077,6 +1294,191 @@
         }
     };
 
+    let powerupMeshesList = [];
+    let myPowerups = { map: 0, superjump: 0, pathfinder: 0, walljumper: 0 };
+    let activeEffects = { map: false, pathfinderLine: null };
+
+    const powerupTypes = ['map', 'superjump', 'pathfinder', 'walljumper'];
+    const powerupColors = { map: 0x3b82f6, superjump: 0x22c55e, pathfinder: 0xeab308, walljumper: 0xa855f7 };
+    const powerupIcons = { map: '🗺️', superjump: '🦘', pathfinder: '✨', walljumper: '👻' };
+    let powerupTextures = {};
+    
+    function updatePowerupUI() {
+        if(gameMode === 'mmo') {
+            document.getElementById('powerup-inventory').classList.remove('hidden');
+            for(let t of powerupTypes) {
+                const count = myPowerups[t];
+                document.getElementById(`count-${t}`).innerText = count;
+                const slot = document.getElementById(`slot-${t}`);
+                if(count > 0) {
+                    slot.classList.remove('disabled');
+                    slot.className = `powerup-slot glow-${t==='map'?'blue':t==='superjump'?'green':t==='pathfinder'?'yellow':'purple'}`;
+                } else {
+                    slot.className = 'powerup-slot disabled';
+                }
+            }
+        } else {
+            document.getElementById('powerup-inventory').classList.add('hidden');
+        }
+    }
+
+    window.usePowerup = function(type) {
+        if(myPowerups[type] <= 0 || !isPlaying || isPaused || isDead) return;
+        
+        myPowerups[type]--;
+        updatePowerupUI();
+
+        let originalFogDensity = 0.015;
+        if (type === 'map') {
+            if(!activeEffects.map) {
+                activeEffects.map = true;
+                gtaNotify("Map Revealed! (5s)", false);
+                if(scene.fog) {
+                    originalFogDensity = scene.fog.density;
+                    scene.fog.density = 0; // Clear fog for map view
+                }
+                setTimeout(() => { 
+                    activeEffects.map = false; 
+                    if(scene.fog) scene.fog.density = originalFogDensity; // Restore fog
+                }, 5000);
+            }
+        } else if (type === 'superjump') {
+            if(isGrounded && !keys.crouch) {
+                velocityY = 35; // Huge boost
+                isGrounded = false;
+                gtaNotify("Super Jump!", false);
+            } else {
+                myPowerups[type]++; // refund if couldn't jump
+                updatePowerupUI();
+            }
+        } else if (type === 'pathfinder') {
+            let res = drawPathfinder();
+            if(!res) { myPowerups[type]++; updatePowerupUI(); } // refund if failed
+        } else if (type === 'walljumper') {
+            let res = performWallPhase();
+            if(!res) { myPowerups[type]++; updatePowerupUI(); }
+        }
+    };
+
+    function performWallPhase() {
+        _camDir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
+        // Try jumping forward 2 cells
+        let targetX = player.position.x + _camDir.x * CELL_SIZE * 2;
+        let targetZ = player.position.z + _camDir.z * CELL_SIZE * 2;
+        
+        let gX = Math.round(targetX/CELL_SIZE);
+        let gZ = Math.round(targetZ/CELL_SIZE);
+        
+        if(gX > 0 && gX < mazeWidth-1 && gZ > 0 && gZ < mazeHeight-1 && mazeGrid[gZ][gX] === 0) {
+            player.position.set(gX * CELL_SIZE, 0, gZ * CELL_SIZE);
+            gtaNotify("Phase Jumped!", false);
+            if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C5', '16n');
+            return true;
+        } else {
+            gtaNotify("Can't jump into solid matter!", true);
+            return false;
+        }
+    }
+
+    function drawPathfinder() {
+        let startGX = Math.round(player.position.x / CELL_SIZE);
+        let startGZ = Math.round(player.position.z / CELL_SIZE);
+        let path = getPathToExit(startGX, startGZ, levelEndX, levelEndZ);
+        
+        if(path.length > 0) {
+            if(activeEffects.pathfinderLine) scene.remove(activeEffects.pathfinderLine);
+            const points = [];
+            points.push(new THREE.Vector3(player.position.x, 0.5, player.position.z));
+            path.forEach(p => points.push(new THREE.Vector3(p.x * CELL_SIZE, 0.5, p.y * CELL_SIZE)));
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const mat = new THREE.LineBasicMaterial({ color: 0xeab308, linewidth: 5 });
+            const line = new THREE.Line(geo, mat);
+            scene.add(line);
+            activeEffects.pathfinderLine = line;
+            setTimeout(() => {
+                if(activeEffects.pathfinderLine) { scene.remove(activeEffects.pathfinderLine); activeEffects.pathfinderLine = null; }
+            }, 10000);
+            gtaNotify("Pathfinder Activated (10s)!", false);
+            return true;
+        }
+        return false;
+    }
+
+    function getPathToExit(startX, startY, endX, endY) {
+        let queue = [{x: startX, y: startY, path: []}];
+        let visited = Array(mazeHeight).fill().map(()=>Array(mazeWidth).fill(false));
+        if (startY >= 0 && startY < mazeHeight && startX >= 0 && startX < mazeWidth) {
+             visited[startY][startX] = true;
+        } else return []; // Out of bounds start
+
+        while(queue.length > 0) {
+            let curr = queue.shift();
+            // Allow matching exact or adjacent if end is on edge
+            if((curr.x === endX && curr.y === endY) || 
+               (Math.abs(curr.x - endX) <= 1 && Math.abs(curr.y - endY) <= 1 && (endX <= 0 || endX >= mazeWidth-1 || endY <= 0 || endY >= mazeHeight-1))) {
+                return curr.path;
+            }
+
+            const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+            for(let d of dirs) {
+                let nx = curr.x + d[0], ny = curr.y + d[1];
+                if(nx >= 0 && nx < mazeWidth && ny >= 0 && ny < mazeHeight && mazeGrid[ny][nx] === 0 && !visited[ny][nx]) {
+                    visited[ny][nx] = true;
+                    queue.push({x: nx, y: ny, path: [...curr.path, {x: nx, y: ny}]});
+                }
+            }
+        }
+        return [];
+    }
+
+    function createPowerupTexture(iconText, colorHex) {
+        const c = document.createElement('canvas');
+        c.width = 128; c.height = 128;
+        const ctx = c.getContext('2d');
+        
+        // Draw glowing background circle
+        ctx.beginPath();
+        ctx.arc(64, 64, 45, 0, Math.PI*2);
+        ctx.fillStyle = '#' + colorHex.toString(16).padStart(6, '0');
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.fill(); // double fill for extra glow
+        
+        // Draw Emoji
+        ctx.shadowBlur = 0;
+        ctx.font = '50px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(iconText, 64, 68);
+        
+        const tex = new THREE.CanvasTexture(c);
+        return tex;
+    }
+
+    function createPowerupMesh(cx, cz, type) {
+        if (!powerupTextures[type]) {
+            powerupTextures[type] = createPowerupTexture(powerupIcons[type], powerupColors[type]);
+        }
+        const mat = new THREE.SpriteMaterial({ map: powerupTextures[type], transparent: true });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(1.5, 1.5, 1.5);
+        sprite.position.set(cx * CELL_SIZE, 1.0, cz * CELL_SIZE);
+        sprite.userData = { type: type, cx: cx, cz: cz, active: true };
+        
+        scene.add(sprite);
+        powerupMeshesList.push(sprite);
+    }
+
+    function clearPowerups() {
+        powerupMeshesList.forEach(m => scene.remove(m));
+        powerupMeshesList = [];
+        if(activeEffects.pathfinderLine) { scene.remove(activeEffects.pathfinderLine); activeEffects.pathfinderLine = null; }
+        activeEffects.map = false;
+        myPowerups = { map: 0, superjump: 0, pathfinder: 0, walljumper: 0 };
+        updatePowerupUI();
+    }
+
     let gameMode = 'campaign'; 
     let remotePlayers = {}; let remoteMeshes = {}; let activePlayerCount = 1; let currentPvPRoom = null;
     let myHP = 100, isDead = false; let myScore = 0, enemyScore = 0; let pvpState = 'playing'; let mmoVictoryState = false;
@@ -1101,7 +1503,7 @@
     }
 
     async function joinOnlineLobby() {
-        gtaNotify("Connecting to Session...");
+        gtaNotify("Connecting to Massive Session...");
         document.getElementById('main-menu-layer').classList.add('hidden');
         gameMode = 'mmo'; document.getElementById('btn-hud-mic').classList.remove('hidden'); 
 
@@ -1225,8 +1627,6 @@
         
         let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
         startGamePlay(sx, sy);
-        
-        canvas.requestPointerLock();
     }
 
     function triggerDamageFlash() { const flash = document.getElementById('damage-overlay'); flash.style.opacity = '1'; if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); setTimeout(() => { flash.style.opacity = '0'; }, 200); }
@@ -1254,6 +1654,7 @@
         }
         gameMode = 'campaign'; setMyStatus('Online'); document.getElementById('pvp-scoreboard').classList.add('hidden'); document.getElementById('hud-hp-container').classList.add('hidden'); document.getElementById('hud-hp-container').classList.remove('flex');
         for(let id in remoteMeshes) removeHologram(id); remotePlayers = {}; currentPvPRoom = null; player.rotation.z = 0; mmoVictoryState = false;
+        clearPowerups();
     }
 
     function createHologram(id, wpn, charType) {
@@ -1284,19 +1685,24 @@
         }
     };
 
+    const TEX_RES = (() => { const t = (window.gameSettings.graphics.texture) || 'high'; return t === 'high' ? 1024 : (t === 'medium' ? 768 : 512); })();
+
     function makeHDWallTextures() {
-        const S = 512, c = document.createElement('canvas'), b = document.createElement('canvas'); c.width = b.width = S; c.height = b.height = S;
+        const S = TEX_RES, scaleF = S / 512, c = document.createElement('canvas'), b = document.createElement('canvas'); c.width = b.width = S; c.height = b.height = S;
         const ctx = c.getContext('2d'), btx = b.getContext('2d'); ctx.fillStyle = '#3a1f16'; ctx.fillRect(0, 0, S, S); btx.fillStyle = '#222222'; btx.fillRect(0, 0, S, S); 
-        const bW = 128, bH = 48, gap = 6; const rows = Math.ceil(S / bH) + 1, cols = Math.ceil(S / bW) + 2;
-        for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col < cols; col++) { const x = col * bW + off, y = row * bH; const rr = 80 + Math.random() * 40, gg = 30 + Math.random() * 20, bb = 20 + Math.random() * 10; ctx.fillStyle = `rgb(${rr},${gg},${bb})`; ctx.fillRect(x + gap, y + gap, bW - gap, bH - gap); btx.fillStyle = '#ffffff'; btx.fillRect(x + gap, y + gap, bW - gap, bH - gap); for (let n = 0; n < 40; n++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`; ctx.fillRect(x + gap + Math.random() * (bW - gap), y + gap + Math.random() * (bH - gap), 3, 3); } } }
+        const bW = 128 * scaleF, bH = 48 * scaleF, gap = 6 * scaleF; const rows = Math.ceil(S / bH) + 1, cols = Math.ceil(S / bW) + 2;
+        for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col < cols; col++) { const x = col * bW + off, y = row * bH; const rr = 80 + Math.random() * 40, gg = 30 + Math.random() * 20, bb = 20 + Math.random() * 10; ctx.fillStyle = `rgb(${rr},${gg},${bb})`; ctx.fillRect(x + gap, y + gap, bW - gap, bH - gap); btx.fillStyle = '#ffffff'; btx.fillRect(x + gap, y + gap, bW - gap, bH - gap); for (let n = 0; n < 40 * scaleF; n++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`; ctx.fillRect(x + gap + Math.random() * (bW - gap), y + gap + Math.random() * (bH - gap), 3 * scaleF, 3 * scaleF); } } }
         ctx.strokeStyle = '#1a0a05'; ctx.lineWidth = gap; btx.strokeStyle = '#000000'; btx.lineWidth = gap;
         for (let row = 0; row <= rows; row++) { ctx.beginPath(); ctx.moveTo(0, row * bH); ctx.lineTo(S, row * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(0, row * bH); btx.lineTo(S, row * bH); btx.stroke(); }
         for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col <= cols; col++) { const x = col * bW + off; ctx.beginPath(); ctx.moveTo(x, row * bH); ctx.lineTo(x, (row + 1) * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(x, row * bH); btx.lineTo(x, (row + 1) * bH); btx.stroke(); } }
         const tex = new THREE.CanvasTexture(c), bumpTex = new THREE.CanvasTexture(b); tex.wrapS = tex.wrapT = bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping; tex.minFilter = bumpTex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = bumpTex.generateMipmaps = true; return { map: tex, bumpMap: bumpTex };
     }
     function makeGrassTexture() {
-        const S = 512, c = document.createElement('canvas'); c.width = S; c.height = S; const ctx = c.getContext('2d'); ctx.fillStyle = '#1c331c'; ctx.fillRect(0, 0, S, S);
-        for (let i = 0; i < 2000; i++) { const x = Math.random() * S, y = Math.random() * S, g = 30 + Math.floor(Math.random() * 40); ctx.fillStyle = `rgba(20,${g},20,0.6)`; ctx.fillRect(x, y, 4 + Math.random() * 14, 2 + Math.random() * 7); }
+        const S = TEX_RES, scaleF = S / 512, c = document.createElement('canvas'); c.width = S; c.height = S; const ctx = c.getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, S, S); grad.addColorStop(0, '#1f3a1f'); grad.addColorStop(1, '#182e18');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, S, S);
+        for (let i = 0; i < 2000; i++) { const x = Math.random() * S, y = Math.random() * S, g = 30 + Math.floor(Math.random() * 40); ctx.fillStyle = `rgba(20,${g},20,0.6)`; ctx.fillRect(x, y, (4 + Math.random() * 14) * scaleF, (2 + Math.random() * 7) * scaleF); }
+        for (let i = 0; i < 500 * scaleF; i++) { const x = Math.random() * S, y = Math.random() * S; ctx.fillStyle = `rgba(90,120,60,${0.15 + Math.random()*0.15})`; ctx.fillRect(x, y, 2 * scaleF, 8 * scaleF); }
         const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(380, 380); return tex;
     }
     function makeTickTexture() { const S=256, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d'); ctx.strokeStyle='#00ff44'; ctx.lineWidth=24; ctx.lineCap=ctx.lineJoin='round'; ctx.shadowColor='#00ff44'; ctx.shadowBlur=20; ctx.beginPath(); ctx.moveTo(50, 130); ctx.lineTo(100, 190); ctx.lineTo(210, 60); ctx.stroke(); return new THREE.CanvasTexture(c); }
@@ -1370,7 +1776,7 @@
     function createWeaponMesh(type) {
         const group = new THREE.Group();
         if(type === 'bat') { const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.7, 12), new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.9})); bat.position.y = 0.35; group.add(bat); group.position.set(0, -0.2, 0.2); group.rotation.x = Math.PI / 2.5; } 
-        else if (type === 'sword') { const h = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.05), new THREE.MeshStandardMaterial({color: 0x111111})); const g = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.05), new THREE.MeshStandardMaterial({color: 0xaaaaaa, metalness: 0.8})); g.position.y = 0.125; const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.1), new THREE.MeshStandardMaterial({color: 0xeeeeee, metalness: 0.9, roughness: 0.1})); b.position.y = 0.5; group.add(h); group.add(g); group.add(b); group.position.set(0, -0.1, 0.2); group.rotation.x = Math.PI / 2.5; } 
+        else if (type === 'sword') { const h = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.05), new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.6})); const g = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.05), new THREE.MeshStandardMaterial({color: 0xaaaaaa, metalness: 0.9, roughness: 0.3, envMapIntensity: 1.2})); g.position.y = 0.125; const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.1), new THREE.MeshStandardMaterial({color: 0xf2f2f2, metalness: 0.95, roughness: 0.06, envMapIntensity: 1.5})); b.position.y = 0.5; group.add(h); group.add(g); group.add(b); group.position.set(0, -0.1, 0.2); group.rotation.x = Math.PI / 2.5; } 
         else if (type === 'chappal') { const c = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.03), new THREE.MeshStandardMaterial({color: 0x3b82f6})); const strap = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.05), new THREE.MeshStandardMaterial({color: 0xffffff})); strap.position.y = 0.05; strap.position.z = 0.01; c.add(strap); c.position.y = 0.15; group.add(c); group.position.set(0, -0.1, 0.2); group.rotation.x = Math.PI / 2.5; } 
         else { const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.08), new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9})); const blade = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.4, 0.1), new THREE.MeshStandardMaterial({color: 0xeeeeee, metalness: 0.8, roughness: 0.2})); blade.position.y = 0.32; group.add(handle); group.add(blade); group.position.set(0, -0.25, 0.1); group.rotation.x = Math.PI / 2; }
         return group;
@@ -1386,27 +1792,41 @@
     function applyCharacterSkin(playerGroup, charType) {
         if(!playerGroup) return; const colors = charColors[charType] || charColors.default;
         if(playerGroup.userData.head) playerGroup.userData.head.material.color.setHex(colors.skin);
-        if(playerGroup.userData.leftArm) playerGroup.userData.leftArm.children[0].material.color.setHex(colors.skin);
-        if(playerGroup.userData.rightArm) playerGroup.userData.rightArm.children[0].material.color.setHex(colors.skin);
+        if(playerGroup.userData.leftArm) playerGroup.userData.leftArm.children[0].children[0].material.color.setHex(colors.skin);
+        if(playerGroup.userData.rightArm) playerGroup.userData.rightArm.children[0].children[0].material.color.setHex(colors.skin);
         if(playerGroup.userData.body) playerGroup.userData.body.material.color.setHex(colors.shirt);
     }
 
     function createBoy(isLocal = true) {
         const g = new THREE.Group();
-        const skin = new THREE.MeshStandardMaterial({color:0xffdcb1,roughness:0.5}); const shirt = new THREE.MeshStandardMaterial({color:0x2563eb,roughness:0.6}); const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.8});
-        const b=new THREE.Mesh(new THREE.BoxGeometry(.7,1,.4),shirt); b.position.y=1.3; b.castShadow=true; g.add(b);
-        const h=new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6),skin); h.position.y=2.1; h.castShadow=true; g.add(h);
-        
-        const eyeMat = new THREE.MeshBasicMaterial({color: 0x000000});
-        const leftEye = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, .05), eyeMat); leftEye.position.set(-.15, .1, .31);
-        const rightEye = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, .05), eyeMat); rightEye.position.set(.15, .1, .31);
-        const mouth = new THREE.Mesh(new THREE.BoxGeometry(.2, .05, .05), eyeMat); mouth.position.set(0, -.15, .31);
+        const skin = new THREE.MeshStandardMaterial({color:0xffdcb1,roughness:0.45,envMapIntensity:0.8});
+        const shirt = new THREE.MeshStandardMaterial({color:0x2563eb,roughness:0.5,envMapIntensity:0.7});
+        const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.65,envMapIntensity:0.6});
+
+        const b=new THREE.Mesh(new THREE.CylinderGeometry(.34,.4,1,20,1), shirt); b.position.y=1.3; b.castShadow=true; b.receiveShadow=true; g.add(b);
+        const shL=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
+        const shR=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12), shirt); shR.position.set(.42,1.72,0); shR.castShadow=true; g.add(shR);
+        const h=new THREE.Mesh(new THREE.SphereGeometry(.36,24,18), skin); h.position.y=2.15; h.castShadow=true; g.add(h);
+
+        const eyeMat = new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:0.25, envMapIntensity:1.2});
+        const leftEye = new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), eyeMat); leftEye.position.set(-.14,.06,.33);
+        const rightEye = new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), eyeMat); rightEye.position.set(.14,.06,.33);
+        const mouth = new THREE.Mesh(new THREE.TorusGeometry(.09,.018,8,12,Math.PI), eyeMat); mouth.position.set(0,-.12,.32); mouth.rotation.set(Math.PI,0,Math.PI);
         h.add(leftEye); h.add(rightEye); h.add(mouth);
 
-        const lA=new THREE.Group(); lA.position.set(-.5,1.7,0); const a1=new THREE.Mesh(new THREE.BoxGeometry(.25,.8,.25),skin); a1.position.y=-.3; a1.castShadow=true; lA.add(a1); g.add(lA);
-        const rA=new THREE.Group(); rA.position.set(.5,1.7,0);  const a2=new THREE.Mesh(new THREE.BoxGeometry(.25,.8,.25),skin); a2.position.y=-.3; a2.castShadow=true; rA.add(a2); g.add(rA);
-        const lL=new THREE.Group(); lL.position.set(-.2,.8,0);  const l1=new THREE.Mesh(new THREE.BoxGeometry(.3,.8,.3),pants); l1.position.y=-.4; l1.castShadow=true; lL.add(l1); g.add(lL);
-        const rL=new THREE.Group(); rL.position.set(.2,.8,0);   const l2=new THREE.Mesh(new THREE.BoxGeometry(.3,.8,.3),pants); l2.position.y=-.4; l2.castShadow=true; rL.add(l2); g.add(rL);
+        function makeCapsuleLimb(mat, radiusTop, radiusBottom, length, capTopR, capBotR) {
+            const grp = new THREE.Group();
+            const mid = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, length, 14), mat);
+            mid.position.y = -length/2; mid.castShadow = true; mid.receiveShadow = true; grp.add(mid);
+            const capTop = new THREE.Mesh(new THREE.SphereGeometry(capTopR,12,10), mat); capTop.position.y = 0; capTop.castShadow = true; grp.add(capTop);
+            const capBot = new THREE.Mesh(new THREE.SphereGeometry(capBotR,12,10), mat); capBot.position.y = -length; capBot.castShadow = true; grp.add(capBot);
+            return grp;
+        }
+
+        const lA=new THREE.Group(); lA.position.set(-.42,1.68,0); const armL = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); lA.add(armL); g.add(lA);
+        const rA=new THREE.Group(); rA.position.set(.42,1.68,0);  const armR = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); rA.add(armR); g.add(rA);
+        const lL=new THREE.Group(); lL.position.set(-.18,.85,0);  const legL = makeCapsuleLimb(pants,.17,.15,.85,.18,.16); lL.add(legL); g.add(lL);
+        const rL=new THREE.Group(); rL.position.set(.18,.85,0);   const legR = makeCapsuleLimb(pants,.17,.15,.85,.18,.16); rL.add(legR); g.add(rL);
         g.userData={head:h,body:b,leftArm:lA,rightArm:rA,leftLeg:lL,rightLeg:rL, isMoving: false}; g.scale.set(.8,.8,.8); 
         
         if(isLocal) {
@@ -1448,7 +1868,7 @@
     function endPvP(won) {
         pvpState = 'victory'; if(won) playWinMelody();
         document.getElementById('hud').classList.add('hidden'); 
-        if(document.pointerLockElement) document.exitPointerLock();
+        if(document.pointerLockElement && !isMobileDevice) document.exitPointerLock();
         setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
     }
 
@@ -1464,35 +1884,61 @@
     wallColorTex.encoding = grassTex.encoding = THREE.sRGBEncoding;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100); scene.add(camera);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000); scene.add(camera);
     const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x112211, 0.6); scene.add(hemiLight);
     const ambientLight = new THREE.AmbientLight(0x202530, 0.8); scene.add(ambientLight);
 
-    const SHADOW_FRUSTUM_SIZE = 25; 
+    const SHADOW_FRUSTUM_SIZE = 25;  
     const dirLight = new THREE.DirectionalLight(0x77aacc, 1.2);
     dirLight.castShadow = true; 
     dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 160;
     dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE; dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
     
-    dirLight.shadow.bias = -0.0005; 
-    dirLight.shadow.normalBias = 0.015; 
+    dirLight.shadow.bias = -0.0007; 
+    dirLight.shadow.normalBias = 0.045; 
     dirLight.shadow.radius = 4.0; 
     dirLight.shadow.blurSamples = 25; 
     
     dirLight.target = new THREE.Object3D(); scene.add(dirLight.target); scene.add(dirLight);
     let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 1024;
 
+    const rimLight = new THREE.DirectionalLight(0x6a7fd6, 0.35); rimLight.position.set(-40, 25, -30); scene.add(rimLight);
+
     let player = createBoy(true); scene.add(player);
     let wallsGroup = new THREE.Group(); scene.add(wallsGroup);
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.9, metalness: 0 }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.9, metalness: 0, envMapIntensity: 0.25 }));
     ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
     let goalMesh;
 
     const WALL_OVERLAP = 0.12, WALL_SINK = 0.5, CELL_SIZE = 3, WALL_H = CELL_SIZE * 1.3 + WALL_SINK;
     const wallGeo = new THREE.BoxGeometry(CELL_SIZE + WALL_OVERLAP, WALL_H, CELL_SIZE + WALL_OVERLAP);
-    const wallMat = new THREE.MeshStandardMaterial({ map: wallColorTex, bumpMap: wallBumpTex, bumpScale: 0.15, roughness: 0.8, metalness: 0.1 });
+    const wallMat = new THREE.MeshStandardMaterial({ map: wallColorTex, bumpMap: wallBumpTex, bumpScale: 0.18, roughnessMap: wallBumpTex, roughness: 0.85, metalness: 0.08, envMapIntensity: 0.35 });
     let instancedWalls = null;
+
+    let composer = null, bloomPass = null, usePostFX = true;
+    function setupPostProcessing() {
+        try {
+            if (!THREE.EffectComposer || !THREE.RenderPass || !THREE.UnrealBloomPass) throw new Error('postfx libs missing');
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.4, 0.85);
+            bloomPass.renderToScreen = true;
+            composer.addPass(bloomPass);
+        } catch (e) {
+            console.warn('Post-processing unavailable, using standard renderer:', e);
+            composer = null; usePostFX = false;
+        }
+    }
+    setupPostProcessing();
+
+    function renderFrame(time) {
+        if (usePostFX && composer) {
+            composer.render();
+        } else {
+            renderer.render(scene, camera);
+        }
+    }
 
     window.applySettingsToEngine = () => {
         const s = window.gameSettings; renderer.toneMappingExposure = (s.display.brightness / 100) * 1.0;
@@ -1506,6 +1952,24 @@
         const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
         renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
         camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
+
+        let pfxTier = 'high';
+        if (s.graphics.quality === 'medium') pfxTier = 'medium';
+        else if (s.graphics.quality === 'low') pfxTier = 'low';
+        else if (s.graphics.quality === 'custom' || !s.graphics.quality) {
+            if (s.graphics.scale >= 90 && s.graphics.shadows) pfxTier = 'high';
+            else if (s.graphics.scale >= 60) pfxTier = 'medium';
+            else pfxTier = 'low';
+        }
+        if (isMobileDevice && pfxTier === 'high') pfxTier = 'medium';
+        usePostFX = pfxTier !== 'low';
+        if (composer) {
+            const pw = Math.max(1, Math.floor(targetW * scaleFactor)), ph = Math.max(1, Math.floor(targetH * scaleFactor));
+            const pr = renderer.getPixelRatio();
+            composer._pixelRatio = pr; 
+            composer.setSize(pw, ph);
+            if (bloomPass) { bloomPass.enabled = usePostFX; bloomPass.strength = pfxTier === 'high' ? 0.45 : 0.3; }
+        }
         
         let sSize = s.graphics.texture==='high' ? 2048 : (s.graphics.texture==='medium' ? 1024 : 512);
         if(dirLight.shadow.mapSize.width !== sSize) { dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; }
@@ -1607,10 +2071,11 @@
         if(instancedWalls) { wallsGroup.remove(instancedWalls); instancedWalls.dispose(); instancedWalls = null; }
         if(goalMesh) scene.remove(goalMesh);
         sprayMeshes.forEach(m => scene.remove(m)); sprayMeshes = [];
+        clearPowerups(); // Clear existing powerups on rebuild
         applySettingsToEngine();
         
         if (isBackgroundMenu) { mazeSeed = 1111; mazeWidth = 15; mazeHeight = 15; }
-        else if (gameMode === 'mmo') { mazeSeed = window.mmoSeed || 99999; mazeWidth = 41; mazeHeight = 41; } 
+        else if (gameMode === 'mmo') { mazeSeed = window.mmoSeed || 99999; mazeWidth = 151; mazeHeight = 151; } 
         else if (gameMode === 'pvp_1v1') { mazeSeed = window.currentPvPSeed; mazeWidth = 15; mazeHeight = 15; } 
         else { mazeWidth = Math.min(9+(currentLevel*2), 61); mazeHeight = Math.min(9+(currentLevel*2), 61); mazeSeed = Math.floor(Math.random() * 1000000); }
         
@@ -1632,6 +2097,19 @@
             }
         }
         wallsGroup.add(instancedWalls);
+
+        // Spawn Powerups for MMO mode
+        if(gameMode === 'mmo' && !isBackgroundMenu) {
+            let numPowerups = Math.floor((mazeWidth * mazeHeight) / 300); // 6x rarer than base density
+            for(let j=0; j<numPowerups; j++) {
+                let px = 1 + Math.floor(deterministicRandom() * (mazeWidth - 2));
+                let pz = 1 + Math.floor(deterministicRandom() * (mazeHeight - 2));
+                if (mazeGrid[pz][px] === 0) {
+                    let type = powerupTypes[Math.floor(deterministicRandom() * powerupTypes.length)];
+                    createPowerupMesh(px, pz, type);
+                }
+            }
+        }
         
         levelStartX = mazeStart.x; levelStartZ = mazeStart.y;
         if(gameMode !== 'pvp_1v1' && !isBackgroundMenu) {
@@ -1665,7 +2143,10 @@
         document.getElementById('hud-hp-container').classList.add('hidden'); document.getElementById('hud-hp-container').classList.remove('flex');
         
         if(!isBackgroundMenu) {
-            if(gameMode === 'mmo') { document.getElementById('hud-online-container').classList.remove('hidden'); document.getElementById('hud-online-container').classList.add('flex'); }
+            if(gameMode === 'mmo') { 
+                document.getElementById('hud-online-container').classList.remove('hidden'); document.getElementById('hud-online-container').classList.add('flex'); 
+                updatePowerupUI();
+            }
             else if (gameMode === 'pvp_1v1') { document.getElementById('hud-pvp-container').classList.remove('hidden'); document.getElementById('hud-pvp-container').classList.add('flex'); document.getElementById('hud-hp-container').classList.remove('hidden'); document.getElementById('hud-hp-container').classList.add('flex'); }
             else { document.getElementById('hud-level-container').classList.remove('hidden'); document.getElementById('hud-level').innerText = currentLevel; }
         }
@@ -1708,6 +2189,12 @@
     function updateCamera(dt) {
         if(player.userData.head) player.userData.head.visible = (cameraMode!=='firstPerson');
         
+        if (activeEffects.map) {
+            camera.position.set(player.position.x, Math.max(200, mazeWidth * 3.0), player.position.z);
+            camera.lookAt(player.position.x, 0, player.position.z);
+            return;
+        }
+
         if (gameMode === 'pvp_1v1' && pvpState === 'intro') {
             _target.copy(player.position).add(_v1.set(Math.sin(camAzimuth)*6,4,Math.cos(camAzimuth)*6));
             if(camera.position.y < 5) { camera.position.set(player.position.x, 40, player.position.z); }
@@ -1767,7 +2254,7 @@
             camera.position.z = player.position.z + Math.cos(time)*8;
             camera.position.y = player.position.y + 5;
             camera.lookAt(player.position);
-            renderer.render(scene, camera);
+            renderFrame(time);
             return;
         }
 
@@ -1779,13 +2266,13 @@
             }
             if(gameMode === 'pvp_1v1' && pvpState === 'victory') updateCamera(dt);
             if(gameMode === 'mmo' || gameMode === 'pvp_1v1') updateRemotePlayers(dt, time);
-            renderer.render(scene, camera); return;
+            renderFrame(time); return;
         }
 
         if (isDead) { player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -Math.PI/2, dt*8); } 
         else { player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, 0, dt*8); }
         
-        if(gameMode === 'pvp_1v1' && pvpState === 'intro') { updateCamera(dt); updateRemotePlayers(dt, time); renderer.render(scene, camera); return; }
+        if(gameMode === 'pvp_1v1' && pvpState === 'intro') { updateCamera(dt); updateRemotePlayers(dt, time); renderFrame(time); return; }
 
         if(gameMode === 'pvp_1v1') {
             pvpMatchTimer -= dt; document.getElementById('hud-timer').innerText=`${Math.floor(pvpMatchTimer/60).toString().padStart(2,'0')}:${Math.floor(pvpMatchTimer%60).toString().padStart(2,'0')}`;
@@ -1797,6 +2284,24 @@
         const snappedX = Math.round(player.position.x / shadowTexelSize) * shadowTexelSize; const snappedZ = Math.round(player.position.z / shadowTexelSize) * shadowTexelSize;
         dirLight.position.set(snappedX + 60, 70, snappedZ + 40); dirLight.target.position.set(snappedX, 0, snappedZ); dirLight.target.updateMatrixWorld();
         
+        // Spin powerups and check for collection
+        if(gameMode === 'mmo' && !isDead) {
+            powerupMeshesList.forEach(pm => {
+                if(pm.userData.active) {
+                    pm.position.y = 1.0 + Math.sin(time * 3) * 0.25;
+                    
+                    if(player.position.distanceTo(pm.position) < 1.5) {
+                        pm.userData.active = false;
+                        scene.remove(pm);
+                        myPowerups[pm.userData.type]++;
+                        if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C6', '32n');
+                        updatePowerupUI();
+                        gtaNotify(`${pm.userData.type.toUpperCase()} found!`);
+                    }
+                }
+            });
+        }
+
         const isTL=keys.left, isTR=keys.right, isUp=keys.up, isDn=keys.down;
         const isSprinting = keys.sprint; 
         let speedMult = isSprinting ? 2.5 : 1.0;
@@ -1907,7 +2412,7 @@
 
         if(gameMode === 'mmo' || gameMode === 'pvp_1v1') updateRemotePlayers(dt, time);
         
-        renderer.render(scene, camera);
+        renderFrame(time);
     }
 
     function updateRemotePlayers(dt, time) {
@@ -1946,7 +2451,7 @@
     document.addEventListener('mousemove', (e) => {
         if (document.pointerLockElement === canvas) {
             camAzimuth -= e.movementX * mouseSensitivity;
-            camElevation -= e.movementY * mouseSensitivity;
+            camElevation += e.movementY * mouseSensitivity;
             camElevation = Math.max(-Math.PI / 8, Math.min(Math.PI / 8, camElevation));
         }
     });
@@ -1969,10 +2474,23 @@
             saveSettings();
             return;
         }
+        
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
         const c=window.gameSettings.controls;
         
         if (k === 'n' && isDeveloper) toggleDeveloperFlyMode();
         if (k === 'v') cameraMode = cameraMode === 'thirdPerson' ? 'firstPerson' : 'thirdPerson';
+        
+        if (k === 'm' && (gameMode === 'mmo' || gameMode === 'pvp_1v1')) voiceChat.toggleMic();
+
+        // Powerup hotkeys
+        if (gameMode === 'mmo') {
+            if (k === '1') usePowerup('map');
+            if (k === '2') usePowerup('superjump');
+            if (k === '3') usePowerup('pathfinder');
+            if (k === '4') usePowerup('walljumper');
+        }
 
         if(k===c.up||k==='arrowup')keys.up=true; if(k===c.down||k==='arrowdown')keys.down=true;
         if(k===c.left||k==='arrowleft')keys.left=true; if(k===c.right||k==='arrowright')keys.right=true;
@@ -2002,6 +2520,8 @@
     });
 
     window.addEventListener('keyup', e=>{
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
         const k=e.key.toLowerCase(), c=window.gameSettings.controls;
         if(k===c.up||k==='arrowup')keys.up=false; if(k===c.down||k==='arrowdown')keys.down=false;
         if(k===c.left||k==='arrowleft')keys.left=false; if(k===c.right||k==='arrowright')keys.right=false;
@@ -2091,7 +2611,7 @@
         if(gameMode !== 'campaign') leaveOnlineSession();
         document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
-        document.getElementById('btn-mode-online').innerHTML = 'Online Session <span>></span>';
+        document.getElementById('btn-mode-online').innerHTML = 'Online Session (Giant Maze) <span>></span>';
         setMyStatus('Online');
         if(document.pointerLockElement) document.exitPointerLock();
         buildLevel(true);
@@ -2103,9 +2623,20 @@
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = e => {
-            const p = e.target.parentElement; p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-            p.parentElement.querySelectorAll('.settings-panel').forEach(pan=>pan.classList.add('hidden'));
-            e.target.classList.add('active'); document.getElementById(`tab-${e.target.dataset.tab}`).classList.remove('hidden');
+            const btnTarget = e.currentTarget;
+            const p = btnTarget.parentElement; 
+            p.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            p.parentElement.querySelectorAll('.settings-panel').forEach(pan => pan.classList.add('hidden'));
+            
+            btnTarget.classList.add('active'); 
+            const tabId = btnTarget.dataset.tab;
+            const targetPanel = document.getElementById(`tab-${tabId}`);
+            if(targetPanel) targetPanel.classList.remove('hidden');
+
+            if (tabId === 'store-chars') renderStore('chars');
+            if (tabId === 'store-weapons') renderStore('weapons');
+            if (tabId === 'inv-characters') renderInventory('chars');
+            if (tabId === 'inv-weapons') renderInventory('weapons');
         };
     });
     
@@ -2175,18 +2706,16 @@
 
     bindUI();
     
-    // PC ONLY BLOCKER INITIALIZATION
     window.onload = () => { 
         if (isMobileDevice) {
             document.getElementById('mobile-blocker').classList.remove('hidden');
             document.getElementById('mobile-blocker').classList.add('flex');
-            return; // Halt all game logic immediately
+            return;
         }
         
         loadAppAuth(); 
     };
     </script>
-<!-- AstraX Cinematic Splash Screen -->
 <script src="astrax_splash.js"></script>
 </body>
 </html>
