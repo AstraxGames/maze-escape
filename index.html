@@ -208,7 +208,7 @@
                         <div class="gta-menu-header">Game Modes</div>
                         <div class="flex-grow overflow-y-auto">
                             <div id="btn-mode-campaign" class="gta-btn">Campaign <span>></span></div>
-                            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Online<span>></span></div>
+                            <div id="btn-mode-online" class="gta-btn text-cyan-300 font-black">Multiplayer<span>></span></div>
                             <div id="btn-pvp-open" class="gta-btn text-red-500 font-black" onclick="toggleLeftSub('sub-pvp')">PvP Arena <span>></span></div>
                         </div>
                         <div class="gta-btn mt-auto border-t border-white/20" onclick="closeAllSubmenus()">Close</div>
@@ -386,7 +386,7 @@
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.0</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.1</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -597,7 +597,7 @@
     <div id="hud" class="absolute top-0 left-0 w-full h-full z-10 hidden pointer-events-none p-4 md:p-6 flex justify-between items-start">
         <div class="bg-black/80 px-3 md:px-4 py-2 md:py-3 border-l-4 border-white pointer-events-auto flex items-center gap-3 md:gap-4 shadow-lg min-w-[180px] md:min-w-[220px] rounded-r-md">
             <div id="hud-level-container" class="text-xs md:text-sm font-black text-white flex items-center uppercase">LVL <span id="hud-level" class="text-base md:text-lg ml-2">1</span></div>
-            <div id="hud-online-container" class="text-xs md:text-sm font-black text-cyan-300 hidden items-center uppercase">GIANT MAZE <span id="hud-players" class="text-base md:text-lg ml-2">1/30</span></div>
+            <div id="hud-online-container" class="text-xs md:text-sm font-black text-cyan-300 hidden items-center uppercase">Online <span id="hud-players" class="text-base md:text-lg ml-2">1/30</span></div>
             <div id="hud-pvp-container" class="text-xs md:text-sm font-black text-red-500 hidden items-center uppercase">PvP 1v1</div>
             <div class="w-px h-4 md:h-5 bg-white/30"></div>
             <div class="text-xs md:text-sm font-black text-white flex items-center font-mono">⏱ <span id="hud-timer" class="text-base md:text-lg ml-2">00:00</span></div>
@@ -1687,12 +1687,12 @@
 
     const TEX_RES = (() => { const t = (window.gameSettings.graphics.texture) || 'high'; return t === 'high' ? 1024 : (t === 'medium' ? 768 : 512); })();
 
-    function makeHDWallTextures() {
+   function makeHDWallTextures() {
         const S = TEX_RES, scaleF = S / 512, c = document.createElement('canvas'), b = document.createElement('canvas'); c.width = b.width = S; c.height = b.height = S;
         const ctx = c.getContext('2d'), btx = b.getContext('2d'); ctx.fillStyle = '#3a1f16'; ctx.fillRect(0, 0, S, S); btx.fillStyle = '#222222'; btx.fillRect(0, 0, S, S); 
         const bW = 128 * scaleF, bH = 48 * scaleF, gap = 6 * scaleF; const rows = Math.ceil(S / bH) + 1, cols = Math.ceil(S / bW) + 2;
         for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col < cols; col++) { const x = col * bW + off, y = row * bH; const rr = 80 + Math.random() * 40, gg = 30 + Math.random() * 20, bb = 20 + Math.random() * 10; ctx.fillStyle = `rgb(${rr},${gg},${bb})`; ctx.fillRect(x + gap, y + gap, bW - gap, bH - gap); btx.fillStyle = '#ffffff'; btx.fillRect(x + gap, y + gap, bW - gap, bH - gap); for (let n = 0; n < 40 * scaleF; n++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`; ctx.fillRect(x + gap + Math.random() * (bW - gap), y + gap + Math.random() * (bH - gap), 3 * scaleF, 3 * scaleF); } } }
-        ctx.strokeStyle = '#1a0a05'; ctx.lineWidth = gap; btx.strokeStyle = '#000000'; btx.lineWidth = gap;
+        ctx.strokeStyle = '#1a0a05'; ctx.lineWidth = gap; btx.strokeStyle = '#444444'; btx.lineWidth = gap; // Softer bump map cracks to prevent aliasing
         for (let row = 0; row <= rows; row++) { ctx.beginPath(); ctx.moveTo(0, row * bH); ctx.lineTo(S, row * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(0, row * bH); btx.lineTo(S, row * bH); btx.stroke(); }
         for (let row = 0; row < rows; row++) { const off = (row % 2 === 0) ? 0 : bW / 2; for (let col = -1; col <= cols; col++) { const x = col * bW + off; ctx.beginPath(); ctx.moveTo(x, row * bH); ctx.lineTo(x, (row + 1) * bH); ctx.stroke(); btx.beginPath(); btx.moveTo(x, row * bH); btx.lineTo(x, (row + 1) * bH); btx.stroke(); } }
         const tex = new THREE.CanvasTexture(c), bumpTex = new THREE.CanvasTexture(b); tex.wrapS = tex.wrapT = bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping; tex.minFilter = bumpTex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = bumpTex.generateMipmaps = true; return { map: tex, bumpMap: bumpTex };
@@ -1799,9 +1799,9 @@
 
     function createBoy(isLocal = true) {
         const g = new THREE.Group();
-        const skin = new THREE.MeshStandardMaterial({color:0xffdcb1,roughness:0.45,envMapIntensity:0.8});
-        const shirt = new THREE.MeshStandardMaterial({color:0x2563eb,roughness:0.5,envMapIntensity:0.7});
-        const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.65,envMapIntensity:0.6});
+        const skin = new THREE.MeshStandardMaterial({color:0xffdcb1,roughness:0.35,envMapIntensity:1.5});
+        const shirt = new THREE.MeshStandardMaterial({color:0x2563eb,roughness:0.4,envMapIntensity:1.2});
+        const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.6,envMapIntensity:1.0});
 
         const b=new THREE.Mesh(new THREE.CylinderGeometry(.34,.4,1,20,1), shirt); b.position.y=1.3; b.castShadow=true; b.receiveShadow=true; g.add(b);
         const shL=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
@@ -1872,6 +1872,9 @@
         setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
     }
 
+
+
+
     const canvas = document.getElementById('game-canvas');
     const renderer = new THREE.WebGLRenderer({
         canvas, 
@@ -1913,7 +1916,8 @@
 
     const WALL_OVERLAP = 0.12, WALL_SINK = 0.5, CELL_SIZE = 3, WALL_H = CELL_SIZE * 1.3 + WALL_SINK;
     const wallGeo = new THREE.BoxGeometry(CELL_SIZE + WALL_OVERLAP, WALL_H, CELL_SIZE + WALL_OVERLAP);
-    const wallMat = new THREE.MeshStandardMaterial({ map: wallColorTex, bumpMap: wallBumpTex, bumpScale: 0.18, roughnessMap: wallBumpTex, roughness: 0.85, metalness: 0.08, envMapIntensity: 0.35 });
+    // Removed roughnessMap to fix shiny mirror cracks, lowered base bumpScale, set to perfectly matte
+    const wallMat = new THREE.MeshStandardMaterial({ map: wallColorTex, bumpMap: wallBumpTex, bumpScale: 0.03, roughness: 0.95, metalness: 0.0, envMapIntensity: 0.15 });
     let instancedWalls = null;
 
     let composer = null, bloomPass = null, usePostFX = true;
@@ -1940,6 +1944,8 @@
         }
     }
 
+
+
     window.applySettingsToEngine = () => {
         const s = window.gameSettings; renderer.toneMappingExposure = (s.display.brightness / 100) * 1.0;
         scene.background = new THREE.Color(0x0b0c16); scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
@@ -1952,6 +1958,13 @@
         const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
         renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
         camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
+
+        // --- DYNAMIC BUMP ATTENUATION ---
+        // Dynamically softens the wall textures when playing on lower resolutions to destroy specular aliasing / white static
+        const totalPixels = (targetW * scaleFactor) * (targetH * scaleFactor);
+        const baselinePixels = 1920 * 1080;
+        const pixelRatio = Math.min(1.0, totalPixels / baselinePixels);
+        wallMat.bumpScale = 0.04 * pixelRatio; 
 
         let pfxTier = 'high';
         if (s.graphics.quality === 'medium') pfxTier = 'medium';
@@ -1972,10 +1985,14 @@
         }
         
         let sSize = s.graphics.texture==='high' ? 2048 : (s.graphics.texture==='medium' ? 1024 : 512);
+        if (s.graphics.quality === 'ultra') sSize = 4096;
         if(dirLight.shadow.mapSize.width !== sSize) { dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; }
         
         renderer.shadowMap.enabled = s.graphics.shadows;
         if(instancedWalls) { instancedWalls.castShadow = s.graphics.shadows; instancedWalls.receiveShadow = s.graphics.shadows; }
+
+
+
         
         if(audioInitialized) { Tone.Destination.volume.value = Tone.gainToDb(s.sound.master/100); if(nightSynth) nightSynth.volume.value = Tone.gainToDb(s.sound.music/100) - 15; if(footstepSynth) footstepSynth.volume.value = Tone.gainToDb(s.sound.sfx/100) - 5; if(customAudio.src) customAudio.volume = (s.sound.music / 100) * (s.sound.master / 100); }
         
@@ -2611,7 +2628,7 @@
         if(gameMode !== 'campaign') leaveOnlineSession();
         document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
-        document.getElementById('btn-mode-online').innerHTML = 'Online Session (Giant Maze) <span>></span>';
+        document.getElementById('btn-mode-online').innerHTML = 'Online Session<span>></span>';
         setMyStatus('Online');
         if(document.pointerLockElement) document.exitPointerLock();
         buildLevel(true);
