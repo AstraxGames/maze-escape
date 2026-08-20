@@ -34,7 +34,23 @@
             }
         }
 
-        body { margin: 0; overflow: hidden; background-color: #0b0c16; font-family: 'Inter', sans-serif; font-size: var(--font-scale-base); }
+        body { 
+    margin: 0; 
+    overflow: hidden; 
+    background-color: #0b0c16; 
+    font-family: 'Inter', sans-serif; 
+    font-size: var(--font-scale-base);
+    
+    /* --- Stop Text Selection --- */
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+/* --- Stop image Selection --- */
+img {
+    -webkit-user-drag: none;
+}
         #game-canvas { width: 100vw; height: 100vh; display: block; }
         
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5,5,12,0.85); backdrop-filter: blur(8px); z-index: 70; color: #fff; transition: opacity 0.3s; padding: var(--menu-padding); overflow-y: auto; }
@@ -144,8 +160,15 @@
     </div>
 
     <div id="initial-loader">
-        <div class="spinner"></div>
-        <h2 class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
+        <div class="spinner" id="loader-spinner"></div>
+        <h2 id="loader-text" class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
+        
+        <!-- NEW: Offline Fallback UI -->
+        <div id="offline-prompt" class="hidden flex-col items-center gap-4 mt-8 z-[1000]">
+            <p class="text-red-500 font-bold uppercase tracking-widest text-sm text-center mb-2">Connection Timeout</p>
+            <button onclick="playOffline()" class="gta-btn bg-cyan-600 hover:bg-cyan-500 text-center justify-center w-64 border border-cyan-400">Play Offline Maze</button>
+            <button onclick="window.close()" class="gta-btn bg-red-600/50 hover:bg-red-500 text-center justify-center w-64 border border-red-400">Quit Game</button>
+        </div>
     </div>
 
     <!-- Crosshair for PC Mouse Look -->
@@ -386,7 +409,7 @@
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.1</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.2</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -739,10 +762,20 @@
     let myStatusRef = null;
     let globalStoreCatalog = { weapons: {}, chars: {} };
     
+    let connectionTimeout;
+
     async function loadAppAuth() {
-        if(!window.FB || !MY_FIREBASE_CONFIG.apiKey) {
-            document.getElementById('initial-loader').innerHTML = "<h2 class='text-red-500 font-black text-2xl'>NETWORK ERROR</h2><p>Please check internet or Firebase keys.</p>"; return;
+        // Check if there is absolutely no internet right away
+        if(!window.FB || !MY_FIREBASE_CONFIG.apiKey || !navigator.onLine) {
+            showOfflinePrompt(); 
+            return;
         }
+
+        // Start the 5-second countdown timer
+        connectionTimeout = setTimeout(() => {
+            showOfflinePrompt();
+        }, 5000);
+
         const app = window.FB.initializeApp(MY_FIREBASE_CONFIG);
         db = window.FB.getDatabase(app); auth = window.FB.getAuth(app);
         
@@ -758,6 +791,7 @@
         }
         
         window.FB.onAuthStateChanged(auth, async (user) => {
+            clearTimeout(connectionTimeout); // Successfully connected! Cancel the timeout.
             if (user) { 
                 currentUser = user; 
                 myDBUid = localStorage.getItem('ax_uid') || currentUser.uid;
@@ -775,6 +809,34 @@
             }
         });
     }
+
+    // NEW: Functions to handle the offline UI and redirect
+    window.showOfflinePrompt = function() {
+        const spinner = document.getElementById('loader-spinner');
+        if(spinner) spinner.classList.add('hidden');
+        document.getElementById('loader-text').innerText = "NETWORK UNAVAILABLE";
+        const prompt = document.getElementById('offline-prompt');
+        if(prompt) { prompt.classList.remove('hidden'); prompt.classList.add('flex'); }
+    };
+
+    window.playOffline = function() {
+        // Build a temporary local profile so the game doesn't crash without the database
+        const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
+        userProfile = { 
+            name: "Offline Player", uidNum: "000000", changesLeft: 0, pfp: DEFAULT_PFP, 
+            equippedWeapon: "knife", equippedChar: "default", level: localLevel, 
+            coins: 0, dailyAdsWatched: 0, lastAdDate: "", 
+            inventory: { weapons: ['knife'], chars: ['default'] } 
+        };
+        currentLevel = localLevel;
+        updateProfileUI();
+
+        // Hide loader and drop directly into offline campaign
+        document.getElementById('initial-loader').classList.add('hidden');
+        gameMode = 'campaign';
+        startGamePlay();
+        canvas.requestPointerLock();
+    };
 
     function setMyStatus(status) { if(myStatusRef) window.FB.set(myStatusRef, status); }
 
@@ -1527,7 +1589,7 @@
 
             activeIds.forEach(id => {
                 const pData = data[id]; if(id === mySessionId) return;
-                if(!remotePlayers[id]) { gtaNotify(`${pData.name || 'Player'} joined`); createHologram(id, pData.wpn, pData.char); if(voiceChat.isActive) voiceChat.createPeer(id, true); } 
+                if(!remotePlayers[id]) { gtaNotify(`${pData.name || 'Player'} joined`); createHologram(id, pData.wpn, pData.char, pData.name); if(voiceChat.isActive) voiceChat.createPeer(id, true); } 
                 else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
                 remotePlayers[id] = pData;
             });
@@ -1605,7 +1667,7 @@
             for(let id in data.players) {
                 if(id !== mySessionId) {
                     const pData = data.players[id];
-                    if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char); gtaNotify("Match Started! First to 15!"); }
+                    if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char, pData.name); gtaNotify("Match Started! First to 15!"); }
                     else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
                     remotePlayers[id] = pData; enemyScore = pData.score || 0; updatePvPScoreboard();
                     if((enemyScore >= 15 || myScore >= 15) && pvpState === 'playing') { endPvP(myScore >= 15); }
@@ -1657,8 +1719,29 @@
         clearPowerups();
     }
 
-    function createHologram(id, wpn, charType) {
-        const holo = createBoy(false); applyWeaponMesh(holo, wpn || 'knife'); applyCharacterSkin(holo, charType || 'default'); scene.add(holo); remoteMeshes[id] = holo;
+    function createNameTag(name) {
+        const c = document.createElement('canvas'); c.width = 512; c.height = 128; const ctx = c.getContext('2d');
+        ctx.font = '900 60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // Add a thick black outline so it's readable against any background
+        ctx.lineWidth = 8; ctx.strokeStyle = '#000000'; ctx.strokeText(name.toUpperCase(), 256, 64);
+        ctx.fillStyle = '#22d3ee'; ctx.fillText(name.toUpperCase(), 256, 64);
+        
+        const tex = new THREE.CanvasTexture(c);
+        // depthTest: false allows tags to be seen through walls in the giant MMO maze
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }); 
+        const sprite = new THREE.Sprite(mat); 
+        sprite.scale.set(2.0, 0.5, 1); 
+        sprite.position.y = 3.2; // Float slightly above the head
+        return sprite;
+    }
+
+    function createHologram(id, wpn, charType, playerName) {
+        const holo = createBoy(false); applyWeaponMesh(holo, wpn || 'knife'); applyCharacterSkin(holo, charType || 'default'); 
+        
+        // Only attach the name tag if we are in the MMO session
+        if (gameMode === 'mmo') { holo.add(createNameTag(playerName || 'Player')); }
+        
+        scene.add(holo); remoteMeshes[id] = holo;
     }
     function removeHologram(id) { if(remoteMeshes[id]) { scene.remove(remoteMeshes[id]); delete remoteMeshes[id]; } }
 
@@ -1748,8 +1831,49 @@
 
     function addSprayToScene(data) {
         if (!data || !data.type || !data.ts || Date.now() - data.ts > 3600000) return; 
-        const mat = data.type === 'cross' ? crossMat : tickMat; const mesh = new THREE.Mesh(sprayGeo, mat); mesh.position.set(data.px, data.py, data.pz);
-        const norm = _v1.set(data.nx, data.ny, data.nz); mesh.position.add(norm.clone().multiplyScalar(0.015)); mesh.lookAt(mesh.position.clone().add(norm)); scene.add(mesh); sprayMeshes.push(mesh);
+        const mat = data.type === 'cross' ? crossMat : tickMat; 
+        
+        // NEW: Use a subdivided plane so it can bend around corners!
+        const geo = new THREE.PlaneGeometry(1.5, 1.5, 4, 4); 
+        const mesh = new THREE.Mesh(geo, mat); 
+        mesh.position.set(data.px, data.py, data.pz);
+        
+        const norm = _v1.set(data.nx, data.ny, data.nz); 
+        mesh.lookAt(mesh.position.clone().add(norm)); 
+        mesh.updateMatrixWorld();
+
+        // Calculate where the spray was shot from (fallback for older network data)
+        const projOrigin = new THREE.Vector3(data.ox, data.oy, data.oz);
+        if(data.ox === undefined) projOrigin.set(data.px + data.nx*2, data.py + data.ny*2, data.pz + data.nz*2);
+
+        const posAttr = geo.attributes.position;
+        const vWorld = new THREE.Vector3();
+        const rayDir = new THREE.Vector3();
+        const decalRay = new THREE.Raycaster();
+
+        // Shrink-wrap every vertex to the walls
+        for(let i = 0; i < posAttr.count; i++) {
+            vWorld.fromBufferAttribute(posAttr, i);
+            mesh.localToWorld(vWorld); 
+
+            // Shoot ray from projection origin through the un-bent vertex
+            rayDir.subVectors(vWorld, projOrigin).normalize();
+            decalRay.set(projOrigin, rayDir);
+            
+            const hits = decalRay.intersectObjects(wallsGroup.children);
+            if(hits.length > 0) {
+                // Prevent infinite stretching if it shoots through an empty gap
+                if(hits[0].distance < projOrigin.distanceTo(mesh.position) + 2.0) {
+                    // Snap vertex to the wall and pull it out 0.015 to prevent Z-fighting
+                    vWorld.copy(hits[0].point).addScaledVector(hits[0].face.normal, 0.015);
+                    mesh.worldToLocal(vWorld);
+                    posAttr.setXYZ(i, vWorld.x, vWorld.y, vWorld.z);
+                }
+            }
+        }
+        geo.computeVertexNormals();
+
+        scene.add(mesh); sprayMeshes.push(mesh);
     }
     
     const raycaster = new THREE.Raycaster();
@@ -1757,14 +1881,24 @@
         if(!isPlaying || isPaused || isDead) return;
         if(gameMode === 'pvp_1v1') { return; }
         
-        _origin.copy(player.position); _origin.y += 1.5; 
+        // NEW: Instantly snap character's body to face the camera direction
+        player.rotation.y = camAzimuth - Math.PI;
+
+        _origin.copy(player.position); _origin.y += 1.5;
         _dir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
         raycaster.set(_origin, _dir); 
         const hits = raycaster.intersectObjects(wallsGroup.children);
         
-        if(hits.length > 0 && hits[0].distance < 4.0) {
-            if(audioInitialized && window.gameSettings.sound.sfx > 0) footstepSynth.triggerAttackRelease('32n');
-            const hit = hits[0]; const sprayData = { px: hit.point.x, py: hit.point.y, pz: hit.point.z, nx: hit.face.normal.x, ny: hit.face.normal.y, nz: hit.face.normal.z, type: type, ts: Date.now() };
+       if(hits.length > 0 && hits[0].distance < 4.0) {
+            isSpraying = true; sprayTimer = 0; // Trigger hand animation
+            if(window.gameSettings.sound.sfx > 0) { spraySound.currentTime = 0; spraySound.play().catch(e=>{}); }
+            const hit = hits[0]; 
+            const sprayData = { 
+                px: hit.point.x, py: hit.point.y, pz: hit.point.z, 
+                nx: hit.face.normal.x, ny: hit.face.normal.y, nz: hit.face.normal.z, 
+                ox: _origin.x, oy: _origin.y, oz: _origin.z, // NEW: Save projection origin
+                type: type, ts: Date.now() 
+            };
             if(gameMode === 'mmo' && db && window.FB) window.FB.push(window.FB.ref(db, 'session/sprays'), sprayData);
             else if(gameMode === 'pvp_1v1' && db && currentPvPRoom && window.FB) window.FB.push(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/sprays`), sprayData);
             else addSprayToScene(sprayData);
@@ -1804,14 +1938,14 @@
         const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.6,envMapIntensity:1.0});
 
         const b=new THREE.Mesh(new THREE.CylinderGeometry(.34,.4,1,20,1), shirt); b.position.y=1.3; b.castShadow=true; b.receiveShadow=true; g.add(b);
-        const shL=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
-        const shR=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12), shirt); shR.position.set(.42,1.72,0); shR.castShadow=true; g.add(shR);
+        const shL=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
+        const shR=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12), shirt); shR.position.set(.42,1.72,0); shR.castShadow=true; g.add(shR);
         const h=new THREE.Mesh(new THREE.SphereGeometry(.36,24,18), skin); h.position.y=2.15; h.castShadow=true; g.add(h);
 
         const eyeMat = new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:0.25, envMapIntensity:1.2});
         const leftEye = new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), eyeMat); leftEye.position.set(-.14,.06,.33);
         const rightEye = new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), eyeMat); rightEye.position.set(.14,.06,.33);
-        const mouth = new THREE.Mesh(new THREE.TorusGeometry(.09,.018,8,12,Math.PI), eyeMat); mouth.position.set(0,-.12,.32); mouth.rotation.set(Math.PI,0,Math.PI);
+        const mouth = new THREE.Mesh(new THREE.TorusGeometry(.09,.018,8,12,Math.PI), eyeMat); mouth.position.set(0,-.12,.345); mouth.rotation.set(Math.PI,0,Math.PI);
         h.add(leftEye); h.add(rightEye); h.add(mouth);
 
         function makeCapsuleLimb(mat, radiusTop, radiusBottom, length, capTopR, capBotR) {
@@ -1825,10 +1959,33 @@
 
         const lA=new THREE.Group(); lA.position.set(-.42,1.68,0); const armL = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); lA.add(armL); g.add(lA);
         const rA=new THREE.Group(); rA.position.set(.42,1.68,0);  const armR = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); rA.add(armR); g.add(rA);
+        
+        // --- NEW: Create Bigger Spray Can & Particles ---
+        const sprayCanGrp = new THREE.Group();
+        const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.22, 16), new THREE.MeshStandardMaterial({color: 0xcccccc, metalness: 0.8, roughness: 0.2}));
+        const canCap = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.05, 0.06, 12), new THREE.MeshStandardMaterial({color: 0xff3333}));
+        canCap.position.y = 0.14;
+        sprayCanGrp.add(canBody); sprayCanGrp.add(canCap);
+        
+        // Create the Smooth Mist Particles
+        const pGeo = new THREE.BufferGeometry();
+        const pCount = 150; // Increased to 150 for dense mist
+        pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pCount * 3), 3));
+        // Smaller size, slight blueish-white tint, and lower opacity
+        const pMat = new THREE.PointsMaterial({color: 0xeef2ff, size: 0.015, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending});
+        const sprayParticles = new THREE.Points(pGeo, pMat);
+        sprayCanGrp.add(sprayParticles);
+
+        sprayCanGrp.position.set(0, -0.85, 0.15); // Lowered into the palm and pushed forward
+        sprayCanGrp.rotation.x = Math.PI / 2; // Pointing straight out
+        sprayCanGrp.visible = false; 
+        rA.add(sprayCanGrp);
+
         const lL=new THREE.Group(); lL.position.set(-.18,.85,0);  const legL = makeCapsuleLimb(pants,.17,.15,.85,.18,.16); lL.add(legL); g.add(lL);
         const rL=new THREE.Group(); rL.position.set(.18,.85,0);   const legR = makeCapsuleLimb(pants,.17,.15,.85,.18,.16); rL.add(legR); g.add(rL);
-        g.userData={head:h,body:b,leftArm:lA,rightArm:rA,leftLeg:lL,rightLeg:rL, isMoving: false}; g.scale.set(.8,.8,.8); 
-        
+        g.userData={head:h,body:b,leftArm:lA,rightArm:rA,leftLeg:lL,rightLeg:rL, sprayCan: sprayCanGrp, sprayParticles: sprayParticles, isMoving: false}; g.scale.set(.8,.8,.8);
+
+
         if(isLocal) {
             const fl = new THREE.SpotLight(0xddeeff, 3.5, 90, Math.PI/4, 0.6, 1.5); fl.position.set(0, 2.1, 0.4); fl.target.position.set(0, 2.1, 10); g.add(fl); g.add(fl.target); g.userData.flashlight = fl;
         } else {
@@ -1838,8 +1995,13 @@
     }
 
     let isAttacking = false, attackTimer = 0;
+    let isSpraying = false, sprayTimer = 0;
     function performKnifeAttack() {
         if(!isPlaying || isPaused || isAttacking || isDead || gameMode !== 'pvp_1v1' || pvpState !== 'playing') return;
+        
+        // NEW: Instantly snap character's body to face the camera direction
+        player.rotation.y = camAzimuth - Math.PI;
+        
         isAttacking = true; attackTimer = 0;
         if(audioInitialized && window.gameSettings.sound.sfx > 0) swingSynth.triggerAttackRelease('16n');
         for(let id in remotePlayers) {
@@ -2094,7 +2256,7 @@
         if (isBackgroundMenu) { mazeSeed = 1111; mazeWidth = 15; mazeHeight = 15; }
         else if (gameMode === 'mmo') { mazeSeed = window.mmoSeed || 99999; mazeWidth = 151; mazeHeight = 151; } 
         else if (gameMode === 'pvp_1v1') { mazeSeed = window.currentPvPSeed; mazeWidth = 15; mazeHeight = 15; } 
-        else { mazeWidth = Math.min(9+(currentLevel*2), 61); mazeHeight = Math.min(9+(currentLevel*2), 61); mazeSeed = Math.floor(Math.random() * 1000000); }
+        else { mazeWidth = Math.min(9+(currentLevel*2), 69); mazeHeight = Math.min(9+(currentLevel*2), 69); mazeSeed = Math.floor(Math.random() * 1000000); }
         
         mazeGrid = generateMaze(mazeWidth, mazeHeight, gameMode !== 'pvp_1v1');
         
@@ -2333,7 +2495,10 @@
                 if (keys.jump) player.position.y += 15 * dt;
                 else if (keys.crouch) player.position.y -= 15 * dt;
             } else {
-                if (keys.jump && isGrounded && !keys.crouch) { velocityY = 12; isGrounded = false; }
+                if (keys.jump && isGrounded && !keys.crouch) { 
+                    velocityY = 12; isGrounded = false; 
+                    if(window.gameSettings.sound.sfx > 0) { jumpSound.currentTime = 0; jumpSound.play().catch(e=>{}); }
+                }
                 player.position.y += velocityY * dt;
                 if (player.position.y > 0) { velocityY -= 35 * dt; isGrounded = false; } 
                 else { player.position.y = 0; velocityY = 0; isGrounded = true; }
@@ -2386,7 +2551,39 @@
                 }
             }
 
-            if(isAttacking) {
+            if(isSpraying) {
+                sprayTimer += dt * 12; 
+                if (player.userData.sprayCan) {
+                    player.userData.sprayCan.visible = true;
+                    
+                    // Animate Smooth Mist Particles shooting out and up
+                    if(player.userData.sprayParticles) {
+                        const pts = player.userData.sprayParticles;
+                        const pos = pts.geometry.attributes.position.array;
+                        for(let i=0; i<150; i++) {
+                            // Fixed pseudo-random trajectories so they flow smoothly instead of teleporting
+                            const r1 = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+                            const r2 = (Math.sin(i * 78.233) * 43758.5453) % 1;
+                            const r3 = (Math.sin(i * 37.719) * 43758.5453) % 1;
+
+                            pos[i*3]   = (r1 - 0.5) * 0.6 * sprayTimer;                  // Spread X (Left/Right)
+                            pos[i*3+1] = 0.15 + (Math.abs(r2) * 0.9 * sprayTimer);       // Shoot forward
+                            // Drift UPwards into the air (-Z is up relative to the rotated can)
+                            pos[i*3+2] = (r3 - 0.5) * 0.3 * sprayTimer - (0.5 * sprayTimer); 
+                        }
+                        pts.geometry.attributes.position.needsUpdate = true;
+                        pts.material.opacity = Math.max(0, 0.6 - (sprayTimer / Math.PI)); // Fade out like gas
+                    }
+                }
+                player.userData.rightArm.rotation.x = -Math.PI / 2.5 - Math.sin(sprayTimer * 3) * 0.15; 
+                
+                if(sprayTimer >= Math.PI) { 
+                    isSpraying = false; 
+                    player.userData.rightArm.rotation.x = 0; 
+                    if (player.userData.sprayCan) player.userData.sprayCan.visible = false;
+                }
+            } else if(isAttacking) {
+
                 attackTimer += dt * 15; player.userData.rightArm.rotation.x = -Math.sin(attackTimer) * 1.5;
                 if(attackTimer >= Math.PI) { isAttacking = false; player.userData.rightArm.rotation.x = 0; }
             } else if(isMoving && isGrounded){
@@ -2546,13 +2743,20 @@
         if(k===c.crouch)keys.crouch=false;
     });
 
-    let audioInitialized = false; let footstepSynth, nightSynth, swingSynth, hitSynth;
+  let audioInitialized = false; let footstepSynth, nightSynth, swingSynth, hitSynth;
+    
+   
+    let jumpSound = new Audio("audio/jump.mp3");
+    let spraySound = new Audio("audio/spray.mp3");
+
     async function initAudio() {
         if(audioInitialized) return; await Tone.start();
+        
         footstepSynth = new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.01,decay:0.05,sustain:0,release:0.05}}).toDestination();
         swingSynth = new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.01,decay:0.1,sustain:0,release:0.1}}).toDestination();
         hitSynth = new Tone.MembraneSynth({pitchDecay: 0.1, octaves: 4, oscillator: {type: 'sine'}, envelope: {attack: 0.001, decay: 0.2, sustain: 0, release: 0.1}}).toDestination();
         nightSynth = new Tone.FMSynth({ harmonicity: 0.5, modulationIndex: 5, oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 1 } }).toDestination();
+        
         let noteIdx = 0; const nightMelody = ['C2', 'D#2', 'G2', 'A#2']; 
         Tone.Transport.scheduleRepeat(time => {
             if(isPlaying && !isPaused && customPlaylist.length === 0) { if(noteIdx % 4 === 0) { const note = nightMelody[(noteIdx/4) % nightMelody.length]; if(note) nightSynth.triggerAttackRelease(note, '4n', time); } }

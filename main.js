@@ -1,10 +1,14 @@
-const { app, BrowserWindow, globalShortcut, Menu } = require('electron');
+const { app, BrowserWindow, globalShortcut, Menu, ipcMain } = require('electron'); // Added ipcMain for updater communication
 const { autoUpdater } = require('electron-updater');
 
 let win;
 let splash;
 
-function createWindow() {
+// Auto-updater configuration
+autoUpdater.autoDownload = false; // CRITICAL: Changed to false so player triggers it from the custom UI
+autoUpdater.autoInstallOnAppQuit = false; // We will force install immediately when downloaded
+
+function startApp() {
     // 1. Create the Splash Screen
     splash = new BrowserWindow({ 
         width: 400, 
@@ -15,7 +19,14 @@ function createWindow() {
     });
     splash.loadFile('splash.html');
 
-    // 2. Create Main Window (Strict Fullscreen)
+    // 2. Check for updates BEFORE loading the main game
+    autoUpdater.checkForUpdates();
+}
+
+function launchMainGame() {
+    if (win) return; // Prevent double launching
+
+    // Create Main Window (Strict Fullscreen)
     win = new BrowserWindow({
         fullscreen: true,
         autoHideMenuBar: true,
@@ -29,23 +40,19 @@ function createWindow() {
 
     win.loadFile('index.html');
 
-    // 3. Show main window when the game is fully loaded
+    // Show main window when the game is fully loaded
     win.once('ready-to-show', () => {
-        setTimeout(() => {
-            splash.destroy();
-            win.show();
-        }, 1500); 
+        if (splash) splash.destroy();
+        win.show();
     });
 
     // Block F11 to strictly prevent exiting fullscreen
     globalShortcut.register('F11', () => {
         // Do nothing! This completely disables the F11 key.
     });
-
-    autoUpdater.checkForUpdatesAndNotify();
 }
 
-// Custom Application Menu (Step 3)
+// Custom Application Menu
 function createMenu() {
     const template = [
         {
@@ -60,13 +67,65 @@ function createMenu() {
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// --- NEW UPDATE SCREEN LAUNCHER ---
+function launchUpdateScreen() {
+    if (win) return;
+
+    win = new BrowserWindow({
+        width: 700,
+        height: 450,
+        frame: false, // Sleek borderless window for updater
+        transparent: true,
+        icon: __dirname + '/icon.ico',
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        }
+    });
+
+    win.loadFile('update.html');
+
+    win.once('ready-to-show', () => {
+        if (splash) splash.destroy();
+        win.show();
+    });
+}
+
+// --- AUTO UPDATER EVENTS ---
+
+autoUpdater.on('update-available', () => {
+    console.log('Update available. Launching update screen...');
+    launchUpdateScreen(); // Show custom update screen instead of game
+});
+
+autoUpdater.on('update-not-available', () => {
+    console.log('Game is up to date.');
+    launchMainGame(); // Start game normally
+});
+
+autoUpdater.on('error', (err) => {
+    console.log('Update error or offline. Launching game.', err);
+    launchMainGame(); // Fallback: Start game even if no internet
+});
+
+// Receive message from update.html to start downloading
+ipcMain.on('start-download', () => {
+    autoUpdater.downloadUpdate();
+});
+
+// Send download progress to update.html
+autoUpdater.on('download-progress', (progressObj) => {
+    if (win) win.webContents.send('download-progress', progressObj);
+});
+
 autoUpdater.on('update-downloaded', () => {
-    autoUpdater.quitAndInstall();
+    console.log('Update downloaded. Installing now...');
+    autoUpdater.quitAndInstall(); // Force restart and install immediately
 });
 
 app.whenReady().then(() => {
     createMenu();
-    createWindow();
+    startApp(); // Start with splash screen and update check
 });
 
 app.on('window-all-closed', () => {

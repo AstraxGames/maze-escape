@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstraX Updater</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: transparent; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .updater-box {
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 15px rgba(34, 211, 238, 0.1) inset;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        /* Top draggable bar so players can move the window */
+        .drag-bar {
+            -webkit-app-region: drag;
+            height: 30px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* Progress Bar Styles */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            height: 24px;
+            width: 100%;
+            display: none; /* Hidden until download starts */
+            position: relative;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #0284c7, #22d3ee);
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s ease;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+        }
+        .btn-download {
+            background: #22d3ee;
+            color: #000;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+        }
+        .btn-download:hover {
+            background: #1cb5cc;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+            transform: scale(1.02);
+        }
+        .btn-download:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="updater-box p-8 flex flex-col justify-center text-center h-[calc(100vh-40px)]">
+        <div class="drag-bar"></div> <!-- Allows moving window -->
+
+        <div class="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+            <span class="text-3xl font-black text-cyan-400">AX</span>
+        </div>
+
+        <h1 class="text-3xl font-black text-white uppercase tracking-widest mb-2">Update Available</h1>
+        <p class="text-gray-400 text-sm font-bold tracking-widest uppercase mb-8">A new version of Maze Escape has been detected.</p>
+
+        <div class="mt-auto">
+            <!-- The Download Button -->
+            <button id="btn-download" class="btn-download" onclick="startDownload()">Download Update</button>
+
+            <!-- The Progress Bar (Hidden initially) -->
+            <div id="progress-wrapper" class="hidden">
+                <div class="flex justify-between text-[0.65rem] font-bold text-cyan-400 uppercase tracking-widest mb-2">
+                    <span id="progress-text">Downloading... 0%</span>
+                    <span id="speed-text">0 MB/s</span>
+                </div>
+                <div class="progress-container block">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Electron IPC Script -->
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        function startDownload() {
+            const btn = document.getElementById('btn-download');
+            const progressWrapper = document.getElementById('progress-wrapper');
+
+            // Hide button, show progress bar
+            btn.style.display = 'none';
+            progressWrapper.classList.remove('hidden');
+
+            // Tell main.js to start downloading
+            ipcRenderer.send('start-download');
+        }
+
+        // Listen for progress updates from main.js
+        ipcRenderer.on('download-progress', (event, progressObj) => {
+            const percent = progressObj.percent.toFixed(1);
+            const speedMB = (progressObj.bytesPerSecond / 1048576).toFixed(2); // Convert to MB/s
+
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-text').innerText = 'Downloading... ' + percent + '%';
+            document.getElementById('speed-text').innerText = speedMB + ' MB/s';
+
+            if (percent >= 100) {
+                document.getElementById('progress-text').innerText = 'Installing Update...';
+                document.getElementById('progress-text').classList.replace('text-cyan-400', 'text-green-400');
+                document.getElementById('progress-fill').style.background = '#22c55e'; // Turn green
+                document.getElementById('speed-text').innerText = 'Please wait';
+            }
+        });
+    </script>
+</body>
+</html>
