@@ -17,12 +17,13 @@
   "build": {
     "appId": "com.astraxgames.mazeescape",
     "icon": "icon.ico",
-     "asar": true,
+    "asar": true,
     "publish": [
       {
         "provider": "github",
         "owner": "AstraxGames",
-        "repo": "maze-escape"
+        "repo": "maze-escape",
+        "releaseType": "draft"
       }
     ],
     "win": {

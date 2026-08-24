@@ -123,6 +123,11 @@ autoUpdater.on('update-downloaded', () => {
     autoUpdater.quitAndInstall(); // Force restart and install immediately
 });
 
+// Receive message from update.html to safely quit
+ipcMain.on('quit-app', () => {
+    app.quit();
+});
+
 app.whenReady().then(() => {
     createMenu();
     startApp(); // Start with splash screen and update check

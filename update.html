@@ -14,7 +14,12 @@
             padding: 20px;
         }
         .updater-box {
-            background: rgba(10, 10, 15, 0.95);
+            /* Matte Background style with Game Banner */
+            background-image: linear-gradient(rgba(10, 10, 15, 0.8), rgba(10, 10, 15, 0.95)), url('assets/banner.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            
             backdrop-filter: blur(10px);
             border: 1px solid rgba(34, 211, 238, 0.3);
             border-radius: 12px;
@@ -51,9 +56,8 @@
             transition: width 0.2s ease;
             box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
         }
-        .btn-download {
-            background: #22d3ee;
-            color: #000;
+        
+        .btn-base {
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -61,8 +65,12 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
+        }
+        
+        .btn-download {
+            background: #22d3ee;
+            color: #000;
             border: none;
-            width: 100%;
         }
         .btn-download:hover {
             background: #1cb5cc;
@@ -76,31 +84,50 @@
             transform: none;
             box-shadow: none;
         }
+
+        .btn-quit {
+            background: transparent;
+            color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.8rem;
+        }
+        .btn-quit:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
     </style>
 </head>
 <body>
     <div class="updater-box p-8 flex flex-col justify-center text-center h-[calc(100vh-40px)]">
         <div class="drag-bar"></div> <!-- Allows moving window -->
 
-        <div class="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
-            <span class="text-3xl font-black text-cyan-400">AX</span>
-        </div>
+        <div class="relative z-10 flex flex-col items-center flex-grow justify-center">
+            <div class="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                <span class="text-3xl font-black text-cyan-400">AX</span>
+            </div>
 
-        <h1 class="text-3xl font-black text-white uppercase tracking-widest mb-2">Update Available</h1>
+            <h1 class="text-3xl font-black text-white uppercase tracking-widest mb-2">Update Available</h1>
         <p class="text-gray-400 text-sm font-bold tracking-widest uppercase mb-8">A new version of Maze Escape has been detected.</p>
 
-        <div class="mt-auto">
-            <!-- The Download Button -->
-            <button id="btn-download" class="btn-download" onclick="startDownload()">Download Update</button>
+        <div class="mt-auto w-full" id="action-container">
+            <!-- Buttons Group -->
+            <div id="button-group" class="flex justify-center gap-4 w-full mb-2">
+                <button id="btn-quit" class="btn-base btn-quit" onclick="quitApp()">Quit to Desktop</button>
+                <button id="btn-download" class="btn-base btn-download" onclick="startDownload()">Download Update</button>
+            </div>
 
             <!-- The Progress Bar (Hidden initially) -->
-            <div id="progress-wrapper" class="hidden">
+            <div id="progress-wrapper" class="hidden text-left">
                 <div class="flex justify-between text-[0.65rem] font-bold text-cyan-400 uppercase tracking-widest mb-2">
-                    <span id="progress-text">Downloading... 0%</span>
-                    <span id="speed-text">0 MB/s</span>
-                </div>
-                <div class="progress-container block">
-                    <div id="progress-fill" class="progress-fill"></div>
+                        <span id="progress-text">Downloading... 0%</span>
+                        <div class="text-right">
+                            <span id="size-text" class="text-white mr-2">0 / 0 MB</span>
+                            <span id="speed-text">0 MB/s</span>
+                        </div>
+                    </div>
+                    <div class="progress-container block">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -110,25 +137,60 @@
     <script>
         const { ipcRenderer } = require('electron');
 
+        // Play a synthetic futuristic blip sound
+        function playClickSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e) { console.log('Audio disabled'); }
+        }
+
         function startDownload() {
-            const btn = document.getElementById('btn-download');
+            playClickSound();
+            
+            const btnGroup = document.getElementById('button-group');
             const progressWrapper = document.getElementById('progress-wrapper');
 
-            // Hide button, show progress bar
-            btn.style.display = 'none';
+            // Hide buttons group, show progress bar
+            btnGroup.style.display = 'none';
             progressWrapper.classList.remove('hidden');
 
             // Tell main.js to start downloading
             ipcRenderer.send('start-download');
         }
 
+        function quitApp() {
+            playClickSound();
+            // Optional delay so sound plays before instantly closing
+            setTimeout(() => {
+                // To quit the app safely, we can send a message to main.js, or use process.exit
+                ipcRenderer.send('quit-app'); 
+            }, 150);
+        }
+
         // Listen for progress updates from main.js
         ipcRenderer.on('download-progress', (event, progressObj) => {
             const percent = progressObj.percent.toFixed(1);
             const speedMB = (progressObj.bytesPerSecond / 1048576).toFixed(2); // Convert to MB/s
+            const transferredMB = (progressObj.transferred / 1048576).toFixed(1);
+            const totalMB = (progressObj.total / 1048576).toFixed(1);
 
             document.getElementById('progress-fill').style.width = percent + '%';
             document.getElementById('progress-text').innerText = 'Downloading... ' + percent + '%';
+            document.getElementById('size-text').innerText = transferredMB + ' / ' + totalMB + ' MB';
             document.getElementById('speed-text').innerText = speedMB + ' MB/s';
 
             if (percent >= 100) {
@@ -136,6 +198,7 @@
                 document.getElementById('progress-text').classList.replace('text-cyan-400', 'text-green-400');
                 document.getElementById('progress-fill').style.background = '#22c55e'; // Turn green
                 document.getElementById('speed-text').innerText = 'Please wait';
+                document.getElementById('size-text').innerText = '';
             }
         });
     </script>
