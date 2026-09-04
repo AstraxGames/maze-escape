@@ -9,6 +9,7 @@
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <!-- Post-processing pipeline (bloom / grade / AA) for HD visual pass -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -304,9 +305,33 @@ img {
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Render Scale: <span id="val-scale" class="text-white">100%</span></label>
                                 <input type="range" id="set-scale" min="20" max="200" value="100" step="5">
                             </div>
-                            <div class="flex justify-between items-center mb-4">
-                                <label class="text-xs font-bold text-gray-400 uppercase">HD Shadows</label>
-                                <button id="set-shadows" class="gta-toggle">ON</button>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Shadow Quality</label>
+                                <select id="set-shadows-select" class="gta-select">
+                                    <option value="ultra">Ultra (4K)</option>
+                                    <option value="high">High (2K)</option>
+                                    <option value="medium">Medium (1K)</option>
+                                    <option value="low">Low (512p)</option>
+                                    <option value="off">OFF</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Post-FX (Bloom)</label>
+                                <select id="set-bloom" class="gta-select">
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                    <option value="off">OFF</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Anisotropic Filtering</label>
+                                <select id="set-anisotropy" class="gta-select">
+                                    <option value="16">16x (Ultra)</option>
+                                    <option value="8">8x (High)</option>
+                                    <option value="4">4x (Medium)</option>
+                                    <option value="1">1x (Off)</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">FPS Limit</label>
@@ -393,7 +418,7 @@ img {
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.1.3</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.2.0</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -534,12 +559,69 @@ img {
         </div>
     </div>
 
-    <div id="matchmaking-screen" class="overlay hidden items-center justify-center bg-black/90 z-[70]">
-        <div class="text-center">
-            <h2 class="text-3xl md:text-4xl font-black text-white tracking-widest mb-4 animate-pulse">SEARCHING...</h2>
-            <p class="text-gray-400 mb-8 uppercase font-bold tracking-widest text-sm">Looking for opponent</p>
-            <div id="btn-cancel-matchmaking" class="gta-btn max-w-xs mx-auto border border-white/20 justify-center">Cancel</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- Cinematic 2-Phase Matchmaking UI -->
+    <div id="matchmaking-screen" class="overlay hidden bg-[#050508] z-[70] flex-col items-center justify-center">
+        <div id="matchmaking-searching" class="flex flex-col items-center justify-center transition-opacity duration-300">
+            <div id="matchmaking-timer" class="text-4xl font-mono text-white font-black tracking-widest mb-6">00:00</div>
+            <div class="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin mb-6"></div>
+            <button id="btn-cancel-matchmaking" class="text-gray-500 hover:text-white text-sm font-bold uppercase tracking-widest transition-colors">Cancel</button>
         </div>
+
+        <div id="matchmaking-found" class="hidden flex-col items-center justify-center w-full max-w-4xl px-4 transition-opacity duration-300 opacity-0">
+            <h2 class="text-4xl md:text-6xl font-black text-white tracking-widest uppercase mb-12">MATCH FOUND</h2>
+            <div class="flex items-center justify-center w-full gap-8 md:gap-16 mb-12">
+                <div class="flex flex-col items-center gap-4 flex-1">
+                    <div class="p-1 bg-white rounded shadow-[0_15px_40px_rgba(0,0,0,0.8)]"><img id="match-pfp-you" src="" class="w-24 h-24 md:w-40 md:h-40 object-cover bg-gray-900"></div>
+                    <span id="match-name-you" class="text-white font-black tracking-wider uppercase text-lg md:text-xl bg-black/80 px-4 py-1 border-b-2 border-white rounded-sm">PLAYER</span>
+                </div>
+                <div class="flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 md:w-20 md:h-20 bg-white text-black flex items-center justify-center font-black text-2xl md:text-4xl italic rounded-sm shadow-[0_15px_40px_rgba(0,0,0,0.8)] z-10 transform -rotate-3">VS</div>
+                </div>
+                <div class="flex flex-col items-center gap-4 flex-1">
+                    <div class="p-1 bg-red-600 rounded shadow-[0_15px_40px_rgba(0,0,0,0.8)]"><img id="match-pfp-enemy" src="" class="w-24 h-24 md:w-40 md:h-40 object-cover bg-gray-900"></div>
+                    <span id="match-name-enemy" class="text-white font-black tracking-wider uppercase text-lg md:text-xl bg-black/80 px-4 py-1 border-b-2 border-red-600 rounded-sm">OPPONENT</span>
+                </div>
+            </div>
+            <div class="bg-black/80 px-8 py-3 rounded border border-white/20 shadow-2xl">
+                <div class="text-gray-300 font-bold uppercase tracking-widest text-sm md:text-base">Match Commences In <span id="match-countdown" class="text-white text-2xl font-black ml-3">5</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pro Esports Scoreboard -->
+    <div id="pvp-scoreboard" class="hidden absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1 z-20 pointer-events-none w-[95%] max-w-lg">
+        <div class="flex-1 bg-black/80 border-2 border-cyan-500/50 rounded-l-lg flex items-center justify-between px-3 md:px-4 py-2 backdrop-blur-sm">
+            <span id="score-name-you" class="text-cyan-400 font-black text-xs md:text-sm uppercase truncate max-w-[80px]">YOU</span>
+            <span id="score-val-you" class="text-white font-black text-xl md:text-2xl">0</span>
+        </div>
+        <div class="bg-black border-2 border-gray-600 px-4 py-2 flex flex-col items-center justify-center z-30 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+            <span class="text-gray-400 text-[0.6rem] font-black uppercase tracking-widest leading-none mb-1">Target: 15</span>
+            <span id="pvp-timer" class="text-white font-black text-lg md:text-xl font-mono leading-none">07:00</span>
+        </div>
+        <div class="flex-1 bg-black/80 border-2 border-red-500/50 rounded-r-lg flex items-center justify-between px-3 md:px-4 py-2 backdrop-blur-sm">
+            <span id="score-val-enemy" class="text-white font-black text-xl md:text-2xl">0</span>
+            <span id="score-name-enemy" class="text-red-500 font-black text-xs md:text-sm uppercase truncate max-w-[80px] text-right">ENEMY</span>
+        </div>
+    </div>
+
+    <!-- AAA Hitmarker UI -->
+    <div id="hitmarker" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[45] hidden opacity-0 transition-opacity duration-75">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 12L28 28M28 12L12 28" stroke="white" stroke-width="2" stroke-linecap="round" style="filter: drop-shadow(0px 0px 3px rgba(0,0,0,1));"/>
+        </svg>
     </div>
 
     <div id="pause-menu" class="overlay hidden bg-black/80 backdrop-blur-md z-[70]">
@@ -552,14 +634,18 @@ img {
                     <button class="gta-btn bg-amber-600/50 hover:bg-amber-500 text-white font-black text-xs justify-center rounded py-2 border border-amber-400/40" onclick="teleportToFinish()">Teleport Finish</button>
                 </div>
             </div>
-
             <div id="btn-resume" class="gta-btn">Resume Game <span class="text-xs text-gray-400 ml-2">(Click to focus)</span></div>
             <div id="btn-quit" class="gta-btn" style="color: #ff4444;">Quit to Menu</div>
         </div>
-        
         <div id="session-players-container" class="gta-menu hidden p-4 w-full max-w-sm">
             <h3 class="text-xs font-black text-gray-400 mb-2 uppercase text-center border-b border-white/20 pb-2">Session Players</h3>
             <div id="pause-player-list" class="max-h-48 overflow-y-auto flex flex-col gap-2 pt-2"></div>
+        </div>
+        
+        <!-- FATHER: New Invite Friends UI for MMO Mode! -->
+        <div id="pause-friends-container" class="gta-menu hidden p-4 w-full max-w-sm mt-4">
+            <h3 class="text-xs font-black text-cyan-400 mb-2 uppercase text-center border-b border-cyan-400/20 pb-2 tracking-widest">Invite Friends</h3>
+            <div id="pause-friends-list" class="max-h-48 overflow-y-auto flex flex-col gap-2 pt-2"></div>
         </div>
     </div>
 
@@ -570,15 +656,24 @@ img {
         </div>
     </div>
     
-    <div id="mmo-victory-screen" class="overlay hidden bg-transparent z-[70]">
-        <h2 class="text-4xl md:text-5xl font-black text-white tracking-widest text-shadow-xl animate-pulse text-center mb-8" style="text-shadow: 0 0 20px #22d3ee;">ESCAPED!</h2>
-        <h3 class="text-xl md:text-2xl font-bold text-cyan-300 uppercase tracking-widest text-center">Giant Session Conquered</h3>
-    </div>
-
-    <div id="pvp-scoreboard" class="hidden">
-        <div class="score-you">YOU: <span id="score-val-you">0</span></div>
-        <div class="text-gray-500">|</div>
-        <div class="score-enemy">ENEMY: <span id="score-val-enemy">0</span></div>
+    <!-- Cinematic Victory Screen -->
+    <div id="mmo-victory-screen" class="overlay hidden bg-black/80 z-[80] flex-col items-center justify-center">
+        <div id="victory-slogan-stage" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-1000 opacity-100">
+            <h1 id="slogan-text" class="text-4xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-600 tracking-widest uppercase scale-150 opacity-0 transition-all duration-700 ease-out text-center px-4" style="text-shadow: 0 0 40px rgba(245, 158, 11, 0.5);">Perfect Escape! CONQUERED</h1>
+        </div>
+        <div id="victory-stats-stage" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-1000 hidden">
+            <div class="absolute top-8 left-8 flex items-center gap-4">
+                <img id="victory-pfp" src="" class="w-12 h-12 md:w-16 md:h-16 border-2 border-yellow-500 rounded-full shadow-[0_0_15px_#f59e0b] object-cover">
+                <span id="victory-player-name" class="text-yellow-500 font-black text-xl md:text-2xl tracking-widest uppercase">Player</span>
+            </div>
+            <div class="bg-black/60 border-2 border-yellow-500/50 p-8 md:p-12 rounded-xl shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md flex flex-col items-center text-center mt-12 w-[90%] max-w-md">
+                <div id="victory-time" class="text-5xl md:text-6xl font-black text-white font-mono tracking-widest mb-10 text-shadow-lg shadow-yellow-500">00:00</div>
+                <div class="flex flex-col md:flex-row gap-4 w-full mt-4">
+                    <button class="flex-1 gta-btn bg-yellow-600/20 hover:bg-yellow-500 border border-yellow-500 justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="playAgainMMO()">PLAY AGAIN</button>
+                    <button class="flex-1 gta-btn bg-black hover:bg-white text-white hover:text-black border border-white justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="returnToMainMenuFromVictory()">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="hud" class="absolute top-0 left-0 w-full h-full z-10 hidden pointer-events-none p-4 md:p-6 flex justify-between items-start">
@@ -588,45 +683,35 @@ img {
             <div id="hud-pvp-container" class="text-xs md:text-sm font-black text-red-500 hidden items-center uppercase">PvP 1v1</div>
             <div class="w-px h-4 md:h-5 bg-white/30"></div>
             <div class="text-xs md:text-sm font-black text-white flex items-center font-mono">⏱ <span id="hud-timer" class="text-base md:text-lg ml-2">00:00</span></div>
-            
-            <div id="dev-hud-fly-indicator" class="hidden bg-cyan-400 text-black font-black text-[0.6rem] md:text-xs px-2 py-1 rounded tracking-wider animate-pulse ml-2 whitespace-nowrap">🚀 FLY ON [N]</div>
         </div>
-        <div class="flex gap-2 pointer-events-auto">
+        <div class="hidden flex gap-2 pointer-events-auto">
             <div id="btn-dev-instant-win" class="hud-icon text-cyan-400 border-cyan-400 hidden" title="Dev Finish" onclick="teleportToFinish()">⚡</div>
-            <div id="btn-hud-mic" class="hud-icon text-red-500 hidden" title="Toggle Voice Chat">
-                🎤<span id="mic-status-text" class="text-[0.5rem] md:text-[0.55rem] font-black absolute bottom-0 left-1/2 -translate-x-1/2">OFF</span>
-            </div>
+            <div id="btn-hud-mic" class="hud-icon text-red-500 hidden" title="Toggle Voice Chat">🎤<span id="mic-status-text" class="text-[0.5rem] md:text-[0.55rem] font-black absolute bottom-0 left-1/2 -translate-x-1/2">OFF</span></div>
             <div id="btn-hud-camera" class="hud-icon">🎥</div>
             <div id="btn-hud-pause" class="hud-icon">⏸</div>
         </div>
-
-        <!-- NEW MMO POWERUP UI -->
         <div id="powerup-inventory" class="hidden">
-            <div class="powerup-slot disabled" id="slot-map" onclick="usePowerup('map')" title="Reveal Map (Press 1)">
-                <span class="powerup-key">1</span>
-                <span class="icon">🗺️</span>
-                <span class="powerup-count" id="count-map">0</span>
-            </div>
-            <div class="powerup-slot disabled" id="slot-superjump" onclick="usePowerup('superjump')" title="Super Jump (Press 2)">
-                <span class="powerup-key">2</span>
-                <span class="icon">🦘</span>
-                <span class="powerup-count" id="count-superjump">0</span>
-            </div>
-            <div class="powerup-slot disabled" id="slot-pathfinder" onclick="usePowerup('pathfinder')" title="Pathfinder (Press 3)">
-                <span class="powerup-key">3</span>
-                <span class="icon">✨</span>
-                <span class="powerup-count" id="count-pathfinder">0</span>
-            </div>
-            <div class="powerup-slot disabled" id="slot-walljumper" onclick="usePowerup('walljumper')" title="Wall Phase (Press 4)">
-                <span class="powerup-key">4</span>
-                <span class="icon">👻</span>
-                <span class="powerup-count" id="count-walljumper">0</span>
-            </div>
+            <div class="powerup-slot disabled" id="slot-map" onclick="usePowerup('map')" title="Reveal Map (Press 1)"><span class="powerup-key">1</span><span class="icon">🗺️</span><span class="powerup-count" id="count-map">0</span></div>
+            <div class="powerup-slot disabled" id="slot-superjump" onclick="usePowerup('superjump')" title="Super Jump (Press 2)"><span class="powerup-key">2</span><span class="icon">🦘</span><span class="powerup-count" id="count-superjump">0</span></div>
+            <div class="powerup-slot disabled" id="slot-pathfinder" onclick="usePowerup('pathfinder')" title="Pathfinder (Press 3)"><span class="powerup-key">3</span><span class="icon">✨</span><span class="powerup-count" id="count-pathfinder">0</span></div>
+            <div class="powerup-slot disabled" id="slot-walljumper" onclick="usePowerup('walljumper')" title="Wall Phase (Press 4)"><span class="powerup-key">4</span><span class="icon">👻</span><span class="powerup-count" id="count-walljumper">0</span></div>
         </div>
     </div>
     
     <div id="hud-hp-container"><div id="hud-hp-fill"></div></div>
     <div id="notification-feed"></div>
+
+    <div id="afk-warning" class="hidden absolute top-12 left-1/2 -translate-x-1/2 bg-red-600/90 backdrop-blur border-2 border-white px-6 py-3 rounded-lg shadow-[0_0_30px_#ef4444] z-[100] flex-col items-center justify-center text-center">
+        <h2 class="text-xl md:text-2xl text-white font-black uppercase tracking-widest animate-pulse">WARNING: AFK DETECTED</h2>
+        <p class="text-xs md:text-sm text-gray-200 font-bold uppercase tracking-widest mt-1">Move or press a key to avoid disconnect (<span id="afk-countdown">60</span>s)</p>
+    </div>
+
+
+
+
+
+
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1043,18 +1128,46 @@ img {
 
     function listenForInvites() {
         window.FB.onChildAdded(window.FB.ref(db, `users/${myDBUid}/invites`), snap => {
-            const data = snap.val(); const sessionId = snap.key;
-            if(!data || !sessionId) return;
-            document.getElementById('invite-sender-name').innerText = data.sender;
+            const data = snap.val(); const inviteId = snap.key;
+            if(!data || !inviteId) return;
+            
+            // FATHER: Ignore old invites that got stuck in the database (older than 2 mins)
+            if (Date.now() - data.ts > 120000) {
+                window.FB.remove(window.FB.ref(db, `users/${myDBUid}/invites/${inviteId}`));
+                return;
+            }
+
+            // AAA Forza Horizon Style Notification
+            const msg = data.type === 'mmo' ? `${data.sender} invited you to their World!` : `${data.sender} invited you!`;
+            document.getElementById('invite-sender-name').innerText = msg;
+            
             document.getElementById('btn-accept-invite').onclick = () => {
                 document.getElementById('invite-popup').classList.remove('show');
-                window.FB.remove(window.FB.ref(db, `users/${myDBUid}/invites/${sessionId}`));
+                window.FB.remove(window.FB.ref(db, `users/${myDBUid}/invites/${inviteId}`));
                 if(isPlaying && gameMode !== 'campaign') leaveOnlineSession();
-                mySessionId = sessionId; joinOnlineLobby();
+                
+                if (data.type === 'mmo') {
+                    joinOnlineLobby(data.roomId); // Teleport directly into their specific World!
+                } else {
+                    mySessionId = inviteId; joinOnlineLobby(); // Legacy fallback
+                }
             };
             document.getElementById('invite-popup').classList.add('show');
         });
     }
+
+    // FATHER: The brand new MMO Inviter Function
+    window.sendMMOInvite = async (friendFirebaseId) => {
+        if(!myDBUid || !db || !currentMmoRoom) return;
+        const inviteId = Math.random().toString(36).substring(2, 10);
+        await window.FB.set(window.FB.ref(db, `users/${friendFirebaseId}/invites/${inviteId}`), {
+            sender: userProfile.name,
+            roomId: currentMmoRoom,
+            type: 'mmo',
+            ts: Date.now()
+        });
+        gtaNotify("World Invite Sent!");
+    };
 
     window.sendFriendRequest = async () => {
         const targetUidNum = document.getElementById('add-friend-uid').value.trim();
@@ -1258,9 +1371,21 @@ img {
                     originalFogDensity = scene.fog.density;
                     scene.fog.density = 0; // Clear fog for map view
                 }
+                
+                // FATHER: Expand the shadow box to cover the entire map!
+                let mapShadowSize = Math.max(SHADOW_FRUSTUM_SIZE, (mazeWidth * CELL_SIZE) / 1.5);
+                dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -mapShadowSize;
+                dirLight.shadow.camera.right = dirLight.shadow.camera.top = mapShadowSize;
+                dirLight.shadow.camera.updateProjectionMatrix();
+
                 setTimeout(() => { 
                     activeEffects.map = false; 
                     if(scene.fog) scene.fog.density = originalFogDensity; // Restore fog
+                    
+                    // FATHER: Shrink shadows back to normal size to keep gameplay FPS high!
+                    dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE;
+                    dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
+                    dirLight.shadow.camera.updateProjectionMatrix();
                 }, 5000);
             }
         } else if (type === 'superjump') {
@@ -1401,9 +1526,13 @@ img {
     }
 
     let gameMode = 'campaign'; 
-    let remotePlayers = {}; let remoteMeshes = {}; let activePlayerCount = 1; let currentPvPRoom = null;
+    let remotePlayers = {}; let remoteMeshes = {}; let activePlayerCount = 1; let currentPvPRoom = null; let currentMmoRoom = null;
     let myHP = 100, isDead = false; let myScore = 0, enemyScore = 0; let pvpState = 'playing'; let mmoVictoryState = false;
     window.currentPvPSeed = null;
+    
+    // FATHER: New Trackers!
+    let lastDamageTime = 0; 
+    let isMenuOpen = false;
 
     let mazeGrid = [], mazeWidth = 15, mazeHeight = 15;
     let mazeStart = {x: 1, y: 1, rot: 0}, mazeEnd = {x: 1, y: 1, rot: 0};
@@ -1428,82 +1557,108 @@ img {
 
 
 
-    async function joinOnlineLobby() {
-        // Show Cinematic Loading Screen
+    async function joinOnlineLobby(specificRoomId = null) {
         document.getElementById('main-menu-layer').classList.add('hidden');
         const loadScreen = document.getElementById('mmo-loading-screen');
         const loadBar = document.getElementById('mmo-loading-bar');
         
-        loadScreen.classList.remove('hidden');
-        loadScreen.classList.add('flex');
-        
-        // Reset the bar width and transition instantly
-        loadBar.style.transition = 'none';
-        loadBar.style.width = '0%';
-        
-        // Force the browser to register the 0% width before animating
+        loadScreen.classList.remove('hidden'); loadScreen.classList.add('flex');
+        loadBar.style.transition = 'none'; loadBar.style.width = '0%';
         void loadBar.offsetWidth; 
-        
-        // Start the smooth 5-second loading animation
-        loadBar.style.transition = 'width 5s linear';
-        loadBar.style.width = '100%';
+        loadBar.style.transition = 'width 5s linear'; loadBar.style.width = '100%';
 
         gameMode = 'mmo'; document.getElementById('btn-hud-mic').classList.remove('hidden'); 
 
-        const playersRef = window.FB.ref(db, 'session/players');
-        const myPlayerRef = window.FB.ref(db, 'session/players/' + mySessionId);
+        // FATHER: Firebase Bypass - Count players globally, assign a World tag locally!
+        if (specificRoomId) {
+            currentMmoRoom = specificRoomId;
+        } else {
+            let foundRoom = null;
+            try {
+                const snap = await window.FB.get(window.FB.ref(db, 'session/players'));
+                const allPlayers = snap.val() || {};
+                let worldCounts = {};
+                for (let i = 1; i <= 15; i++) worldCounts['world_' + i] = 0;
+                
+                for (let id in allPlayers) {
+                    let w = allPlayers[id].world;
+                    if (w) worldCounts[w] = (worldCounts[w] || 0) + 1;
+                }
+                
+                for (let i = 1; i <= 15; i++) {
+                    if (worldCounts['world_' + i] < 30) { foundRoom = 'world_' + i; break; }
+                }
+            } catch(e) {
+                console.warn("Could not fetch global players, defaulting to world_1");
+            }
+            currentMmoRoom = foundRoom || 'world_overflow_' + Math.random().toString(36).substring(2, 10);
+        }
+
+        // FATHER: We write back to the completely UNLOCKED 'session' node!
+        const playersRef = window.FB.ref(db, 'session/players'); 
+        const myPlayerRef = window.FB.ref(db, `session/players/${mySessionId}`);
         window.FB.onDisconnect(myPlayerRef).remove();
         setMyStatus('In-Game');
 
+        let isInitialSync = true; 
+        
         onlineUnsub = window.FB.onValue(playersRef, (snap) => {
-            const data = snap.val() || {}; let count = 0; const activeIds = Object.keys(data); 
+            const rawData = snap.val() || {}; 
+            
+            // FATHER: Only load players who share your exact World Tag!
+            const data = {};
+            for (let id in rawData) {
+                if (rawData[id].world === currentMmoRoom) data[id] = rawData[id];
+            }
+            
+            let count = 0; const activeIds = Object.keys(data); 
             activeIds.forEach(id => { count++; });
             
-            if(!onlineSyncInterval && count >= 30) { 
-                gtaNotify("Session Full (30/30). Try later.", true); 
+            if(!onlineSyncInterval && count >= 30 && isInitialSync) { 
+                gtaNotify("Target World Full! Rerouting...", true); 
                 leaveOnlineSession(); 
-                document.getElementById('main-menu-layer').classList.remove('hidden'); 
-                loadScreen.classList.add('hidden');
-                loadScreen.classList.remove('flex');
+                joinOnlineLobby(); 
                 return; 
             }
             activePlayerCount = count === 0 ? 1 : count; document.getElementById('hud-players').innerText = `${activePlayerCount}/30`;
-            
-            if (!onlineSyncInterval) {
-                if (count === 0 || (count === 1 && data[mySessionId])) {
-                    window.FB.remove(window.FB.ref(db, 'session/sprays')).catch(()=>{});
-                }
-            }
 
             activeIds.forEach(id => {
                 const pData = data[id]; if(id === mySessionId) return;
-                if(!remotePlayers[id]) { gtaNotify(`${pData.name || 'Player'} joined`); createHologram(id, pData.wpn, pData.char, pData.name); if(voiceChat.isActive) voiceChat.createPeer(id, true); } 
+                if(!remotePlayers[id]) { 
+                    if (!isInitialSync) gtaNotify(`${pData.name || 'Player'} joined`); 
+                    createHologram(id, pData.wpn, pData.char, pData.name); 
+                    if(voiceChat.isActive) voiceChat.createPeer(id, true); 
+                } 
                 else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
                 remotePlayers[id] = pData;
             });
             for(let id in remotePlayers) { if(!data[id]) { gtaNotify(`${remotePlayers[id].name || 'Player'} left`); removeHologram(id); delete remotePlayers[id]; } }
+            
+            isInitialSync = false; 
         });
 
         onlineSyncInterval = setInterval(() => {
             if(!myDBUid) return;
-            window.FB.set(myPlayerRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
+            window.FB.set(myPlayerRef, { world: currentMmoRoom, x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
         }, 150);
 
-        const spraysRef = window.FB.ref(db, 'session/sprays');
-        sprayUnsub = window.FB.onChildAdded(spraysRef, (snap) => { addSprayToScene(snap.val()); });
+        const spraysRef = window.FB.ref(db, `session/sprays`);
+        sprayUnsub = window.FB.onChildAdded(spraysRef, (snap) => { 
+            let sData = snap.val();
+            // FATHER: Only draw sprays that belong to our World!
+            if (sData && (sData.world === currentMmoRoom || !sData.world)) {
+                addSprayToScene(sData); 
+            }
+        });
 
-        // Wait EXACTLY 5 seconds while the bar fills up
         await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // Generate the massive world in the background
         await startGamePlay();
 
-        // Smoothly hide the loading screen and drop the player in
         loadScreen.style.opacity = '0';
         setTimeout(() => {
             loadScreen.classList.add('hidden');
             loadScreen.classList.remove('flex');
-            loadScreen.style.opacity = '1'; // Reset for next time
+            loadScreen.style.opacity = '1'; 
         }, 300);
     }
 
@@ -1512,26 +1667,107 @@ img {
 
 
 
-
     let pvpMatchTimer = 7 * 60;
     
+    // Father, these track the Bot's brain and the matchmaking timer!
+    let matchmakingTimeout;
+    let matchmakingInterval; 
+    let matchFoundCountdown; 
+    let searchSeconds = 0;
+    let isBotMatch = false;
+    let botData = null;
+    let botPath = [];
+    let botPathTimer = 0;
+
+    function triggerMatchFoundSequence(enemyName, enemyPfp, startCallback) {
+        clearInterval(matchmakingInterval);
+        clearTimeout(matchmakingTimeout);
+        
+        const searchUI = document.getElementById('matchmaking-searching');
+        const foundUI = document.getElementById('matchmaking-found');
+        
+        document.getElementById('match-pfp-you').src = userProfile.pfp;
+        document.getElementById('match-name-you').innerText = userProfile.name;
+        document.getElementById('match-pfp-enemy').src = enemyPfp || DEFAULT_PFP;
+        document.getElementById('match-name-enemy').innerText = enemyName || "ENEMY";
+        
+        searchUI.style.opacity = '0';
+        setTimeout(() => {
+            searchUI.classList.add('hidden');
+            foundUI.classList.remove('hidden');
+            setTimeout(() => { foundUI.style.opacity = '1'; }, 50);
+            
+            let count = 5;
+            document.getElementById('match-countdown').innerText = count;
+            
+            matchFoundCountdown = setInterval(() => {
+                count--;
+                document.getElementById('match-countdown').innerText = count;
+                if (count <= 0) {
+                    clearInterval(matchFoundCountdown);
+                    foundUI.style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('matchmaking-screen').classList.add('hidden');
+                        document.getElementById('matchmaking-screen').classList.remove('flex');
+                        startCallback();
+                    }, 300);
+                }
+            }, 1000);
+        }, 300);
+    }
+
     async function startPvPMatchmaking() {
         document.getElementById('main-menu-layer').classList.add('hidden');
         document.getElementById('matchmaking-screen').classList.remove('hidden'); 
         document.getElementById('matchmaking-screen').classList.add('flex');
         
+        // FATHER: Start Phase 1 UI and Timer
+        searchSeconds = 0;
+        document.getElementById('matchmaking-timer').innerText = "00:00";
+        document.getElementById('matchmaking-searching').classList.remove('hidden');
+        document.getElementById('matchmaking-searching').style.opacity = '1';
+        document.getElementById('matchmaking-found').classList.add('hidden');
+        document.getElementById('matchmaking-found').style.opacity = '0';
+        
+        matchmakingInterval = setInterval(() => {
+            searchSeconds++;
+            const m = Math.floor(searchSeconds / 60).toString().padStart(2, '0');
+            const s = (searchSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('matchmaking-timer').innerText = `${m}:${s}`;
+        }, 1000);
+
         gameMode = 'pvp_1v1'; myHP = 100; isDead = false; myScore = 0; enemyScore = 0; pvpState = 'intro'; pvpMatchTimer = 7 * 60; player.rotation.z = 0;
         updatePvPScoreboard(); setMyStatus('In-PvP');
+        isBotMatch = false;
+
+
 
         const waitRef = window.FB.ref(db, 'pvp/waiting'); const myRoomRef = window.FB.ref(db, 'pvp/rooms/' + mySessionId);
+        
+        // FATHER: THE 20 SECOND BOT TRIGGER!
+        clearTimeout(matchmakingTimeout);
+        matchmakingTimeout = setTimeout(() => {
+            if (pvpStateUnsub) { pvpStateUnsub(); pvpStateUnsub = null; }
+            if (myDBUid && window.FB) window.FB.remove(waitRef).catch(()=>{});
+            startBotMatch(); // Start the AI Bot match!
+        }, 20000);
+
         window.FB.get(waitRef).then((snap) => {
             const waitingData = snap.val();
             if (!waitingData || waitingData.uid === mySessionId) {
                 const seed = Math.floor(Math.random() * 100000);
                 window.currentPvPSeed = seed;
                 window.FB.set(waitRef, { uid: mySessionId, seed: seed }); window.FB.onDisconnect(waitRef).remove();
-                pvpStateUnsub = window.FB.onValue(myRoomRef, (roomSnap) => { const rData = roomSnap.val(); if(rData && rData.guest) { window.FB.remove(waitRef); joinPvPRoom(mySessionId, rData.guest, seed, 'host'); } });
+                pvpStateUnsub = window.FB.onValue(myRoomRef, (roomSnap) => { 
+                    const rData = roomSnap.val(); 
+                    if(rData && rData.guest) { 
+                        clearTimeout(matchmakingTimeout); // Found a real player! Cancel bot!
+                        window.FB.remove(waitRef); 
+                        joinPvPRoom(mySessionId, rData.guest, seed, 'host'); 
+                    } 
+                });
             } else {
+                clearTimeout(matchmakingTimeout); // Found a real host! Cancel bot!
                 const hostUid = waitingData.uid; const seed = waitingData.seed; window.FB.remove(waitRef);
                 window.currentPvPSeed = seed;
                 window.FB.set(window.FB.ref(db, 'pvp/rooms/' + hostUid), { guest: mySessionId, host: hostUid });
@@ -1540,68 +1776,302 @@ img {
         });
     }
 
-    function updatePvPScoreboard() { document.getElementById('score-val-you').innerText = myScore; document.getElementById('score-val-enemy').innerText = enemyScore; }
 
-    function joinPvPRoom(roomId, opponentUid, seed, role) {
-        currentPvPRoom = roomId; window.currentPvPSeed = seed;
-        document.getElementById('matchmaking-screen').classList.add('hidden'); document.getElementById('matchmaking-screen').classList.remove('flex');
-        document.getElementById('pvp-scoreboard').classList.remove('hidden'); document.getElementById('pvp-scoreboard').classList.add('flex');
-        const roomRef = window.FB.ref(db, `pvp/rooms/${roomId}`); const myStateRef = window.FB.ref(db, `pvp/rooms/${roomId}/players/${mySessionId}`);
-        window.FB.onDisconnect(myStateRef).remove();
+function startBotMatch() {
+        isBotMatch = true;
+        myHP = 100;
+        isDead = false;
+        myScore = 0;
+        enemyScore = 0;
+        pvpState = 'intro';
+        pvpMatchTimer = 7 * 60;
+        player.rotation.z = 0;
         
-        window.FB.update(myStateRef, { hp: 100, x: player.position.x, y: player.position.y, z: player.position.z });
+        document.getElementById('damage-overlay').style.opacity = '0';
+        updateHPBar();
+        updatePvPScoreboard();
+        
+        window.currentPvPSeed = Math.floor(Math.random() * 100000);
+        
+        const botWeapons = ['knife'];
+        const botChars = ['ninja', 'soldier', 'default'];
+        
+        botData = {
+            id: 'BOT_ID',
+            name: generateCoolName(),
+            hp: 100, score: 0,
+            wpn: botWeapons[Math.floor(Math.random() * botWeapons.length)], 
+            char: botChars[Math.floor(Math.random() * botChars.length)],
+            x: 13 * CELL_SIZE, z: 13 * CELL_SIZE, y: 0, rot: 0,
+            isAttacking: false, crouch: false,
+            velocityY: 0, isGrounded: true, attackCooldown: 0, attackTimer: 0, isDeadTimer: 0
+        };
 
-        if(sprayUnsub) sprayUnsub();
-        const pvpSpraysRef = window.FB.ref(db, `pvp/rooms/${roomId}/sprays`);
-        sprayUnsub = window.FB.onChildAdded(pvpSpraysRef, (snap) => { addSprayToScene(snap.val()); });
+        remotePlayers['BOT_ID'] = botData;
+        
+        // FATHER: The generic dark profile picture so bots look realistic
+        const genericDarkPfp = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzU1NSI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==";
+        
+        triggerMatchFoundSequence(botData.name, genericDarkPfp, () => {
+            document.getElementById('pvp-scoreboard').classList.remove('hidden'); 
+            document.getElementById('pvp-scoreboard').classList.add('flex');
+            createHologram('BOT_ID', botData.wpn, botData.char, botData.name);
+            gtaNotify("Match Started! First to 15!");
+            startGamePlay(1, 1);
+        });
+    }
 
-        onlineSyncInterval = setInterval(() => {
-            if(!myDBUid || pvpState !== 'playing') return;
-            window.FB.update(myStateRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, isAttacking: isAttacking, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, score: myScore, crouch: keys.crouch });
-        }, 100);
 
-        if (pvpStateUnsub) { pvpStateUnsub(); pvpStateUnsub = null; }
-        pvpStateUnsub = window.FB.onValue(roomRef, (snap) => {
-            const data = snap.val(); if(!data || !data.players) return;
-            
-            const playerIds = Object.keys(data.players);
-            if (pvpState === 'playing' && playerIds.length < 2 && playerIds.includes(mySessionId)) {
-                gtaNotify("Opponent left the match!", true);
-                endPvP(true);
-                return;
+
+
+
+
+
+
+
+
+
+
+
+
+    function updateBotAI(dt) {
+        if(!isBotMatch || !botData || pvpState !== 'playing') return;
+
+        // Father: We added attackTimer to track the arm animation cleanly!
+        if(botData.velocityY === undefined) {
+            botData.velocityY = 0; botData.isGrounded = true; botData.attackCooldown = 0; botData.attackTimer = 0; botData.isDeadTimer = 0; botPathTimer = 0;
+        }
+
+        // 1. PROFESSIONAL RESPAWN TIMER
+        if (botData.hp <= 0) {
+            botData.isAttacking = false; // Reset the arm instantly if it dies!
+            if (botData.isDeadTimer === 0) botData.isDeadTimer = 3.0; // Stay dead for 3s
+            botData.isDeadTimer -= dt;
+            if (botData.isDeadTimer <= 0) {
+                botData.hp = 100;
+                botData.isDeadTimer = 0;
+                let rp = getRandomSpawn();
+                botData.x = rp.x * CELL_SIZE;
+                botData.z = rp.y * CELL_SIZE;
+                botPath = [];
             }
+            return; // Dead bots don't move or think!
+        }
 
-            for(let id in data.players) {
-                if(id !== mySessionId) {
-                    const pData = data.players[id];
-                    if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char, pData.name); gtaNotify("Match Started! First to 15!"); }
-                    else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
-                    remotePlayers[id] = pData; enemyScore = pData.score || 0; updatePvPScoreboard();
-                    if((enemyScore >= 15 || myScore >= 15) && pvpState === 'playing') { endPvP(myScore >= 15); }
-                } else {
-                    const serverHP = data.players[id].hp;
-                    if(serverHP < myHP && serverHP > 0) { myHP = serverHP; triggerDamageFlash(); updateHPBar(); } 
-                    else if (serverHP <= 0 && !isDead && pvpState === 'playing') { 
-                        myHP = 0; isDead = true; updateHPBar();
-                        
-                        let killerName = "Enemy";
-                        for (let kId in data.players) { if (kId !== mySessionId) killerName = data.players[kId].name || "Enemy"; }
-                        gtaNotify(`${killerName} killed ${userProfile.name}!`, true);
-                        
-                        setTimeout(() => { if(pvpState === 'playing') { myHP = 100; isDead = false; player.rotation.z = 0; updateHPBar(); const rp = getRandomSpawn(); player.position.set(rp.x*CELL_SIZE, 0, rp.y*CELL_SIZE); window.FB.update(myStateRef, { hp: 100, x: player.position.x, z: player.position.z }); } }, 3000);
+        // 2. BOT GRAVITY & JUMPING DODGE
+        botData.y += botData.velocityY * dt;
+        if (botData.y > 0) {
+            botData.velocityY -= 35 * dt; 
+            botData.isGrounded = false;
+        } else {
+            botData.y = 0;
+            botData.velocityY = 0;
+            botData.isGrounded = true;
+        }
+
+        let distToPlayer = Math.sqrt(Math.pow(botData.x - player.position.x, 2) + Math.pow(botData.z - player.position.z, 2));
+
+        if (botData.isGrounded && Math.random() < 0.02 && distToPlayer < 8 && !keys.crouch) {
+            botData.velocityY = 12; 
+            botData.isGrounded = false;
+            if(window.gameSettings.sound.sfx > 0) { jumpSound.currentTime = 0; jumpSound.play().catch(e=>{}); }
+        }
+
+        // 3. PATHFINDING
+        botPathTimer -= dt;
+        if (botPathTimer <= 0) {
+            let botGX = Math.round(botData.x / CELL_SIZE), botGZ = Math.round(botData.z / CELL_SIZE);
+            let pGX = Math.round(player.position.x / CELL_SIZE), pGZ = Math.round(player.position.z / CELL_SIZE);
+            botPath = getPathToExit(botGX, botGZ, pGX, pGZ); 
+            botPathTimer = 0.4;
+        }
+
+        // 4. SPRINTING & CHASING
+        if (distToPlayer > 2.8 && botPath && botPath.length > 1) {
+            let targetX = botPath[1].x * CELL_SIZE, targetZ = botPath[1].y * CELL_SIZE;
+            let dx = targetX - botData.x, dz = targetZ - botData.z;
+            let distToNode = Math.sqrt(dx*dx + dz*dz);
+
+            if (distToNode > 0.1) {
+                let isSprinting = distToPlayer > 6.0;
+                let moveSpd = (isSprinting ? 15.0 : 7.0) * dt; 
+                botData.x += (dx / distToNode) * moveSpd;
+                botData.z += (dz / distToNode) * moveSpd;
+                botData.rot = Math.atan2(dx, dz);
+            } else botPath.shift(); 
+        } else if (distToPlayer <= 3.8) {
+            botData.rot = Math.atan2(player.position.x - botData.x, player.position.z - botData.z);
+        }
+
+        // FATHER: THE WALL HACK FIX! The bot now obeys the exact same wall collision laws as you do!
+        const resolvedBot = resolveOverlap(botData.x, botData.z);
+        botData.x = resolvedBot.x;
+        botData.z = resolvedBot.z;
+        
+        // 5. ENGINE-LEVEL ATTACK STATE MACHINE (NO SETTIMEOUTS!)
+        if (botData.attackCooldown > 0) botData.attackCooldown -= dt;
+        if (botData.attackTimer > 0) botData.attackTimer -= dt;
+        
+       // 5. ENGINE-LEVEL ATTACK STATE MACHINE (BLOODTHIRSTY OVERRIDE)
+        if (botData.attackCooldown > 0) botData.attackCooldown -= dt;
+        if (botData.attackTimer > 0) botData.attackTimer -= dt;
+        
+        botData.isAttacking = (botData.attackTimer > 0);
+
+        // Speed and Attack Controls
+        if (distToPlayer <= 3.8 && botData.attackCooldown <= 0 && !isDead) {
+            botData.attackTimer = 0.4; 
+            botData.attackCooldown = 2.0; // Swinging speed!
+
+            // FATHER: The Lunge Mechanic! The bot physically slides forward when attacking!
+            botData.x += Math.sin(botData.rot) * 10.0 * dt;
+            botData.z += Math.cos(botData.rot) * 10.0 * dt;
+
+            if(audioInitialized && window.gameSettings.sound.sfx > 0) swingSynth.triggerAttackRelease('16n');
+            
+            // FATHER: TRUE BLOODTHIRSTY OVERRIDE! 
+            // The bot flashes your screen red and plays the stab sound EVERY SINGLE SWING, even if you are dead on the floor!
+            triggerDamageFlash(); 
+
+            // FATHER: We only subtract HP if you are alive, so it doesn't go into negative numbers!
+            if (myHP > 0 && !isDead) {
+                myHP -= 25; 
+                updateHPBar();
+
+                if (myHP <= 0) {
+                    isDead = true; myHP = 0; updateHPBar();
+                    enemyScore++; updatePvPScoreboard();
+                    gtaNotify(`${botData.name} killed ${userProfile.name}!`, true);
+
+                    if (enemyScore >= 15) endPvP(false);
+                    else {
+                        setTimeout(() => {
+                            if (pvpState === 'playing') {
+                                myHP = 100; isDead = false; player.rotation.z = 0; updateHPBar();
+                                let rp = getRandomSpawn(); player.position.set(rp.x*CELL_SIZE, 0, rp.y*CELL_SIZE);
+                            }
+                        }, 3000); // You lie dead for 3s while the bot continues to hack at you!
                     }
                 }
             }
-        });
-        
-        let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
-        startGamePlay(sx, sy);
+        }
     }
 
-    function triggerDamageFlash() { const flash = document.getElementById('damage-overlay'); flash.style.opacity = '1'; if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); setTimeout(() => { flash.style.opacity = '0'; }, 200); }
+
+
+
+
+
+
+
+
+
+    function updatePvPScoreboard() { 
+        document.getElementById('score-val-you').innerText = myScore; 
+        document.getElementById('score-val-enemy').innerText = enemyScore; 
+        
+        // FATHER: Dynamically update the scoreboard names to show REAL player names, not just "YOU" and "ENEMY"
+        const myNameEl = document.getElementById('score-name-you');
+        if (myNameEl) myNameEl.innerText = userProfile.name;
+        
+        let oppName = "OPPONENT";
+        if (isBotMatch && botData) {
+            oppName = botData.name;
+        } else {
+            for(let id in remotePlayers) {
+                if(id !== mySessionId) oppName = remotePlayers[id].name || "OPPONENT";
+            }
+        }
+        const oppNameEl = document.getElementById('score-name-enemy');
+        if (oppNameEl) oppNameEl.innerText = oppName;
+    }
+
+    function joinPvPRoom(roomId, opponentUid, seed, role) {
+        currentPvPRoom = roomId; window.currentPvPSeed = seed;
+        
+        // FATHER: Fetch the enemy profile to show on the VS screen!
+        window.FB.get(window.FB.ref(db, `users/${opponentUid}/profile`)).then((snap) => {
+            let oppName = "ENEMY";
+            let oppPfp = DEFAULT_PFP;
+            if(snap.exists()) {
+                oppName = snap.val().name || "ENEMY";
+                oppPfp = snap.val().pfp || DEFAULT_PFP;
+            }
+            
+            triggerMatchFoundSequence(oppName, oppPfp, () => {
+                document.getElementById('pvp-scoreboard').classList.remove('hidden'); document.getElementById('pvp-scoreboard').classList.add('flex');
+                
+                const roomRef = window.FB.ref(db, `pvp/rooms/${roomId}`); const myStateRef = window.FB.ref(db, `pvp/rooms/${roomId}/players/${mySessionId}`);
+                window.FB.onDisconnect(myStateRef).remove();
+                
+                window.FB.update(myStateRef, { hp: 100, x: player.position.x, y: player.position.y, z: player.position.z });
+
+                if(sprayUnsub) sprayUnsub();
+                const pvpSpraysRef = window.FB.ref(db, `pvp/rooms/${roomId}/sprays`);
+                sprayUnsub = window.FB.onChildAdded(pvpSpraysRef, (snap) => { addSprayToScene(snap.val()); });
+
+                onlineSyncInterval = setInterval(() => {
+                    if(!myDBUid || pvpState !== 'playing') return;
+                    window.FB.update(myStateRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, isAttacking: isAttacking, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, score: myScore, crouch: keys.crouch });
+                }, 100);
+
+                if (pvpStateUnsub) { pvpStateUnsub(); pvpStateUnsub = null; }
+                pvpStateUnsub = window.FB.onValue(roomRef, (snap) => {
+                    const data = snap.val(); if(!data || !data.players) return;
+                    
+                    const playerIds = Object.keys(data.players);
+                    if (pvpState === 'playing' && playerIds.length < 2 && playerIds.includes(mySessionId)) {
+                        gtaNotify("Opponent left the match!", true);
+                        endPvP(true);
+                        return;
+                    }
+
+                    for(let id in data.players) {
+                        if(id !== mySessionId) {
+                            const pData = data.players[id];
+                            if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char, pData.name); gtaNotify("Match Started! First to 15!"); }
+                            else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
+                            remotePlayers[id] = pData; enemyScore = pData.score || 0; updatePvPScoreboard();
+                            if((enemyScore >= 15 || myScore >= 15) && pvpState === 'playing') { endPvP(myScore >= 15); }
+                        } else {
+                            const serverHP = data.players[id].hp;
+                            if(serverHP < myHP && serverHP > 0) { myHP = serverHP; triggerDamageFlash(); updateHPBar(); } 
+                            else if (serverHP <= 0 && !isDead && pvpState === 'playing') { 
+                                myHP = 0; isDead = true; updateHPBar();
+                                
+                                let killerName = "Enemy";
+                                for (let kId in data.players) { if (kId !== mySessionId) killerName = data.players[kId].name || "Enemy"; }
+                                gtaNotify(`${killerName} killed ${userProfile.name}!`, true);
+                                
+                                setTimeout(() => { if(pvpState === 'playing') { myHP = 100; isDead = false; player.rotation.z = 0; updateHPBar(); const rp = getRandomSpawn(); player.position.set(rp.x*CELL_SIZE, 0, rp.y*CELL_SIZE); window.FB.update(myStateRef, { hp: 100, x: player.position.x, z: player.position.z }); } }, 3000);
+                            }
+                        }
+                    }
+                });
+                
+                let sx = (role === 'guest') ? 13 : 1; let sy = (role === 'guest') ? 13 : 1;
+                startGamePlay(sx, sy);
+            });
+        });
+    }
+
+    let screenShakeTime = 0; // FATHER: Tracks how long the camera should tremble!
+    
+    function triggerDamageFlash() { 
+        const flash = document.getElementById('damage-overlay'); 
+        flash.style.opacity = '1'; 
+        if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); 
+        screenShakeTime = 0.3; 
+        lastDamageTime = Date.now(); // FATHER: Resets the 6-second heal timer on every hit!
+        setTimeout(() => { flash.style.opacity = '0'; }, 200); 
+    }
+    
     function updateHPBar() { document.getElementById('hud-hp-fill').style.width = Math.max(0, myHP) + '%'; if(myHP < 40) document.getElementById('hud-hp-fill').style.background = '#ef4444'; else document.getElementById('hud-hp-fill').style.background = '#22c55e'; }
 
     function cancelMatchmaking() {
+        clearInterval(matchmakingInterval);
+        clearInterval(matchFoundCountdown);
+        clearTimeout(matchmakingTimeout);
         if(pvpStateUnsub) pvpStateUnsub();
         if(myDBUid) window.FB.remove(window.FB.ref(db, 'pvp/waiting')).catch(()=>{});
         
@@ -1611,18 +2081,38 @@ img {
         gameMode = 'campaign'; 
         setMyStatus('Online');
     }
-
+        
+       
     function leaveOnlineSession() {
         voiceChat.stopMic(); document.getElementById('btn-hud-mic').classList.add('hidden');
         if(onlineSyncInterval) clearInterval(onlineSyncInterval); if(onlineUnsub) onlineUnsub(); if(sprayUnsub) sprayUnsub(); if(pvpStateUnsub) pvpStateUnsub();
         onlineSyncInterval = null; onlineUnsub = null; sprayUnsub = null; pvpStateUnsub = null;
         if(myDBUid && db) {
-            if(gameMode === 'mmo') window.FB.remove(window.FB.ref(db, 'session/players/' + mySessionId)).catch(e=>{});
+            if(gameMode === 'mmo') window.FB.remove(window.FB.ref(db, `session/players/${mySessionId}`)).catch(e=>{});
             if(gameMode === 'pvp_1v1' && currentPvPRoom) window.FB.remove(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}`)).catch(e=>{});
             window.FB.remove(window.FB.ref(db, 'session/signals/' + mySessionId)).catch(e=>{});
         }
-        gameMode = 'campaign'; setMyStatus('Online'); document.getElementById('pvp-scoreboard').classList.add('hidden'); document.getElementById('hud-hp-container').classList.add('hidden'); document.getElementById('hud-hp-container').classList.remove('flex');
-        for(let id in remoteMeshes) removeHologram(id); remotePlayers = {}; currentPvPRoom = null; player.rotation.z = 0; mmoVictoryState = false;
+
+        // Reset game state & health
+        gameMode = 'campaign'; 
+        setMyStatus('Online'); 
+        myHP = 100;
+        isDead = false;
+        isBotMatch = false;
+        botData = null;
+
+        // Reset HUD and red damage overlay
+        document.getElementById('damage-overlay').style.opacity = '0';
+        updateHPBar();
+        document.getElementById('pvp-scoreboard').classList.add('hidden'); 
+        document.getElementById('hud-hp-container').classList.add('hidden'); 
+        document.getElementById('hud-hp-container').classList.remove('flex');
+
+        for(let id in remoteMeshes) removeHologram(id); 
+        remotePlayers = {}; 
+        currentPvPRoom = null; 
+        player.rotation.z = 0; 
+        mmoVictoryState = false;
         clearPowerups();
     }
 
@@ -1656,7 +2146,7 @@ img {
     customAudio.addEventListener('ended', () => { if (customPlaylist.length > 1) { currentPlaylistIndex = (currentPlaylistIndex + 1) % customPlaylist.length; customAudio.src = customPlaylist[currentPlaylistIndex]; playCustomAudio(); } else customAudio.play(); });
     function playCustomAudio() { if(customAudio.src && customAudio.src !== window.location.href) { let p = customAudio.play(); if (p !== undefined) p.catch(e => {}); } }
 
-    let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: true, texture: 'high', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
+    let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: 'high', bloom: 'high', anisotropy: '16', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
     window.gameSettings = defaultSettings;
 
     try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
@@ -1695,8 +2185,73 @@ img {
         for (let i = 0; i < 500 * scaleF; i++) { const x = Math.random() * S, y = Math.random() * S; ctx.fillStyle = `rgba(90,120,60,${0.15 + Math.random()*0.15})`; ctx.fillRect(x, y, 2 * scaleF, 8 * scaleF); }
         const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(380, 380); return tex;
     }
-    function makeTickTexture() { const S=256, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d'); ctx.strokeStyle='#00ff44'; ctx.lineWidth=24; ctx.lineCap=ctx.lineJoin='round'; ctx.shadowColor='#00ff44'; ctx.shadowBlur=20; ctx.beginPath(); ctx.moveTo(50, 130); ctx.lineTo(100, 190); ctx.lineTo(210, 60); ctx.stroke(); return new THREE.CanvasTexture(c); }
-    function makeCrossTexture() { const S=256, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d'); ctx.strokeStyle='#ff2222'; ctx.lineWidth=24; ctx.lineCap='round'; ctx.shadowColor='#ff2222'; ctx.shadowBlur=20; ctx.beginPath(); ctx.moveTo(60, 60); ctx.lineTo(196, 196); ctx.stroke(); ctx.beginPath(); ctx.moveTo(196, 60); ctx.lineTo(60, 196); ctx.stroke(); return new THREE.CanvasTexture(c); }
+
+
+
+
+
+
+
+
+
+
+
+
+    // Father, this generates gritty spray paint with a perfectly transparent background!
+    function makeRealisticSpray(type) { 
+        const S=512, c=document.createElement('canvas'); c.width=c.height=S; 
+        const ctx=c.getContext('2d'); 
+        
+        // Ensure perfect transparency (No black square!)
+        ctx.clearRect(0, 0, S, S);
+        
+        const color = type === 'tick' ? '20, 140, 40' : '160, 20, 20';
+        
+        function sprayLine(x1, y1, x2, y2) {
+            const dist = Math.hypot(x2 - x1, y2 - y1);
+            const steps = dist * 2.5; 
+            for(let i=0; i<steps; i++) {
+                const t = i / steps; const cx = x1 + (x2 - x1)*t; const cy = y1 + (y2 - y1)*t;
+                // The Thick Core (The Main Paint)
+                ctx.fillStyle = `rgba(${color}, 0.7)`;
+                ctx.beginPath(); ctx.arc(cx + (Math.random()-0.5)*10, cy + (Math.random()-0.5)*10, 8 + Math.random()*8, 0, Math.PI*2); ctx.fill();
+                const rad = 25 + Math.random() * 20;
+                for(let p=0; p<8; p++) {
+                    const angle = Math.random() * Math.PI * 2; const r = Math.random() * rad;
+                    // scattered dust! (The Overspray)
+                    ctx.fillStyle = `rgba(${color}, 0.15)`;
+                    ctx.beginPath(); ctx.arc(cx + Math.cos(angle)*r, cy + Math.sin(angle)*r, Math.random()*4, 0, Math.PI*2); ctx.fill();
+                }
+                if(Math.random() < 0.03) {
+                    // The Drips (The Running Paint)
+                    ctx.fillStyle = `rgba(${color}, 0.5)`;
+                    ctx.fillRect(cx, cy, 2 + Math.random()*3, 30 + Math.random()*60);
+                }
+            }
+        }
+
+        if(type === 'tick') { sprayLine(120, 260, 220, 400); sprayLine(220, 400, 420, 120); } 
+        else { sprayLine(140, 140, 372, 372); sprayLine(372, 140, 140, 372); }
+        
+        const tex = new THREE.CanvasTexture(c); 
+        tex.anisotropy = 16; 
+        tex.encoding = THREE.sRGBEncoding; // Father, this syncs it with the AAA lighting!
+        return tex;
+    }
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
     function makeFinishTexture() {
         const c = document.createElement('canvas'); c.width = 512; c.height = 512;
@@ -1719,8 +2274,8 @@ img {
     
 
     const grassTex = makeGrassTexture();
-    const tickMat = new THREE.MeshBasicMaterial({ map: makeTickTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
-    const crossMat = new THREE.MeshBasicMaterial({ map: makeCrossTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+   const tickMat = new THREE.MeshStandardMaterial({ map: makeRealisticSpray('tick'), transparent: true, roughness: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const crossMat = new THREE.MeshStandardMaterial({ map: makeRealisticSpray('cross'), transparent: true, roughness: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const sprayGeo = new THREE.PlaneGeometry(1.5, 1.5); 
     let sprayMeshes = [];
 
@@ -1799,13 +2354,29 @@ img {
             isSpraying = true; sprayTimer = 0; // Trigger hand animation
             if(window.gameSettings.sound.sfx > 0) { spraySound.currentTime = 0; spraySound.play().catch(e=>{}); }
             const hit = hits[0]; 
+            let px = hit.point.x, py = hit.point.y, pz = hit.point.z;
+            const nx = hit.face.normal.x, ny = hit.face.normal.y, nz = hit.face.normal.z;
+
+            // --- FATHER: THIS PREVENTS EDGE OVERHANG! ---
+            const dHalf = 0.75; 
+            if (Math.abs(nx) > 0.5) { 
+                let cz = Math.round(pz / CELL_SIZE) * CELL_SIZE;
+                pz = Math.max(cz - 1.5 + dHalf, Math.min(cz + 1.5 - dHalf, pz));
+            } else if (Math.abs(nz) > 0.5) { 
+                let cx = Math.round(px / CELL_SIZE) * CELL_SIZE;
+                px = Math.max(cx - 1.5 + dHalf, Math.min(cx + 1.5 - dHalf, px));
+            }
+            py = Math.max(dHalf, Math.min(3.9 - dHalf, py));
+            // ------------------------------------------
+
             const sprayData = { 
-                px: hit.point.x, py: hit.point.y, pz: hit.point.z, 
-                nx: hit.face.normal.x, ny: hit.face.normal.y, nz: hit.face.normal.z, 
-                ox: _origin.x, oy: _origin.y, oz: _origin.z, // NEW: Save projection origin
+                world: currentMmoRoom, // FATHER: Tag the spray so it stays in this specific world!
+                px: px, py: py, pz: pz, 
+                nx: nx, ny: ny, nz: nz, 
+                ox: _origin.x, oy: _origin.y, oz: _origin.z, 
                 type: type, ts: Date.now() 
             };
-            if(gameMode === 'mmo' && db && window.FB) window.FB.push(window.FB.ref(db, 'session/sprays'), sprayData);
+            if(gameMode === 'mmo' && db && window.FB) window.FB.push(window.FB.ref(db, `session/sprays`), sprayData);
             else if(gameMode === 'pvp_1v1' && db && currentPvPRoom && window.FB) window.FB.push(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/sprays`), sprayData);
             else addSprayToScene(sprayData);
         }
@@ -1866,12 +2437,48 @@ img {
         const lA=new THREE.Group(); lA.position.set(-.42,1.68,0); const armL = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); lA.add(armL); g.add(lA);
         const rA=new THREE.Group(); rA.position.set(.42,1.68,0);  const armR = makeCapsuleLimb(skin,.135,.12,.75,.14,.13); rA.add(armR); g.add(rA);
         
+
+
+
+
+
+
+
+
         // --- NEW: Create Bigger Spray Can & Particles ---
         const sprayCanGrp = new THREE.Group();
-        const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.22, 16), new THREE.MeshStandardMaterial({color: 0xcccccc, metalness: 0.8, roughness: 0.2}));
-        const canCap = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.05, 0.06, 12), new THREE.MeshStandardMaterial({color: 0xff3333}));
-        canCap.position.y = 0.14;
-        sprayCanGrp.add(canBody); sprayCanGrp.add(canCap);
+        
+        
+        gltfLoader.load(
+            'models/lubricant_spray_1k/lubricant_spray_1k.gltf', 
+            (gltf) => {
+                const sprayModel = gltf.scene;
+                
+                
+                sprayModel.scale.set(1.5, 1.5, 1.5); 
+                sprayModel.position.set(0, 0, -0.05); 
+                
+                sprayModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
+                sprayCanGrp.add(sprayModel);
+                console.log("SUCCESS!");
+            },
+            undefined, // We don't need the loading progress bar right now
+            (error) => {
+                console.error("WE FOUND THE ERROR:", error);
+            }
+        );
+
+
+
+
+
+
         
         // Create the Smooth Mist Particles
         const pGeo = new THREE.BufferGeometry();
@@ -1922,10 +2529,30 @@ img {
                         raycaster.set(_origin, _dirToOpp);
                         const hits = raycaster.intersectObjects(wallsGroup.children);
                         if(hits.length === 0 || hits[0].distance > dist) {
-                            if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C4', '16n');
-                            const newHp = Math.max(0, enemyData.hp - 25);
-                            window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${id}`), { hp: newHp });
-                            if (newHp <= 0) { myScore++; updatePvPScoreboard(); window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${mySessionId}`), { score: myScore }); }
+                            // FATHER: The AAA Hitmarker Flash & Sound!
+                            if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('E5', '32n');
+                            const hm = document.getElementById('hitmarker'); hm.classList.remove('hidden'); hm.style.opacity = '1';
+                            setTimeout(() => { hm.style.opacity = '0'; }, 100); setTimeout(() => { hm.classList.add('hidden'); }, 200);
+                            
+                            window.myTotalDamage = (window.myTotalDamage || 0) + 25; // Track for post-match stats!
+                            
+                            // FATHER: Local Bot Damage vs Firebase Online Damage!
+                            if (isBotMatch && id === 'BOT_ID') {
+                                botData.hp = Math.max(0, botData.hp - 25);
+                                if (botData.hp <= 0) { 
+                                    myScore++; updatePvPScoreboard(); 
+                                    gtaNotify(`You killed ${botData.name}!`, false); // FATHER: Bot Kill Feed!
+                                    if (myScore >= 15) endPvP(true); 
+                                }
+                            } else {
+                                const newHp = Math.max(0, enemyData.hp - 25);
+                                window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${id}`), { hp: newHp });
+                                if (newHp <= 0) { 
+                                    myScore++; updatePvPScoreboard(); 
+                                    gtaNotify(`You killed ${enemyData.name}!`, false); // FATHER: Online Kill Feed!
+                                    window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${mySessionId}`), { score: myScore }); 
+                                }
+                            }
                         }
                     }
                 }
@@ -1934,10 +2561,76 @@ img {
     }
 
     function endPvP(won) {
-        pvpState = 'victory'; if(won) playWinMelody();
+        pvpState = 'victory'; 
+        mmoVictoryState = true; // FATHER: This triggers the cinematic camera spin around your character!
+        isPlaying = false;      // FATHER: This stops the Pause Menu bug instantly!
+        
+        if(won) playWinMelody();
+        
         document.getElementById('hud').classList.add('hidden'); 
+        document.getElementById('pvp-scoreboard').classList.add('hidden'); 
+        
         if(document.pointerLockElement && !isMobileDevice) document.exitPointerLock();
-        setTimeout(() => { document.getElementById('level-menu').classList.remove('hidden'); document.getElementById('next-level-btn').innerHTML = "Exit to Menu <span>></span>"; if(won) { document.getElementById('end-title').innerText = "VICTORY"; document.getElementById('end-title').style.color = "#22c55e"; } else { document.getElementById('end-title').innerText = "DEFEAT"; document.getElementById('end-title').style.color = "#ef4444"; } document.getElementById('next-level-btn').onclick = () => { document.getElementById('level-menu').classList.add('hidden'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }; }, 3000);
+        
+        const vicScreen = document.getElementById('mmo-victory-screen');
+        const sloganStage = document.getElementById('victory-slogan-stage');
+        const statsStage = document.getElementById('victory-stats-stage');
+        const sloganText = document.getElementById('slogan-text');
+
+        vicScreen.classList.remove('hidden'); vicScreen.classList.add('flex');
+        sloganStage.classList.remove('hidden'); sloganStage.style.opacity = '1';
+        statsStage.classList.add('hidden'); statsStage.style.opacity = '0';
+        statsStage.classList.remove('pointer-events-auto');
+        
+        sloganText.style.transform = 'scale(1.5)';
+        sloganText.style.opacity = '0';
+        
+        if (won) {
+            sloganText.innerText = "VICTORY";
+            sloganText.className = "text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 tracking-widest uppercase scale-150 opacity-0 transition-all duration-700 ease-out text-center px-4";
+            sloganText.style.textShadow = "0 0 40px rgba(34, 211, 238, 0.5)";
+        } else {
+            sloganText.innerText = "DEFEAT";
+            sloganText.className = "text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-700 tracking-widest uppercase scale-150 opacity-0 transition-all duration-700 ease-out text-center px-4";
+            sloganText.style.textShadow = "0 0 40px rgba(239, 68, 68, 0.5)";
+        }
+
+        setTimeout(() => { sloganText.style.transform = 'scale(1)'; sloganText.style.opacity = '1'; }, 100);
+
+        setTimeout(() => {
+            sloganStage.style.opacity = '0';
+            setTimeout(() => {
+                sloganStage.classList.add('hidden');
+                statsStage.classList.remove('hidden');
+
+                document.getElementById('victory-player-name').innerText = userProfile.name;
+                document.getElementById('victory-pfp').src = userProfile.pfp;
+                
+                // Calculate actual match duration
+                const timeElapsed = Math.floor(420 - pvpMatchTimer);
+                const min = Math.floor(timeElapsed / 60).toString().padStart(2, '0');
+                const sec = (timeElapsed % 60).toString().padStart(2, '0');
+                const kdRatio = enemyScore === 0 ? myScore.toFixed(2) : (myScore / enemyScore).toFixed(2);
+                
+                // FATHER: Advanced Glassy Stats Overhaul
+                document.getElementById('victory-time').innerHTML = `
+                    <div class="flex flex-col gap-3 text-left w-full border-b border-white/20 pb-6 mb-2">
+                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">KILLS</span> <span class="text-cyan-400">${myScore}</span></div>
+                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">DEATHS</span> <span class="text-red-500">${enemyScore}</span></div>
+                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">K/D RATIO</span> <span class="text-yellow-400">${kdRatio}</span></div>
+                        <div class="flex justify-between items-center text-sm md:text-base tracking-widest font-bold mt-2"><span class="text-gray-500">DMG DEALT</span> <span class="text-white">${window.myTotalDamage || 0}</span></div>
+                        <div class="flex justify-between items-center text-sm md:text-base tracking-widest font-bold"><span class="text-gray-500">MATCH TIME</span> <span class="text-white">${min}:${sec}</span></div>
+                    </div>
+                `;
+
+                // FATHER: Hide the "Play Again" button and just show one giant "MAIN MENU" button
+                document.getElementById('victory-time').nextElementSibling.innerHTML = `<button class="w-full gta-btn bg-white hover:bg-cyan-400 text-black font-black border border-white justify-center text-center py-4 text-sm md:text-base tracking-widest uppercase transition-colors" onclick="returnToMainMenuFromVictory()">RETURN TO MAIN MENU</button>`;
+
+                window.myTotalDamage = 0;
+
+                setTimeout(() => { statsStage.style.opacity = '1'; statsStage.classList.add('pointer-events-auto'); }, 100);
+            }, 1000);
+        }, 3500);
     }
 
 
@@ -1973,7 +2666,7 @@ img {
     let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 1024;
 
     const rimLight = new THREE.DirectionalLight(0x6a7fd6, 0.35); rimLight.position.set(-40, 25, -30); scene.add(rimLight);
-
+const gltfLoader = new THREE.GLTFLoader();
     let player = createBoy(true); scene.add(player);
     let wallsGroup = new THREE.Group(); scene.add(wallsGroup);
 
@@ -1984,14 +2677,15 @@ img {
    // 1. Initialize Texture Loader
 const texLoader = new THREE.TextureLoader();
 
-// 2. Load the forest ground maps (check if your files end in .jpg or .png)
-const forestColor  = texLoader.load('textures/forest_ground_06_diff_1k.jpg');
-const forestNormal = texLoader.load('textures/forest_ground_06_nor_gl_1k.jpg');
-const forestRough  = texLoader.load('textures/forest_ground_06_rough_1k.jpg');
 
-// 3. Configure Tiling across the 3000x3000 arena
-// 400-500 makes the ground soil and leaves look naturally proportioned
-const GROUND_REPEAT = 450; 
+// 2. Load the forest ground maps (check if your files end in .jpg or .png)
+const forestColor  = texLoader.load('textures/Campaign_ground_diff.webp');
+const forestNormal = texLoader.load('textures/Campaign_ground_gl.webp');
+const forestRough  = texLoader.load('textures/Campaign_ground_rough.webp');
+
+
+
+const GROUND_REPEAT = 225;
 
 [forestColor, forestNormal, forestRough].forEach(tex => {
     tex.wrapS = THREE.RepeatWrapping;
@@ -2004,6 +2698,22 @@ forestColor.encoding = THREE.sRGBEncoding;
 forestColor.anisotropy = renderer.capabilities.getMaxAnisotropy();
 forestNormal.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
+// Father, load the new optimized rocky terrain textures here!
+const rockyColor = texLoader.load('textures/Multip_ground_diff.webp');
+const rockyNormal = texLoader.load('textures/Multip_ground_gl.webp');
+const rockyRough = texLoader.load('textures/Multip_ground_rough.webp');
+
+[rockyColor, rockyNormal, rockyRough].forEach(tex => {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(GROUND_REPEAT, GROUND_REPEAT);
+});
+
+// Father, this keeps the rocky terrain perfectly sharp in the distance!
+rockyColor.encoding = THREE.sRGBEncoding;
+rockyColor.anisotropy = renderer.capabilities.getMaxAnisotropy();
+rockyNormal.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
 // 4. Build standard PBR material (flat mesh, fast 60+ FPS)
 const groundMat = new THREE.MeshStandardMaterial({
     map: forestColor,
@@ -2013,9 +2723,12 @@ const groundMat = new THREE.MeshStandardMaterial({
     envMapIntensity: 0.2
 });
 
-// 5. Create the single-plane mesh
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), groundMat);
+// 5. Create the perfectly optimized single-plane mesh!
+// Father, 500x500 gives enough room for your max 453-unit MMO maze plus a nice border!
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1500, 1500), groundMat);
 ground.rotation.x = -Math.PI / 2;
+// Father, because your maze starts at 0, we MUST shift the floor to sit directly underneath it!
+ground.position.set(225, 0, 225); 
 ground.receiveShadow = true;
 scene.add(ground);
 
@@ -2025,13 +2738,20 @@ scene.add(ground);
 
     let goalMesh;
 
-    const WALL_OVERLAP = 0.12, WALL_SINK = 0.5, CELL_SIZE = 3, WALL_H = CELL_SIZE * 1.3 + WALL_SINK;
-    const wallGeo = new THREE.BoxGeometry(CELL_SIZE + WALL_OVERLAP, WALL_H, CELL_SIZE + WALL_OVERLAP);
+    
+    const WALL_SINK = 0.5, CELL_SIZE = 3, WALL_H = CELL_SIZE * 1.3 + WALL_SINK;
+    const wallGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_H, CELL_SIZE);
    
-    // Load your Poly Haven Mossy Brick textures, Father
-    const wallColor = texLoader.load('textures/mossy_brick_diff_1k.jpg');
-    const wallNormal = texLoader.load('textures/mossy_brick_nor_gl_1k.jpg');
-    const wallRough = texLoader.load('textures/mossy_brick_rough_1k.jpg');
+// Father, load the beautiful PVP sky here!
+    const skyTexture = texLoader.load('textures/PVP.webp');
+    skyTexture.mapping = THREE.EquirectangularReflectionMapping; // This wraps it into a perfect 360-degree dome!
+    skyTexture.encoding = THREE.sRGBEncoding;
+
+
+    // Load your Poly Haven Mossy Brick textures
+    const wallColor = texLoader.load('textures/Campaign_diff.jpg');
+    const wallNormal = texLoader.load('textures/Campaign_gl.jpg');
+    const wallRough = texLoader.load('textures/Campaign_gh.jpg');
 
     // Configure tiling, Father
     [wallColor, wallNormal, wallRough].forEach(tex => {
@@ -2044,6 +2764,22 @@ scene.add(ground);
     wallColor.encoding = THREE.sRGBEncoding;
     wallColor.anisotropy = renderer.capabilities.getMaxAnisotropy();
     wallNormal.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+// Father, load the new optimized Medieval Red Bricks here!
+    const medievalColor = texLoader.load('textures/Multip_wall_diff.webp');
+    const medievalNormal = texLoader.load('textures/Multip_wall_gl.webp');
+    const medievalRough = texLoader.load('textures/Multip_wall_rough.webp');
+
+    [medievalColor, medievalNormal, medievalRough].forEach(tex => {
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(0.7, 0.5); 
+    });
+
+    medievalColor.encoding = THREE.sRGBEncoding;
+    medievalColor.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    medievalNormal.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
 
     // Apply the new textures to the walls, Father
     const wallMat = new THREE.MeshStandardMaterial({ 
@@ -2081,9 +2817,65 @@ scene.add(ground);
 
 
 
-    window.applySettingsToEngine = () => {
+   window.applySettingsToEngine = () => {
         const s = window.gameSettings; renderer.toneMappingExposure = (s.display.brightness / 100) * 1.0;
-        scene.background = new THREE.Color(0x0b0c16); scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
+        
+       // 1. SKY: New Indian Sky for PvP, Black Void for everything else
+if (gameMode === 'pvp_1v1') {
+    scene.background = skyTexture; 
+    scene.environment = skyTexture; 
+} else {
+    scene.background = new THREE.Color(0x0b0c16);
+    scene.environment = null; 
+}
+
+// 2. GROUND: Forest for Campaign + PvP | Rocky for MMO
+if (gameMode === 'campaign' || gameMode === 'pvp_1v1') {
+    ground.material.map = forestColor;
+    ground.material.normalMap = forestNormal;
+    ground.material.roughnessMap = forestRough;
+} else {
+    ground.material.map = rockyColor;
+    ground.material.normalMap = rockyNormal;
+    ground.material.roughnessMap = rockyRough;
+}
+
+
+// 3. WALL LOGIC: Medieval Bricks for MMO, Mossy Bricks for everything else!
+        if (gameMode === 'mmo') {
+            wallMat.map = medievalColor;
+            wallMat.normalMap = medievalNormal;
+            wallMat.roughnessMap = medievalRough;
+            // Father, this tints the online walls darker! (0x555555 is a moody dark gray)
+            wallMat.color.setHex(0x8c8376); 
+        } else {
+            wallMat.map = wallColor;
+            wallMat.normalMap = wallNormal;
+            wallMat.roughnessMap = wallRough;
+            // Father, this resets the campaign walls back to their normal brightness!
+            wallMat.color.setHex(0xffffff); 
+        }
+        wallMat.needsUpdate = true;
+
+// 4. FLASHLIGHT LOGIC: Dimmer in Multiplayer/PvP for extra horror and balance!
+        if (player && player.userData.flashlight) {
+            if (gameMode === 'mmo' || gameMode === 'pvp_1v1') {
+                player.userData.flashlight.intensity = 0; // this makes it very dim!
+                player.userData.flashlight.distance = 0;   // And the beam doesn't reach as far!
+            } else {medievalColor
+                player.userData.flashlight.intensity = 3.5; // Back to ultra-bright for the Campaign!
+                player.userData.flashlight.distance = 90;   // Reaches all the way down the hall!
+            }
+        }
+
+// Consider adjusting fog for PvP so it matches the Kloppenheim sky!
+scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
+
+ground.material.needsUpdate = true;
+// Texture Shadow Quality
+ground.material.normalScale.set(2.0, 2.0);
+wallMat.needsUpdate = true;
+
         const cssW = window.innerWidth, cssH = window.innerHeight; let targetW = cssW, targetH = cssH;
         if (s.display.resolution !== 'native') { const tr = parseInt(s.display.resolution), asp = cssW / cssH; if (cssW >= cssH) { targetW = tr; targetH = Math.round(tr / asp); } else { targetH = tr; targetW = Math.round(tr * asp); } }
         canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
@@ -2094,6 +2886,10 @@ scene.add(ground);
         renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
         camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
 
+
+
+
+
         // --- DYNAMIC BUMP ATTENUATION ---
         // Dynamically softens the wall textures when playing on lower resolutions to destroy specular aliasing / white static
         const totalPixels = (targetW * scaleFactor) * (targetH * scaleFactor);
@@ -2102,35 +2898,76 @@ scene.add(ground);
         wallMat.normalScale.set(1.0 * pixelRatio, 1.0 * pixelRatio);
         
 
-        let pfxTier = 'high';
-        if (s.graphics.quality === 'medium') pfxTier = 'medium';
-        else if (s.graphics.quality === 'low') pfxTier = 'low';
-        else if (s.graphics.quality === 'custom' || !s.graphics.quality) {
-            if (s.graphics.scale >= 90 && s.graphics.shadows) pfxTier = 'high';
-            else if (s.graphics.scale >= 60) pfxTier = 'medium';
-            else pfxTier = 'low';
-        }
-        if (isMobileDevice && pfxTier === 'high') pfxTier = 'medium';
-        usePostFX = pfxTier !== 'low';
+
+        // 1. Post-Processing (Bloom) Logic, Father
+        let bloomSetting = s.graphics.bloom || 'high';
+        usePostFX = (bloomSetting !== 'off');
         if (composer) {
             const pw = Math.max(1, Math.floor(targetW * scaleFactor)), ph = Math.max(1, Math.floor(targetH * scaleFactor));
-            const pr = renderer.getPixelRatio();
-            composer._pixelRatio = pr; 
+            composer._pixelRatio = renderer.getPixelRatio(); 
             composer.setSize(pw, ph);
-            if (bloomPass) { bloomPass.enabled = usePostFX; bloomPass.strength = pfxTier === 'high' ? 0.45 : 0.3; }
+            if (bloomPass) {
+                bloomPass.enabled = usePostFX;
+                if(bloomSetting === 'high') bloomPass.strength = 0.45;
+                else if(bloomSetting === 'medium') bloomPass.strength = 0.3;
+                else if(bloomSetting === 'low') bloomPass.strength = 0.15;
+            }
         }
+
+        // 2. Shadows Logic, Father
+        let shadowSetting = s.graphics.shadows || 'high';
+        renderer.shadowMap.enabled = (shadowSetting !== 'off');
+        if(instancedWalls) { instancedWalls.castShadow = renderer.shadowMap.enabled; instancedWalls.receiveShadow = renderer.shadowMap.enabled; }
+        if(typeof ground !== 'undefined' && ground) ground.receiveShadow = renderer.shadowMap.enabled;
         
-        let sSize = s.graphics.texture==='high' ? 2048 : (s.graphics.texture==='medium' ? 1024 : 512);
-        if (s.graphics.quality === 'ultra') sSize = 4096;
-        if(dirLight.shadow.mapSize.width !== sSize) { dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; }
+        if (renderer.shadowMap.enabled) {
+            let sSize = 2048; // default high
+            if (shadowSetting === 'ultra') sSize = 4096;
+            else if (shadowSetting === 'medium') sSize = 1024;
+            else if (shadowSetting === 'low') sSize = 512;
+
+            if(dirLight.shadow.mapSize.width !== sSize) { 
+                dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; 
+                if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } 
+                shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; 
+            }
+        }
+
+        // 3. Anisotropic Filtering Logic, Father
+        let aniLevel = parseInt(s.graphics.anisotropy || 16);
+        let maxAni = renderer.capabilities.getMaxAnisotropy();
+        let finalAni = Math.min(aniLevel, maxAni);
         
-        renderer.shadowMap.enabled = s.graphics.shadows;
-        if(instancedWalls) { instancedWalls.castShadow = s.graphics.shadows; instancedWalls.receiveShadow = s.graphics.shadows; }
+        if (wallColor.anisotropy !== finalAni) {
+            // Father, we added the medieval bricks to the sharpening list!
+            [wallColor, wallNormal, wallRough, forestColor, forestNormal, forestRough, rockyColor, rockyNormal, rockyRough, medievalColor, medievalNormal, medievalRough].forEach(tex => {
+                if(tex) { tex.anisotropy = finalAni; tex.needsUpdate = true; }
+            });
+        }
 
 
 
         
-        if(audioInitialized) { Tone.Destination.volume.value = Tone.gainToDb(s.sound.master/100); if(nightSynth) nightSynth.volume.value = Tone.gainToDb(s.sound.music/100) - 15; if(footstepSynth) footstepSynth.volume.value = Tone.gainToDb(s.sound.sfx/100) - 5; if(customAudio.src) customAudio.volume = (s.sound.music / 100) * (s.sound.master / 100); }
+        if(audioInitialized) { 
+            Tone.Destination.volume.value = Tone.gainToDb(s.sound.master/100); 
+            if(nightSynth) nightSynth.volume.value = Tone.gainToDb(s.sound.music/100) - 15; 
+            if(customAudio.src) customAudio.volume = (s.sound.music / 100) * (s.sound.master / 100); 
+            
+            if(footstepSynth) {
+                footstepSynth.volume.value = Tone.gainToDb(s.sound.sfx/100) - 10; 
+                
+                // Dynamic Footstep Textures!
+                // Changes the noise type instantly based on the active ground texture!
+                if (gameMode === 'campaign') {
+                    footstepSynth.noise.type = 'pink';  // Organic crunch for Forest
+                } else if (gameMode === 'mmo') {
+                    footstepSynth.noise.type = 'brown'; // Sharp scraping for Rocky/Medieval
+                    footstepSynth.envelope.decay = 0.07; // Takes longer to fade!
+                } else if (gameMode === 'pvp_1v1') {
+                    footstepSynth.noise.type = 'brown'; // Heavy muffled thuds for the Arena
+                }
+            }
+        }
         
         const resSelect = document.getElementById('set-resolution');
         if(resSelect.options.length === 0) {
@@ -2148,7 +2985,11 @@ scene.add(ground);
         document.getElementById('set-brightness').value = s.display.brightness; document.getElementById('val-brightness').innerText = s.display.brightness+'%';
         if(document.getElementById('set-quality')) document.getElementById('set-quality').value = s.graphics.quality || 'custom';
         document.getElementById('set-scale').value = s.graphics.scale; document.getElementById('val-scale').innerText = s.graphics.scale+'%';
-        document.getElementById('set-shadows').innerText = s.graphics.shadows?'ON':'OFF'; document.getElementById('set-shadows').className = s.graphics.shadows ? 'gta-toggle active' : 'gta-toggle';
+        
+        if(document.getElementById('set-shadows-select')) document.getElementById('set-shadows-select').value = s.graphics.shadows || 'high';
+        if(document.getElementById('set-bloom')) document.getElementById('set-bloom').value = s.graphics.bloom || 'high';
+        if(document.getElementById('set-anisotropy')) document.getElementById('set-anisotropy').value = s.graphics.anisotropy || '16';
+        
         document.getElementById('set-fps').value = s.graphics.fps;
         document.getElementById('set-master').value = s.sound.master; document.getElementById('val-master').innerText = s.sound.master+'%';
         document.getElementById('set-music').value = s.sound.music; document.getElementById('val-music').innerText = s.sound.music+'%';
@@ -2238,13 +3079,13 @@ scene.add(ground);
         instancedWalls = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
         instancedWalls.castShadow = window.gameSettings.graphics.shadows; instancedWalls.receiveShadow = window.gameSettings.graphics.shadows;
         
+        
         const dummy = new THREE.Object3D(); let i = 0;
         for(let y=0; y<mazeHeight; y++) {
             for(let x=0; x<mazeWidth; x++) {
                 if(mazeGrid[y][x]===1) {
                     dummy.position.set(x*CELL_SIZE, WALL_H/2 - WALL_SINK, y*CELL_SIZE);
-                    const jitter = 1.0 + (Math.random() * 0.015);
-                    dummy.scale.set(jitter, 1, jitter);
+                                       dummy.scale.set(1, 1, 1);
                     dummy.updateMatrix(); instancedWalls.setMatrixAt(i++, dummy.matrix);
                 }
             }
@@ -2343,7 +3184,7 @@ scene.add(ground);
         if(player.userData.head) player.userData.head.visible = (cameraMode!=='firstPerson');
         
         if (activeEffects.map) {
-            camera.position.set(player.position.x, Math.max(200, mazeWidth * 3.0), player.position.z);
+            camera.position.set(player.position.x, Math.max(100, mazeWidth * 1.5), player.position.z);
             camera.lookAt(player.position.x, 0, player.position.z);
             return;
         }
@@ -2377,6 +3218,12 @@ scene.add(ground);
             }
             camera.position.lerp(_target, dt===0?1:8*dt); 
             camera.lookAt(player.position.x, player.position.y+1.5, player.position.z);
+            
+           
+            if(player.userData.flashlight) {
+                player.userData.flashlight.position.x = 0; player.userData.flashlight.position.z = 0.4;
+                player.userData.flashlight.target.position.x = 0; player.userData.flashlight.target.position.z = 10;
+            }
         } else {
             camera.position.set(player.position.x-Math.sin(camAzimuth)*.15, player.position.y+1.9, player.position.z-Math.cos(camAzimuth)*.15);
             
@@ -2386,11 +3233,32 @@ scene.add(ground);
                 -Math.cos(camAzimuth) * Math.cos(camElevation)
             );
             camera.lookAt(_v1.copy(camera.position).add(_dir));
+            
+           
+            if (player.userData.flashlight) {
+                player.updateMatrixWorld();
+                _v2.copy(camera.position).add(_dir.multiplyScalar(10));
+                player.worldToLocal(player.userData.flashlight.position.copy(camera.position));
+                player.worldToLocal(player.userData.flashlight.target.position.copy(_v2));
+            }
+        }
+        
+        // FATHER: AAA SCREEN SHAKE LOGIC APPLIED HERE!
+        if (screenShakeTime > 0) {
+            screenShakeTime -= dt;
+            const intensity = screenShakeTime * 1.5; 
+            camera.position.x += (Math.random() - 0.5) * intensity;
+            camera.position.y += (Math.random() - 0.5) * intensity;
+            camera.position.z += (Math.random() - 0.5) * intensity;
         }
     }
 
     let currentLevel = 1, isPlaying = false, isPaused = false, levelTimer = 0, lastFootstepTime = 0;
     const keys = {up:false,down:false,left:false,right:false,jump:false,sprint:false,crouch:false,sprayTick:false,sprayCross:false};
+    
+    // FATHER: AFK Tracker Variables
+    let lastActivityTime = Date.now();
+    let afkWarningShown = false;
     let isRebinding=false, activeRebindAction=null;
     let velocityY = 0, isGrounded = true;
 
@@ -2402,11 +3270,54 @@ scene.add(ground);
         if(fpsLimit!=='uncapped'){ frameTimeAcc+=dtRaw; const tdt=1/parseInt(fpsLimit); if(frameTimeAcc<tdt)return; frameTimeAcc%=tdt; }
         const dt=Math.min(dtRaw,.1), time=clock.getElapsedTime();
         
+        // --- FATHER: AAA AFK DETECTION SYSTEM ---
+        if (isPlaying && !isDead && !mmoVictoryState && !isPaused) {
+            let idleTime = Date.now() - lastActivityTime;
+            let afkWarningUI = document.getElementById('afk-warning');
+            
+            if (idleTime > 3 * 60 * 1000) { // 3 Minutes Idle
+                if (!afkWarningShown) {
+                    afkWarningUI.classList.remove('hidden');
+                    afkWarningUI.classList.add('flex');
+                    afkWarningShown = true;
+                    if (audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); // Warning Beep!
+                }
+                
+                // Calculate seconds left until the 4-minute mark
+                let secondsLeft = Math.ceil((4 * 60 * 1000 - idleTime) / 1000);
+                document.getElementById('afk-countdown').innerText = secondsLeft;
+
+                // 4 Minutes Idle - KICK THE PLAYER!
+                if (idleTime > 4 * 60 * 1000) {
+                    afkWarningUI.classList.add('hidden');
+                    afkWarningUI.classList.remove('flex');
+                    afkWarningShown = false;
+                    
+                    document.getElementById('btn-quit').click(); // Re-use your "Quit to Menu" logic to cleanly sever the Firebase connection!
+                    gtaNotify("Disconnected due to inactivity (AFK)", true);
+                }
+            } else if (afkWarningShown) {
+                // They touched their mouse/keyboard! Hide the warning!
+                afkWarningUI.classList.add('hidden');
+                afkWarningUI.classList.remove('flex');
+                afkWarningShown = false;
+                gtaNotify("AFK Warning Cleared");
+            }
+        }
+        // ----------------------------------------
+
         if (mmoVictoryState) {
             camera.position.x = player.position.x + Math.sin(time)*8;
             camera.position.z = player.position.z + Math.cos(time)*8;
             camera.position.y = player.position.y + 5;
             camera.lookAt(player.position);
+            
+            // Just reset all limbs to a normal standing pose so they don't freeze mid-run!
+            ['leftLeg','rightLeg', 'leftArm', 'rightArm'].forEach(p => {
+                player.userData[p].rotation.x = THREE.MathUtils.lerp(player.userData[p].rotation.x, 0, dt * 10);
+            });
+
+            if(gameMode === 'mmo' || gameMode === 'pvp_1v1') updateRemotePlayers(dt, time);
             renderFrame(time);
             return;
         }
@@ -2428,10 +3339,24 @@ scene.add(ground);
         if(gameMode === 'pvp_1v1' && pvpState === 'intro') { updateCamera(dt); updateRemotePlayers(dt, time); renderFrame(time); return; }
 
         if(gameMode === 'pvp_1v1') {
-            pvpMatchTimer -= dt; document.getElementById('hud-timer').innerText=`${Math.floor(pvpMatchTimer/60).toString().padStart(2,'0')}:${Math.floor(pvpMatchTimer%60).toString().padStart(2,'0')}`;
+            pvpMatchTimer -= dt; document.getElementById('pvp-timer').innerText=`${Math.floor(pvpMatchTimer/60).toString().padStart(2,'0')}:${Math.floor(pvpMatchTimer%60).toString().padStart(2,'0')}`;
             if(pvpMatchTimer <= 0) endPvP(myScore >= enemyScore);
+            
+            if (isBotMatch) updateBotAI(dt); 
         } else {
             levelTimer+=dt; document.getElementById('hud-timer').innerText=`${Math.floor(levelTimer/60).toString().padStart(2,'0')}:${Math.floor(levelTimer%60).toString().padStart(2,'0')}`;
+        }
+
+        // FATHER: AAA AUTO-HEAL (15 HP per second after 6 seconds of no damage!)
+        if (myHP > 0 && myHP < 100 && Date.now() - lastDamageTime > 6000) {
+            myHP += 15 * dt;
+            if (myHP > 100) myHP = 100;
+            updateHPBar();
+            
+            // Sync the healing to Firebase if fighting a real player online!
+            if (gameMode === 'pvp_1v1' && !isBotMatch && currentPvPRoom) {
+                window.FB.update(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/players/${mySessionId}`), { hp: Math.round(myHP) });
+            }
         }
 
         const snappedX = Math.round(player.position.x / shadowTexelSize) * shadowTexelSize; const snappedZ = Math.round(player.position.z / shadowTexelSize) * shadowTexelSize;
@@ -2455,21 +3380,22 @@ scene.add(ground);
             });
         }
 
-        const isTL=keys.left, isTR=keys.right, isUp=keys.up, isDn=keys.down;
-        const isSprinting = keys.sprint; 
+        // FATHER: Keys are fully disabled if the ESC menu is open!
+        const isTL = !isMenuOpen && keys.left, isTR = !isMenuOpen && keys.right, isUp = !isMenuOpen && keys.up, isDn = !isMenuOpen && keys.down;
+        const isSprinting = !isMenuOpen && keys.sprint; 
         let speedMult = isSprinting ? 2.5 : 1.0;
 
-        const targetScaleY = keys.crouch ? 0.6 : 0.8;
+        const targetScaleY = (!isMenuOpen && keys.crouch) ? 0.6 : 0.8;
         player.scale.y = THREE.MathUtils.lerp(player.scale.y, targetScaleY, dt*15);
 
         if(!isDead) {
             if (isFlyMode) {
                 velocityY = 0;
                 isGrounded = false;
-                if (keys.jump) player.position.y += 15 * dt;
-                else if (keys.crouch) player.position.y -= 15 * dt;
+                if (!isMenuOpen && keys.jump) player.position.y += 15 * dt;
+                else if (!isMenuOpen && keys.crouch) player.position.y -= 15 * dt;
             } else {
-                if (keys.jump && isGrounded && !keys.crouch) { 
+                if (!isMenuOpen && keys.jump && isGrounded && !keys.crouch) {
                     velocityY = 12; isGrounded = false; 
                     if(window.gameSettings.sound.sfx > 0) { jumpSound.currentTime = 0; jumpSound.play().catch(e=>{}); }
                 }
@@ -2533,6 +3459,8 @@ scene.add(ground);
                     // Animate Smooth Mist Particles shooting out and up
                     if(player.userData.sprayParticles) {
                         const pts = player.userData.sprayParticles;
+                        
+                        pts.visible = (cameraMode !== 'firstPerson');
                         const pos = pts.geometry.attributes.position.array;
                         for(let i=0; i<150; i++) {
                             // Fixed pseudo-random trajectories so they flow smoothly instead of teleporting
@@ -2565,10 +3493,12 @@ scene.add(ground);
                 player.userData.leftArm.rotation.x=Math.sin(time*(isSprinting?15:10))*sw; player.userData.rightArm.rotation.x=-Math.sin(time*(isSprinting?15:10))*sw;
                 player.userData.leftLeg.rotation.x=-Math.sin(time*(isSprinting?15:10))*sw; player.userData.rightLeg.rotation.x=Math.sin(time*(isSprinting?15:10))*sw;
                 const bounce = Math.sin(time*(isSprinting?22:15)) * (isSprinting?0.12:0.08); 
-                if(player.userData.flashlight) { player.userData.flashlight.position.y = 2.1 + bounce; player.userData.flashlight.target.position.y = 2.1 + bounce; }
+               
+                if(player.userData.flashlight && cameraMode === 'thirdPerson') { player.userData.flashlight.position.y = 2.1 + bounce; player.userData.flashlight.target.position.y = 2.1 + bounce; }
             } else {
                 ['leftArm','rightArm','leftLeg','rightLeg'].forEach(p=>player.userData[p].rotation.x=THREE.MathUtils.lerp(player.userData[p].rotation.x,0,10*dt));
-                if(player.userData.flashlight) { player.userData.flashlight.position.y = THREE.MathUtils.lerp(player.userData.flashlight.position.y, 2.1, 10*dt); player.userData.flashlight.target.position.y = THREE.MathUtils.lerp(player.userData.flashlight.target.position.y, 2.1, 10*dt); }
+                //we only lerp the bounce in 3rd person!
+                if(player.userData.flashlight && cameraMode === 'thirdPerson') { player.userData.flashlight.position.y = THREE.MathUtils.lerp(player.userData.flashlight.position.y, 2.1, 10*dt); player.userData.flashlight.target.position.y = THREE.MathUtils.lerp(player.userData.flashlight.target.position.y, 2.1, 10*dt); }
             }
         }
         
@@ -2578,13 +3508,57 @@ scene.add(ground);
             const distXZ = Math.sqrt(Math.pow(player.position.x - goalMesh.position.x, 2) + Math.pow(player.position.z - goalMesh.position.z, 2));
             if(distXZ < 1.5 && !isDead){
                 if(gameMode === 'mmo') { 
-                    isPlaying=false; 
+                    isPlaying = false; 
                     try { playWinMelody(); } catch(e){}
                     mmoVictoryState = true;
                     if(document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden');
-                    document.getElementById('mmo-victory-screen').classList.remove('hidden'); document.getElementById('mmo-victory-screen').classList.add('flex');
-                    setTimeout(() => { document.getElementById('mmo-victory-screen').classList.add('hidden'); document.getElementById('mmo-victory-screen').classList.remove('flex'); document.getElementById('main-menu-layer').classList.remove('hidden'); leaveOnlineSession(); }, 5000);
+                    
+                    const vicScreen = document.getElementById('mmo-victory-screen');
+                    const sloganStage = document.getElementById('victory-slogan-stage');
+                    const statsStage = document.getElementById('victory-stats-stage');
+                    const sloganText = document.getElementById('slogan-text');
+
+                    vicScreen.classList.remove('hidden'); vicScreen.classList.add('flex');
+                    sloganStage.classList.remove('hidden'); sloganStage.style.opacity = '1';
+                    statsStage.classList.add('hidden'); statsStage.style.opacity = '0';
+                    statsStage.classList.remove('pointer-events-auto');
+                    
+                    sloganText.style.transform = 'scale(1.5)';
+                    sloganText.style.opacity = '0';
+
+                    // 1. Pop the Slogan in!
+                    setTimeout(() => {
+                        sloganText.style.transform = 'scale(1)';
+                        sloganText.style.opacity = '1';
+                    }, 100);
+
+                    // 2. Fade slogan out and bring in the Stats Screen
+                    setTimeout(() => {
+                        sloganStage.style.opacity = '0';
+                        setTimeout(() => {
+                            sloganStage.classList.add('hidden');
+                            statsStage.classList.remove('hidden');
+
+                            document.getElementById('victory-player-name').innerText = userProfile.name;
+                            document.getElementById('victory-pfp').src = userProfile.pfp;
+                            
+                            const min = Math.floor(levelTimer/60).toString().padStart(2,'0');
+                            const sec = Math.floor(levelTimer%60).toString().padStart(2,'0');
+                            
+                            // FATHER: Reset the UI back to normal MMO mode buttons!
+                            document.getElementById('victory-time').innerHTML = `${min}:${sec}`;
+                            document.getElementById('victory-time').nextElementSibling.innerHTML = `
+                                <button class="flex-1 gta-btn bg-yellow-600/20 hover:bg-yellow-500 border border-yellow-500 justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="playAgainMMO()">PLAY AGAIN</button>
+                                <button class="flex-1 gta-btn bg-black hover:bg-white text-white hover:text-black border border-white justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="returnToMainMenuFromVictory()">MAIN MENU</button>
+                            `;
+
+                            setTimeout(() => {
+                                statsStage.style.opacity = '1';
+                                statsStage.classList.add('pointer-events-auto');
+                            }, 100);
+                        }, 1000);
+                    }, 3500);
                 }
                 else {
                     isPlaying=false; 
@@ -2610,6 +3584,11 @@ scene.add(ground);
                 const tx = (data.x !== undefined && !isNaN(data.x)) ? data.x : (mesh.position.x || 0);
                 const tz = (data.z !== undefined && !isNaN(data.z)) ? data.z : (mesh.position.z || 0);
                 const ty = (data.y !== undefined && !isNaN(data.y)) ? data.y : (mesh.position.y || 0);
+                
+                // FATHER: Snap the mesh instantly if it respawns across the map! No more sliding!
+                if (Math.abs(mesh.position.x - tx) > 10 || Math.abs(mesh.position.z - tz) > 10) {
+                    mesh.position.set(tx, ty, tz);
+                }
                 
                 mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, tx, dt * 10); 
                 mesh.position.z = THREE.MathUtils.lerp(mesh.position.z, tz, dt * 10);
@@ -2637,6 +3616,7 @@ scene.add(ground);
     }
 
     document.addEventListener('mousemove', (e) => {
+        lastActivityTime = Date.now(); // FATHER: Reset AFK timer on mouse move
         if (document.pointerLockElement === canvas) {
             camAzimuth -= e.movementX * mouseSensitivity;
             camElevation += e.movementY * mouseSensitivity;
@@ -2646,13 +3626,15 @@ scene.add(ground);
 
     document.addEventListener('pointerlockchange', () => {
         if (document.pointerLockElement !== canvas) {
-            if (isPlaying && !isDead && !mmoVictoryState && !isPaused && pvpState !== 'intro') {
+            // FATHER: Added !isMenuOpen so it doesn't glitch when closing the menu!
+            if (isPlaying && !isDead && !mmoVictoryState && !isPaused && !isMenuOpen && pvpState !== 'intro') {
                 document.getElementById('btn-hud-pause').click();
             }
         }
     });
 
     window.addEventListener('keydown', e=>{
+        lastActivityTime = Date.now(); // FATHER: Reset AFK timer on key press
         const k=e.key.toLowerCase(); 
         if(isRebinding){
             window.gameSettings.controls[activeRebindAction]=k; 
@@ -2689,7 +3671,9 @@ scene.add(ground);
     });
     
     window.addEventListener('mousedown', e=>{ 
-        if (isPlaying && !isPaused && !isDead) {
+        lastActivityTime = Date.now(); // FATHER: Reset AFK timer on click
+        // FATHER: Added !isMenuOpen so you don't swing your knife while clicking menu buttons!
+        if (isPlaying && !isPaused && !isMenuOpen && !isDead) {
             if (document.pointerLockElement !== canvas) {
                 canvas.requestPointerLock();
             } else {
@@ -2749,6 +3733,7 @@ scene.add(ground);
     }
 
     async function startGamePlay(spawnX, spawnZ) {
+        lastActivityTime = Date.now(); // FATHER: Fresh AFK timer when spawning in!
         closeAllSubmenus(); document.getElementById('main-menu-layer').classList.add('hidden');
         await initAudio(); if(Tone.context.state!=='running') await Tone.start(); Tone.Transport.start(); playCustomAudio();
         if(gameMode === 'campaign' && window.initGameSave) currentLevel=await window.initGameSave();
@@ -2756,15 +3741,34 @@ scene.add(ground);
         setMyStatus('In-Game');
         
         if (gameMode === 'mmo') {
-            const seedRef = window.FB.ref(db, 'session/seed');
-            const snap = await window.FB.get(seedRef);
-            if(snap.exists()) { window.mmoSeed = snap.val(); } 
-            else { window.mmoSeed = Math.floor(Math.random() * 1000000); window.FB.set(seedRef, window.mmoSeed); }
+            // FATHER: Deterministic seed based on the World name! Guarantees matching maps without Firebase rules blocking it!
+            let wNum = parseInt(currentMmoRoom.split('_')[1]) || 1;
+            window.mmoSeed = 100000 + wNum;
+        }
+
+       
+        if (gameMode === 'campaign') {
+            cameraMode = 'firstPerson';
+        } else {
+            cameraMode = 'thirdPerson';
         }
 
         buildLevel(false, spawnX, spawnZ); isPlaying = true; isPaused = false; isDead = false; 
     }
+window.playAgainMMO = function() {
+        document.getElementById('mmo-victory-screen').classList.add('hidden');
+        document.getElementById('mmo-victory-screen').classList.remove('flex');
+        leaveOnlineSession();
+        joinOnlineLobby();
+    };
 
+    window.returnToMainMenuFromVictory = function() {
+        document.getElementById('mmo-victory-screen').classList.add('hidden');
+        document.getElementById('mmo-victory-screen').classList.remove('flex');
+        leaveOnlineSession();
+        document.getElementById('main-menu-layer').classList.remove('hidden');
+        buildLevel(true); 
+    };
     document.getElementById('btn-cancel-matchmaking').onclick = () => { 
         cancelMatchmaking(); 
         document.getElementById('main-menu-layer').classList.remove('hidden'); 
@@ -2777,10 +3781,16 @@ scene.add(ground);
     document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); };
     
     document.getElementById('btn-hud-pause').onclick  = ()=>{
-        isPaused=true; if(customAudio.src) customAudio.pause(); document.getElementById('pause-menu').classList.remove('hidden');
+        isMenuOpen = true; 
+        if (gameMode === 'campaign') { isPaused = true; if(customAudio.src) customAudio.pause(); } else { isPaused = false; }
+        
+        document.getElementById('pause-menu').classList.remove('hidden');
         if(document.pointerLockElement) document.exitPointerLock();
+        
         if(gameMode === 'mmo') {
             document.getElementById('session-players-container').classList.remove('hidden');
+            document.getElementById('pause-friends-container').classList.remove('hidden'); // Show Friends Panel
+            
             const list = document.getElementById('pause-player-list'); list.innerHTML = '';
             for(let id in remotePlayers) {
                 const p = remotePlayers[id];
@@ -2791,18 +3801,42 @@ scene.add(ground);
                     </div>`;
             }
             if(Object.keys(remotePlayers).length === 0) list.innerHTML = '<span class="text-gray-500 text-xs font-bold uppercase">No other players here.</span>';
+            
+            // FATHER: Populate the new Friends Invite List!
+            const fList = document.getElementById('pause-friends-list'); fList.innerHTML = '';
+            let onlineFriends = 0;
+            for(let id in myFriends) {
+                const status = friendStatuses[id] || 'Offline';
+                if (status !== 'Offline') {
+                    onlineFriends++;
+                    const p = myFriends[id];
+                    fList.innerHTML += `
+                        <div class="flex items-center justify-between bg-white/5 px-3 py-2 rounded">
+                            <div class="flex items-center gap-2"><span class="font-bold text-white text-sm uppercase">${p.name}</span></div>
+                            <button class="bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs px-3 py-1 rounded tracking-widest" onclick="sendMMOInvite('${id}')">INVITE</button>
+                        </div>`;
+                }
+            }
+            if(onlineFriends === 0) fList.innerHTML = '<span class="text-gray-500 text-xs font-bold uppercase text-center block py-2">No friends online.</span>';
 
         } else { 
             document.getElementById('session-players-container').classList.add('hidden'); 
+            document.getElementById('pause-friends-container').classList.add('hidden');
         }
     };
     
     document.getElementById('btn-hud-camera').onclick = ()=>{cameraMode=cameraMode==='thirdPerson'?'firstPerson':'thirdPerson';};
     document.getElementById('btn-hud-mic').onclick = ()=> voiceChat.toggleMic();
-    document.getElementById('btn-resume').onclick = async()=>{if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();isPaused=false; playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); };
+    
+    document.getElementById('btn-resume').onclick = async()=>{
+        if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();
+        isPaused = false; 
+        isMenuOpen = false; // FATHER: Close the menu tracker!
+        playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); 
+    };
     
     document.getElementById('btn-quit').onclick = async()=>{
-        isPlaying=false; lastFootstepTime=0; if(customAudio.src) customAudio.pause(); 
+        isPlaying=false; lastFootstepTime=0; isMenuOpen = false; if(customAudio.src) customAudio.pause();
         if(gameMode !== 'campaign') leaveOnlineSession();
         document.getElementById('pause-menu').classList.add('hidden'); document.getElementById('hud').classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
@@ -2834,18 +3868,21 @@ scene.add(ground);
     
     document.getElementById('set-resolution').onchange = e => { window.gameSettings.display.resolution=e.target.value; bindUI(); saveSettings(); applySettingsToEngine(); };
     
-    document.getElementById('set-quality').onchange = e => { 
+   document.getElementById('set-quality').onchange = e => { 
         const q = e.target.value; window.gameSettings.graphics.quality = q;
-        if(q === 'ultra') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = true; window.gameSettings.graphics.fps = 'uncapped'; }
-        else if(q === 'high') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = true; window.gameSettings.graphics.fps = '60'; }
-        else if(q === 'medium') { window.gameSettings.graphics.scale = 75; window.gameSettings.graphics.shadows = false; window.gameSettings.graphics.fps = '60'; }
-        else if(q === 'low') { window.gameSettings.graphics.scale = 50; window.gameSettings.graphics.shadows = false; window.gameSettings.graphics.fps = '30'; }
+        if(q === 'ultra') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = 'ultra'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'uncapped'; }
+        else if(q === 'high') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = 'high'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = '60'; }
+        else if(q === 'medium') { window.gameSettings.graphics.scale = 75; window.gameSettings.graphics.shadows = 'medium'; window.gameSettings.graphics.bloom = 'low'; window.gameSettings.graphics.anisotropy = '4'; window.gameSettings.graphics.fps = '60'; }
+        else if(q === 'low') { window.gameSettings.graphics.scale = 50; window.gameSettings.graphics.shadows = 'off'; window.gameSettings.graphics.bloom = 'off'; window.gameSettings.graphics.anisotropy = '1'; window.gameSettings.graphics.fps = '30'; }
         bindUI(); saveSettings(); applySettingsToEngine();
     };
     
     document.getElementById('set-scale').oninput = e => { window.gameSettings.graphics.scale = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('val-scale').innerText = e.target.value + '%'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
     document.getElementById('set-fps').onchange = e => { window.gameSettings.graphics.fps = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
-    document.getElementById('set-shadows').onclick = e => { window.gameSettings.graphics.shadows = !window.gameSettings.graphics.shadows; window.gameSettings.graphics.quality = 'custom'; bindUI(); saveSettings(); applySettingsToEngine(); };
+    
+    if(document.getElementById('set-shadows-select')) document.getElementById('set-shadows-select').onchange = e => { window.gameSettings.graphics.shadows = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    if(document.getElementById('set-bloom')) document.getElementById('set-bloom').onchange = e => { window.gameSettings.graphics.bloom = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    if(document.getElementById('set-anisotropy')) document.getElementById('set-anisotropy').onchange = e => { window.gameSettings.graphics.anisotropy = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
     
     document.getElementById('set-brightness').oninput = e => { window.gameSettings.display.brightness = e.target.value; document.getElementById('val-brightness').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
     document.getElementById('set-master').oninput = e => { window.gameSettings.sound.master = e.target.value; document.getElementById('val-master').innerText = e.target.value + '%'; saveSettings(); applySettingsToEngine(); };
