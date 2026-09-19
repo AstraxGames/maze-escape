@@ -3,9 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Maze Escape - 3D Multiplayer Game</title>
-    <meta name="description" content="Play Maze Escape, a thrilling 3D multiplayer maze game built by AstraX Games. Navigate procedural mazes, join online lobbies, and battle friends in real-time." />
-    
+   <title>Maze Escape — 3D Multiplayer Maze Game | AstraX Games</title>
+
+<meta name="description" content="Play Maze Escape, a 3D multiplayer maze game by AstraX Games. Explore procedurally generated mazes, play online with friends, battle in PvP, and play directly in your browser.">
+
+<meta name="keywords" content="Maze Escape, Maze Escape game, Maze Escape multiplayer, 3D maze game, online maze game, multiplayer maze game, AstraX Games">
+
+<link rel="canonical" href="https://mazeescape.astraxgames.com/">
+<link rel="canonical" href="https://astraxgames.com/maze-escape/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Maze Escape — 3D Multiplayer Maze Game">
+<meta property="og:description" content="Play Maze Escape, a 3D multiplayer maze game by AstraX Games. Explore mazes, play with friends and battle in PvP.">
+<meta property="og:url" content="https://mazeescape.astraxgames.com/">
+<meta property="og:site_name" content="Maze Escape — AstraX Games">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Maze Escape — 3D Multiplayer Maze Game">
+<meta name="twitter:description" content="Play Maze Escape, a 3D multiplayer maze game by AstraX Games.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Maze Escape",
+  "url": "https://mazeescape.astraxgames.com/",
+  "description": "Maze Escape is a 3D multiplayer maze game by AstraX Games featuring procedural mazes, online multiplayer and PvP gameplay.",
+  "applicationCategory": "Game",
+  "genre": ["Maze", "Multiplayer", "Action", "3D"],
+  "gamePlatform": ["Web Browser", "Windows"],
+  "author": {
+    "@type": "Organization",
+    "name": "AstraX Games",
+    "url": "https://astraxgames.com/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "AstraX Games",
+    "url": "https://astraxgames.com/"
+  }
+}
+</script>
+
+
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,6 +56,7 @@
     <!-- Post-processing pipeline (bloom / grade / AA) for HD visual pass -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/Pass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
@@ -36,6 +79,23 @@
         }
 
         body { 
+#cinematic-vignette {
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:40;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(0,0,0,0) 45%,
+            rgba(0,0,0,.28) 72%,
+            rgba(0,0,0,.65) 100%
+        );
+
+    opacity:.75;
+}
+
     margin: 0; 
     overflow: hidden; 
     background-color: #0b0c16; 
@@ -164,6 +224,15 @@ img {
         <div class="spinner" id="loader-spinner"></div>
         <h2 id="loader-text" class="font-black tracking-widest text-xl uppercase text-center px-4">Connecting to Server...</h2>
         
+<div id="server-down-screen" class="hidden absolute top-0 left-0 w-full h-full bg-[#050508] z-[9999] flex-col justify-center items-center text-center p-6">
+        <h1 class="text-5xl font-black text-red-500 mb-4 tracking-widest uppercase">SERVER DOWN</h1>
+        <p class="text-gray-300 font-bold uppercase tracking-widest leading-relaxed max-w-md mx-auto mb-8">The AstraX Network is currently undergoing maintenance or has reached its capacity.</p>
+        <div class="inline-block border border-red-500/30 bg-red-500/10 px-6 py-3 rounded-md mb-8">
+            <p class="text-red-400 font-black tracking-widest uppercase text-sm">We will be back soon.</p>
+        </div>
+        <button onclick="playOffline()" class="gta-btn bg-white hover:bg-gray-200 text-black text-center justify-center font-black px-8 py-3 rounded uppercase tracking-widest w-64 border-none">Play Offline</button>
+    </div>
+
         <!-- NEW: Offline Fallback UI -->
         <div id="offline-prompt" class="hidden flex-col items-center gap-4 mt-8 z-[1000]">
             <p class="text-red-500 font-bold uppercase tracking-widest text-sm text-center mb-2">Connection Timeout</p>
@@ -195,8 +264,23 @@ img {
     </div>
 
     <canvas id="game-canvas"></canvas>
+    <div id="cinematic-vignette"></div>
     <div id="voice-chat-audio"></div>
     <div id="damage-overlay"></div>
+    <div id="fps-counter" class="hidden"
+     style="
+        position:absolute;
+        bottom:12px;
+        right:15px;
+        font-size:11px;
+        font-weight:900;
+        color:#9ca3af;
+        letter-spacing:1px;
+        pointer-events:none;
+        z-index:35;
+     ">
+    FPS --
+</div>
 
     <div id="invite-popup">
         <div class="font-black text-white uppercase text-sm truncate"><span id="invite-sender-name" class="text-cyan-400">Player</span> invited you!</div>
@@ -279,10 +363,22 @@ img {
                             <button class="tab-btn text-white" data-tab="sound">Audio</button>
                         </div>
                         
+
+
+
+
+
+
+
+
                         <div id="tab-display" class="settings-panel flex-grow">
                             <div class="mb-4">
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Resolution</label>
                                 <select id="set-resolution" class="gta-select"></select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Field of View (FOV): <span id="val-fov" class="text-white">75</span></label>
+                                <input type="range" id="set-fov" min="60" max="110" value="75">
                             </div>
                             <div class="mb-4">
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Brightness: <span id="val-brightness" class="text-white">100%</span></label>
@@ -291,6 +387,51 @@ img {
                         </div>
                         
                         <div id="tab-graphics" class="settings-panel hidden flex-grow">
+
+                            <!-- ASTRAX RENDERING TECHNOLOGY -->
+                            <div class="mb-5 border-b border-white/20 pb-5">
+                                <label class="block text-xs font-black text-cyan-400 mb-1 uppercase tracking-widest">Rendering Technology</label>
+                                <select id="set-render-tech" class="gta-select border-cyan-500 text-cyan-300">
+                                    <option value="ax">AX Upscaler — Performance</option>
+                                    <option value="vision">AX Vision — Native Fidelity</option>
+                                </select>
+                                <p id="render-tech-description" class="text-[0.6rem] text-gray-500 mt-1 uppercase">Performance-focused rendering for lower-end hardware.</p>
+                            </div>
+
+                            <div id="ax-upscaler-section" class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">AX Upscaler</label>
+                                <select id="set-upscaler" class="gta-select border-cyan-500 text-cyan-300">
+                                    <option value="off">Off (Native 100%)</option>
+                                    <option value="quality">Quality (77% + AX Reconstruction)</option>
+                                    <option value="balanced">Balanced (59% + AX Reconstruction)</option>
+                                    <option value="performance">Performance (50% + AX Reconstruction)</option>
+                                    <option value="ultra">Ultra Performance (33% + AX Reconstruction)</option>
+                                </select>
+                                <p class="text-[0.6rem] text-gray-500 mt-1 uppercase">Boosts FPS by rendering at lower resolution and edge-sharpening the output.</p>
+                            </div>
+
+                            <!-- ASTRAX VISION HIGH-END CONTROLS -->
+                            <div id="ax-vision-section" class="mb-5 p-3 border border-cyan-500/20 bg-cyan-950/10 rounded-md">
+                                <label class="block text-xs font-black text-cyan-300 mb-1 uppercase tracking-widest">AX Vision Profile</label>
+                                <select id="set-vision-profile" class="gta-select">
+                                    <option value="native">Native Fidelity — Legacy Look</option>
+                                    <option value="cinematic">Cinematic — Enhanced Depth</option>
+                                    <option value="extreme">Extreme — Maximum Fidelity</option>
+                                    <option value="radiance">Radiance Experimental — Screen-Space Ray Simulation</option>
+                                </select>
+                                <p id="vision-profile-description" class="text-[0.6rem] text-gray-500 mt-1 uppercase">Restores the original native rendering character with no AX reconstruction.</p>
+
+                                <div class="mt-4">
+                                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Vision Shadow Detail</label>
+                                    <select id="set-vision-shadows" class="gta-select">
+                                        <option value="follow">Follow Shadow Quality</option>
+                                        <option value="4k">4K Ultra</option>
+                                        <option value="8k">8K Extreme (Hardware Limit)</option>
+                                    </select>
+                                    <p class="text-[0.6rem] text-gray-500 mt-1 uppercase">Optional premium shadow map. 8K is capped by the GPU texture limit.</p>
+                                </div>
+                            </div>
+
                             <div class="mb-4">
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Graphics Quality</label>
                                 <select id="set-quality" class="gta-select">
@@ -300,10 +441,6 @@ img {
                                     <option value="medium">Medium</option>
                                     <option value="low">Low</option>
                                 </select>
-                            </div>
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Render Scale: <span id="val-scale" class="text-white">100%</span></label>
-                                <input type="range" id="set-scale" min="20" max="200" value="100" step="5">
                             </div>
                             <div class="mb-4">
                                 <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Shadow Quality</label>
@@ -333,13 +470,33 @@ img {
                                     <option value="1">1x (Off)</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">FPS Limit</label>
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">V-Sync / FPS Limit</label>
                                 <select id="set-fps" class="gta-select">
-                                    <option value="uncapped">Uncapped</option><option value="60">60 FPS</option><option value="30">30 FPS</option>
+                                    <option value="vsync">V-Sync (Match Monitor)</option>
+                                    <option value="uncapped">Uncapped / Max</option>
+                                    <option value="60">Lock 60 FPS</option>
+                                    <option value="30">Lock 30 FPS</option>
                                 </select>
                             </div>
+
+                            <div class="mb-4 flex justify-between items-center">
+                                <label class="text-xs font-bold text-gray-400 uppercase">Show FPS Counter</label>
+                                <button id="toggle-fps" type="button" class="gta-toggle">OFF</button>
+                            </div>
                         </div>
+
+
+
+
+
+
+
+
+
+
+
+
                         
                         <div id="tab-controls" class="settings-panel hidden flex-grow">
                             <div id="settings-pc">
@@ -418,7 +575,7 @@ img {
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.2.0</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.5.0</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -459,66 +616,99 @@ img {
         </div>
     </div>
 
-    <div id="profile-menu" class="overlay hidden bg-black/90 z-[70]">
-        <h2 class="title-text">YOUR PROFILE</h2>
-        <div class="gta-menu p-6 flex flex-col items-center">
+
+
+
+   <div id="profile-menu" class="overlay hidden bg-[#050508]/90 backdrop-blur-md z-[70]">
+        <!-- Modernized Container -->
+        <div class="w-full max-w-md bg-black/80 border border-cyan-500/40 rounded-xl shadow-[0_0_40px_rgba(34,211,238,0.15)] flex flex-col overflow-hidden relative">
             
-            <div class="relative cursor-pointer group mb-6 flex-shrink-0" onclick="if(!localStorage.getItem('ax_uid')) document.getElementById('pfp-upload').click()">
-                <img id="edit-pfp" src="" class="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white object-cover bg-gray-800">
-                <div id="pfp-change-overlay" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span class="text-white font-black text-xs uppercase">Change</span>
+            <!-- Tech Header -->
+            <div class="bg-gradient-to-r from-cyan-900/50 to-transparent p-5 border-b border-cyan-500/30 flex items-center justify-between">
+                <h2 class="text-xl font-black text-cyan-400 tracking-[0.2em] uppercase m-0" style="text-shadow: 0 0 10px rgba(34,211,238,0.5);">Operative Profile</h2>
+                <div class="text-[0.6rem] font-mono text-cyan-500/50">AX-OS v1.2</div>
+            </div>
+
+            <!-- Content Body -->
+            <div class="p-6 flex flex-col items-center">
+                <!-- PFP Avatar with Glow -->
+                <div class="relative cursor-pointer group mb-8 flex-shrink-0" onclick="if(!localStorage.getItem('ax_uid')) document.getElementById('pfp-upload').click()">
+                    <div class="absolute inset-0 bg-cyan-500 blur-md opacity-20 group-hover:opacity-50 transition-opacity rounded-full"></div>
+                    <img id="edit-pfp" src="" class="relative w-28 h-28 md:w-32 md:h-32 rounded-full border-2 border-cyan-400 object-cover bg-gray-900 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                    <div id="pfp-change-overlay" class="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border-2 border-cyan-400">
+                        <span class="text-cyan-300 font-black text-xs uppercase tracking-widest">Update</span>
+                    </div>
+                </div>
+                <input type="file" id="pfp-upload" accept="image/*" class="hidden">
+                
+                <!-- Inputs -->
+                <div class="w-full mb-5">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-[0.65rem] font-black text-cyan-500/70 uppercase tracking-widest">Callsign</label>
+                        <span id="name-changes-text" class="text-[0.6rem] text-gray-500 font-bold">Changes: <span id="name-changes-left" class="text-cyan-400">2</span></span>
+                    </div>
+                    <input type="text" id="edit-name-input" class="w-full bg-black border border-white/10 focus:border-cyan-400 text-white font-bold px-4 py-2.5 outline-none transition-colors rounded text-sm" maxlength="15">
+                </div>
+
+                <div class="w-full mb-8">
+                    <label class="block text-[0.65rem] font-black text-cyan-500/70 mb-1 uppercase tracking-widest">Network UID</label>
+                    <div id="edit-uid-display" class="w-full bg-white/5 border border-white/5 text-gray-400 font-mono px-4 py-2.5 rounded text-sm cursor-not-allowed">------</div>
+                </div>
+
+                <!-- AstraX Cloud Module -->
+                <div class="w-full mb-6 p-4 bg-gradient-to-br from-black to-cyan-950/30 border border-cyan-500/20 rounded-lg flex flex-col items-center shadow-inner relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                    <h3 class="text-[0.65rem] font-black text-cyan-400 tracking-widest uppercase mb-1">AstraX Network Sync</h3>
+                    <div id="ax-status" class="text-xs font-bold mb-4 text-gray-400 truncate w-full text-center">Local Guest Instance</div>
+                    
+                    <div id="ax-locked-warning" class="hidden text-[0.65rem] text-cyan-300 uppercase tracking-widest mb-3 flex items-center justify-center gap-1 bg-cyan-900/30 px-3 py-1 rounded-full border border-cyan-500/30">
+                        <span class="text-cyan-400">⚡</span> Identity Verified
+                    </div>
+                    
+                    <button id="btn-ax-modal" onclick="openAstraXModal()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-widest py-2.5 rounded transition-all shadow-[0_0_10px_rgba(34,211,238,0.2)]">Connect AstraX ID</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex w-full gap-3 mt-auto">
+                    <button class="flex-1 bg-transparent hover:bg-white/5 border border-white/20 text-gray-300 font-black text-xs uppercase tracking-widest py-3 rounded transition-colors" onclick="closeMenu('profile-menu')">Abort</button>
+                    <button id="btn-save-profile" class="flex-1 bg-white hover:bg-gray-200 text-black font-black text-xs uppercase tracking-widest py-3 rounded transition-colors shadow-lg">Save Profile</button>
                 </div>
             </div>
-            <input type="file" id="pfp-upload" accept="image/*" class="hidden">
-            
-            <div class="w-full mb-4">
-                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Display Name <span id="name-changes-text">(Changes Left: <span id="name-changes-left">2</span>)</span></label>
-                <input type="text" id="edit-name-input" class="gta-input" maxlength="15">
-            </div>
-            <div class="w-full mb-6">
-                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Account UID</label>
-                <div id="edit-uid-display" class="gta-input bg-black/80 text-gray-500 cursor-not-allowed">------</div>
-            </div>
-
-            <div class="w-full mt-auto mb-6 p-4 bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border border-blue-500/30 rounded-lg flex flex-col items-center shadow-lg relative overflow-hidden flex-shrink-0">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400"></div>
-                <h3 class="text-[0.65rem] font-black text-cyan-400 tracking-widest uppercase mb-1">AstraX Cloud Network</h3>
-                <div id="ax-status" class="text-sm font-bold mb-4 text-gray-300 truncate w-full text-center">Playing as Local Guest</div>
-                <div id="ax-locked-warning" class="hidden text-[0.65rem] text-gray-400 uppercase tracking-widest mb-3 flex items-center justify-center gap-1"><span class="text-green-400">✔</span> Identity Locked</div>
-                <button id="btn-ax-modal" onclick="openAstraXModal()" class="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-black uppercase tracking-widest py-3 rounded transition-all">Link AstraX ID</button>
-            </div>
-
-            <div id="btn-save-profile" class="gta-btn bg-white text-black justify-center mb-3 rounded-md flex-shrink-0">Save Profile</div>
-            <div class="gta-btn justify-center border border-white/20 rounded-md flex-shrink-0" onclick="closeMenu('profile-menu')">Cancel</div>
         </div>
     </div>
 
     <!-- AstraX ID Link Modal -->
-    <div id="astrax-link-modal" class="overlay hidden bg-black/95 z-[110] backdrop-blur-xl flex-col justify-center items-center">
-        <div class="w-full max-w-sm bg-[#0a0c14] border border-white/10 rounded-xl shadow-[0_0_50px_rgba(34,211,238,0.1)] overflow-hidden">
-            <div class="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 p-6 text-center border-b border-white/10">
-                <h2 class="text-xl font-black text-white tracking-widest uppercase mb-1">AstraX Connect</h2>
-                <p class="text-[0.65rem] text-cyan-400 font-bold uppercase tracking-widest">Cross-Platform Sync</p>
+    <div id="astrax-link-modal" class="overlay hidden bg-[#050508]/95 z-[110] backdrop-blur-xl flex-col justify-center items-center">
+        <div class="w-full max-w-sm bg-[#0a0c14] border-2 border-cyan-500/50 rounded-xl shadow-[0_0_50px_rgba(34,211,238,0.2)] overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-cyan-900/60 to-blue-900/60 p-6 text-center border-b border-cyan-500/30">
+                <h2 class="text-xl font-black text-white tracking-widest uppercase mb-1">AstraX Secure ID</h2>
+                <p class="text-[0.65rem] text-cyan-400 font-bold uppercase tracking-widest">Cross-Platform Authentication</p>
             </div>
             <div class="p-6">
-                <p class="text-xs text-gray-400 text-center mb-6 leading-relaxed">Secure your progression, inventory, and friends list to your permanent AstraX identity.</p>
+                <p class="text-xs text-gray-400 text-center mb-4 leading-relaxed">Authenticate to sync progression, inventory, and telemetry data to the cloud.</p>
+                
+                <!-- NEW ERROR BOX -->
+                <div id="ax-error-box" class="hidden mb-4 bg-red-900/30 border border-red-500/50 rounded p-3 text-center transition-all">
+                    <span id="ax-error-text" class="text-red-400 text-[0.65rem] font-black uppercase tracking-widest">Invalid Credentials</span>
+                </div>
+
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-[0.6rem] font-black text-gray-500 uppercase tracking-widest mb-1">Email</label>
-                        <input type="email" id="ax-email" class="w-full bg-black/50 border border-white/10 rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="player@astrax.com">
+                        <label class="block text-[0.6rem] font-black text-cyan-500 uppercase tracking-widest mb-1">Email Address</label>
+                        <input type="email" id="ax-email" class="w-full bg-black/80 border border-cyan-900 rounded px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder-gray-600" placeholder="operative@astrax.com">
                     </div>
                     <div>
-                        <label class="block text-[0.6rem] font-black text-gray-500 uppercase tracking-widest mb-1">Password</label>
-                        <input type="password" id="ax-pass" class="w-full bg-black/50 border border-white/10 rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="••••••••">
+                        <label class="block text-[0.6rem] font-black text-cyan-500 uppercase tracking-widest mb-1">Passcode</label>
+                        <input type="password" id="ax-pass" class="w-full bg-black/80 border border-cyan-900 rounded px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder-gray-600" placeholder="••••••••">
                     </div>
                 </div>
                 <div class="mt-8 space-y-3">
-                    <button id="btn-ax-link" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest text-xs py-3.5 rounded transition-colors" onclick="submitAstraXLink()">Initialize Link</button>
-                    <a href="https://astraxgames.com" target="_blank" class="block w-full text-center text-[0.7rem] text-gray-400 hover:text-white uppercase tracking-widest font-bold py-2 transition-colors">Create New ID</a>
+                    <button id="btn-ax-link" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest text-xs py-3.5 rounded transition-colors shadow-[0_0_15px_rgba(34,211,238,0.4)]" onclick="submitAstraXLink()">Authenticate & Link</button>
+                    <a href="https://astraxgames.com" target="_blank" class="block w-full text-center text-[0.65rem] text-cyan-500/50 hover:text-cyan-400 uppercase tracking-widest font-bold py-2 transition-colors">Register New Identity</a>
                 </div>
             </div>
-            <div class="bg-white/5 p-3 text-center border-t border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onclick="closeAstraXModal()">
-                <span class="text-[0.65rem] text-gray-300 font-black uppercase tracking-widest">Cancel / Return</span>
+            <div class="bg-black/50 p-4 text-center border-t border-cyan-900 cursor-pointer hover:bg-white/5 transition-colors" onclick="closeAstraXModal()">
+                <span class="text-[0.65rem] text-gray-400 hover:text-white font-black uppercase tracking-widest transition-colors">Abort Sequence</span>
             </div>
         </div>
     </div>
@@ -716,9 +906,9 @@ img {
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getDatabase, ref, set, get, update, push, onValue, onChildAdded, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getDatabase, ref, set, get, update, push, onValue, onChildAdded, onChildRemoved, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
-        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getDatabase, ref, set, get, update, push, onValue, onChildAdded, onDisconnect, remove };
+        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getDatabase, ref, set, get, update, push, onValue, onChildAdded, onChildRemoved, onDisconnect, remove };
     </script>
 
     <script>
@@ -782,19 +972,114 @@ img {
         document.querySelectorAll('.overlay').forEach(el => { if(el.id !== 'initial-loader' && el.id !== 'hud' && el.id !== 'invite-popup' && el.id !== 'mmo-victory-screen' && el.id !== 'astrax-link-modal') el.classList.add('hidden') });
         document.getElementById(id).classList.remove('hidden');
     }
+
+
+
+
+
     function closeMenu(id) {
         document.getElementById(id).classList.add('hidden');
         document.getElementById('main-menu-layer').classList.remove('hidden');
     }
-    
+
+// --- 1. OPEN MODAL FUNCTION ---
     window.openAstraXModal = () => {
         document.getElementById('astrax-link-modal').classList.remove('hidden');
         document.getElementById('astrax-link-modal').classList.add('flex');
     };
+
+    // --- 2. CLOSE MODAL FUNCTION ---
     window.closeAstraXModal = () => {
         document.getElementById('astrax-link-modal').classList.add('hidden');
         document.getElementById('astrax-link-modal').classList.remove('flex');
     };
+
+
+
+
+
+// --- 3. AUTHENTICATE ID FUNCTION (REAL CLOUDFLARE SYNC) ---
+    window.submitAstraXLink = async () => {
+        const email = document.getElementById('ax-email').value.trim();
+        const pass = document.getElementById('ax-pass').value;
+        const errorBox = document.getElementById('ax-error-box');
+        const errorText = document.getElementById('ax-error-text');
+        const btn = document.getElementById('btn-ax-link');
+
+        // Reset errors before checking
+        errorBox.classList.add('hidden');
+        
+        // Validation Checks
+        if (!email || !pass) {
+            errorText.innerText = "Error: All fields are required.";
+            errorBox.classList.remove('hidden');
+            return;
+        }
+
+        // Loading State
+        const originalText = btn.innerText;
+        btn.innerText = "CONNECTING TO ASTRAX CLOUD...";
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        try {
+            // Send the real request to your Cloudflare Worker
+            const WORKER_URL = 'https://astrax-auth.ranjanroushan5.workers.dev';
+            const res = await fetch(WORKER_URL, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'login', email: email, password: pass })
+            });
+            
+            const data = await res.json();
+
+            if (data.success) {
+                // 1. Lock the ID in the browser storage (Cross-Progression)
+                localStorage.setItem('ax_uid', data.uid);
+                localStorage.setItem('ax_email', data.email);
+                localStorage.setItem('ax_name', data.name);
+                localStorage.setItem('ax_pfp', data.pfp || DEFAULT_PFP);
+                
+                // 2. Overwrite the temporary Guest Profile in the active game memory
+                userProfile.name = data.name;
+                userProfile.uidNum = data.uid.substring(0, 6).toUpperCase(); 
+                userProfile.pfp = data.pfp || DEFAULT_PFP;
+                
+                // 3. Force sync the true identity to Firebase so everyone in the multiplayer room sees the change instantly
+                if (myDBUid && db && window.FB) {
+                    await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), {
+                        name: userProfile.name,
+                        pfp: userProfile.pfp
+                    });
+                }
+                
+                gtaNotify("AstraX ID Synced Successfully!", false);
+                closeAstraXModal();
+                updateProfileUI(); 
+                
+            } else {
+                // Handle wrong passwords / missing accounts
+                errorText.innerText = data.error || "Access Denied: Invalid Credentials.";
+                errorBox.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorText.innerText = "Network Error. Cloudflare unreachable.";
+            errorBox.classList.remove('hidden');
+            console.error("AstraX Sync Error:", e);
+        }
+
+        // Reset the button state
+        btn.innerText = originalText;
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        document.getElementById('ax-pass').value = ''; 
+    };
+
+
+
+
+
+    
     
     const MY_FIREBASE_CONFIG = { apiKey: "AIzaSyAXwPgUZosfl8A8b7xdyOBhRvb6OhS1b5U", authDomain: "astrax-games.firebaseapp.com", databaseURL: "https://astrax-games-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "astrax-games", storageBucket: "astrax-games.firebasestorage.app", messagingSenderId: "34977949864", appId: "1:34977949864:web:80dccbf1b3230e8bf03a9d", measurementId: "G-JXLYFP05T4" };
     
@@ -827,6 +1112,18 @@ img {
 
         const app = window.FB.initializeApp(MY_FIREBASE_CONFIG);
         db = window.FB.getDatabase(app); auth = window.FB.getAuth(app);
+
+         // FATHER: 24-Hour Master Reset (Midnight GMT)
+        const resetRef = window.FB.ref(db, 'server/lastReset');
+        window.FB.get(resetRef).then(snap => {
+            const todayGMT = new Date().toISOString().split('T')[0]; // Gets current Date in GMT
+            if (snap.val() !== todayGMT) {
+                window.FB.remove(window.FB.ref(db, 'session/worlds')); // Nukes every maze globally!
+                window.FB.set(resetRef, todayGMT);
+            }
+        });
+
+
         
         try {
             const res = await fetch('https://astrax-auth.ranjanroushan5.workers.dev/store');
@@ -840,7 +1137,7 @@ img {
         }
         
         window.FB.onAuthStateChanged(auth, async (user) => {
-            clearTimeout(connectionTimeout); // Successfully connected! Cancel the timeout.
+            clearTimeout(connectionTimeout); 
             if (user) { 
                 currentUser = user; 
                 myDBUid = localStorage.getItem('ax_uid') || currentUser.uid;
@@ -850,14 +1147,27 @@ img {
                 
                 myStatusRef = window.FB.ref(db, 'users/' + myDBUid + '/status');
                 window.FB.onDisconnect(myStatusRef).set('Offline');
-                await loadUserProfile(); 
-                listenForInvites();
-                listenForGlobalNotices();
+                
+                try {
+                    await loadUserProfile(); 
+                    listenForInvites();
+                    listenForGlobalNotices();
+                } catch (error) {
+                    // FATHER: This catches the red "Permission denied" quota error from your screenshot!
+                    console.error("Database Quota Reached:", error);
+                    document.getElementById('initial-loader').classList.add('hidden');
+                    document.getElementById('server-down-screen').classList.remove('hidden');
+                    document.getElementById('server-down-screen').classList.add('flex');
+                }
             } else { 
-                await window.FB.signInAnonymously(auth); 
+                window.FB.signInAnonymously(auth).catch((error) => {
+                    document.getElementById('initial-loader').classList.add('hidden');
+                    document.getElementById('server-down-screen').classList.remove('hidden');
+                    document.getElementById('server-down-screen').classList.add('flex');
+                });
             }
         });
-    }
+}
 
     // NEW: Functions to handle the offline UI and redirect
     window.showOfflinePrompt = function() {
@@ -892,9 +1202,13 @@ img {
     async function loadUserProfile() {
         const userRef = window.FB.ref(db, 'users/' + myDBUid + '/profile');
         const snap = await window.FB.get(userRef);
+
+// FATHER: Detect if they are playing the downloaded PC version!
+            const isDesktopExe = navigator.userAgent.toLowerCase().includes('electron') || window.location.protocol === 'file:';
         if (snap.exists()) {
             const val = snap.val();
             userProfile = { ...userProfile, ...val };
+            window.FB.update(userRef, { platform: isDesktopExe ? 'EXE' : 'WEB' });
             
             if(!userProfile.inventory) userProfile.inventory = { weapons: ['knife'], chars: ['default'] };
             if(!userProfile.inventory.chars) userProfile.inventory.chars = ['default'];
@@ -912,7 +1226,23 @@ img {
         } else {
             const randomID = Math.floor(100000 + Math.random() * 900000);
             const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
-            userProfile = { name: generateCoolName(), uidNum: randomID, changesLeft: 2, pfp: DEFAULT_PFP, equippedWeapon: "knife", equippedChar: "default", level: localLevel, coins: 0, dailyAdsWatched: 0, lastAdDate: "", inventory: { weapons: ['knife'], chars: ['default'] } };
+            
+           
+
+            userProfile = { 
+                name: generateCoolName(), 
+                uidNum: randomID, 
+                platform: isDesktopExe ? 'EXE' : 'WEB', // <--- Tags the player permanently!
+                changesLeft: 2, 
+                pfp: DEFAULT_PFP, 
+                equippedWeapon: "knife", 
+                equippedChar: "default", 
+                level: localLevel, 
+                coins: 0, 
+                dailyAdsWatched: 0, 
+                lastAdDate: "", 
+                inventory: { weapons: ['knife'], chars: ['default'] } 
+            };
             
             await window.FB.set(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
             await window.FB.set(window.FB.ref(db, 'uids/' + randomID), myDBUid);
@@ -1557,6 +1887,9 @@ img {
 
 
 
+    window.sprayGarbageCollector = null;
+    window.sprayRemoveUnsub = null;
+
     async function joinOnlineLobby(specificRoomId = null) {
         document.getElementById('main-menu-layer').classList.add('hidden');
         const loadScreen = document.getElementById('mmo-loading-screen');
@@ -1569,50 +1902,31 @@ img {
 
         gameMode = 'mmo'; document.getElementById('btn-hud-mic').classList.remove('hidden'); 
 
-        // FATHER: Firebase Bypass - Count players globally, assign a World tag locally!
         if (specificRoomId) {
             currentMmoRoom = specificRoomId;
         } else {
             let foundRoom = null;
-            try {
-                const snap = await window.FB.get(window.FB.ref(db, 'session/players'));
-                const allPlayers = snap.val() || {};
-                let worldCounts = {};
-                for (let i = 1; i <= 15; i++) worldCounts['world_' + i] = 0;
-                
-                for (let id in allPlayers) {
-                    let w = allPlayers[id].world;
-                    if (w) worldCounts[w] = (worldCounts[w] || 0) + 1;
-                }
-                
-                for (let i = 1; i <= 15; i++) {
-                    if (worldCounts['world_' + i] < 30) { foundRoom = 'world_' + i; break; }
-                }
-            } catch(e) {
-                console.warn("Could not fetch global players, defaulting to world_1");
+            for (let i = 1; i <= 15; i++) {
+                const snap = await window.FB.get(window.FB.ref(db, `session/worlds/world_${i}/players`));
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                if (count < 30) { foundRoom = `world_${i}`; break; }
             }
             currentMmoRoom = foundRoom || 'world_overflow_' + Math.random().toString(36).substring(2, 10);
         }
 
-        // FATHER: We write back to the completely UNLOCKED 'session' node!
-        const playersRef = window.FB.ref(db, 'session/players'); 
-        const myPlayerRef = window.FB.ref(db, `session/players/${mySessionId}`);
+        const worldPlayersRef = window.FB.ref(db, `session/worlds/${currentMmoRoom}/players`); 
+        const myPlayerRef = window.FB.ref(db, `session/worlds/${currentMmoRoom}/players/${mySessionId}`);
         window.FB.onDisconnect(myPlayerRef).remove();
         setMyStatus('In-Game');
 
+       // FATHER: Set up the Instant Empty Wipe!
+        let myRoomDisconnectRef = window.FB.onDisconnect(window.FB.ref(db, `session/worlds/${currentMmoRoom}`));
+        let mySpraysDisconnectRef = window.FB.onDisconnect(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays`));
         let isInitialSync = true; 
         
-        onlineUnsub = window.FB.onValue(playersRef, (snap) => {
-            const rawData = snap.val() || {}; 
-            
-            // FATHER: Only load players who share your exact World Tag!
-            const data = {};
-            for (let id in rawData) {
-                if (rawData[id].world === currentMmoRoom) data[id] = rawData[id];
-            }
-            
-            let count = 0; const activeIds = Object.keys(data); 
-            activeIds.forEach(id => { count++; });
+        onlineUnsub = window.FB.onValue(worldPlayersRef, (snap) => {
+            const data = snap.val() || {}; 
+            let count = Object.keys(data).length;
             
             if(!onlineSyncInterval && count >= 30 && isInitialSync) { 
                 gtaNotify("Target World Full! Rerouting...", true); 
@@ -1620,16 +1934,29 @@ img {
                 joinOnlineLobby(); 
                 return; 
             }
-            activePlayerCount = count === 0 ? 1 : count; document.getElementById('hud-players').innerText = `${activePlayerCount}/30`;
+            activePlayerCount = count === 0 ? 1 : count; 
+            document.getElementById('hud-players').innerText = `${activePlayerCount}/30`;
 
-            activeIds.forEach(id => {
+            // FATHER: Possibility 3 - If alone, closing the browser nukes the sprays and the room!
+            if (activePlayerCount === 1) {
+                mySpraysDisconnectRef.remove();
+                myRoomDisconnectRef.remove();
+            } else {
+                mySpraysDisconnectRef.cancel();
+                myRoomDisconnectRef.cancel();
+            }
+
+            Object.keys(data).forEach(id => {
+
                 const pData = data[id]; if(id === mySessionId) return;
                 if(!remotePlayers[id]) { 
                     if (!isInitialSync) gtaNotify(`${pData.name || 'Player'} joined`); 
                     createHologram(id, pData.wpn, pData.char, pData.name); 
                     if(voiceChat.isActive) voiceChat.createPeer(id, true); 
                 } 
-                else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
+                else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { 
+                    applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); 
+                }
                 remotePlayers[id] = pData;
             });
             for(let id in remotePlayers) { if(!data[id]) { gtaNotify(`${remotePlayers[id].name || 'Player'} left`); removeHologram(id); delete remotePlayers[id]; } }
@@ -1639,20 +1966,44 @@ img {
 
         onlineSyncInterval = setInterval(() => {
             if(!myDBUid) return;
-            window.FB.set(myPlayerRef, { world: currentMmoRoom, x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
+            window.FB.set(myPlayerRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
         }, 150);
-
-        const spraysRef = window.FB.ref(db, `session/sprays`);
-        sprayUnsub = window.FB.onChildAdded(spraysRef, (snap) => { 
-            let sData = snap.val();
-            // FATHER: Only draw sprays that belong to our World!
-            if (sData && (sData.world === currentMmoRoom || !sData.world)) {
-                addSprayToScene(sData); 
-            }
-        });
 
         await new Promise(resolve => setTimeout(resolve, 5000));
         await startGamePlay();
+
+        const spraysRef = window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays`);
+        
+        // FATHER: Add paint to the wall
+        sprayUnsub = window.FB.onChildAdded(spraysRef, (snap) => { 
+            let sData = snap.val();
+            if (sData) addSprayToScene(sData, snap.key); 
+        });
+        
+        // FATHER: Erase paint from the wall instantly when Firebase deletes it!
+        window.sprayRemoveUnsub = window.FB.onChildRemoved(spraysRef, (snap) => {
+            removeSprayFromScene(snap.key);
+        });
+
+        // FATHER: The Automated Garbage Collector (Possibility 1 & 2)
+        window.sprayGarbageCollector = setInterval(() => {
+            const now = Date.now();
+            sprayMeshes.forEach(mesh => {
+                if(!mesh.userData || !mesh.userData.ts) return;
+                const ts = mesh.userData.ts;
+                const sprayId = mesh.userData.sprayId;
+                const isOwnerPresent = (mesh.userData.uid === mySessionId) || !!remotePlayers[mesh.userData.uid];
+                
+                // Possibility 1: 15-Minute Expiration for Active Players
+                if (isOwnerPresent && (now - ts > 15 * 60 * 1000)) {
+                    window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays/${sprayId}`));
+                }
+                // Possibility 2: 60-Minute Expiration for Ghost Paint
+                else if (!isOwnerPresent && (now - ts > 60 * 60 * 1000)) {
+                    window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays/${sprayId}`));
+                }
+            });
+        }, 10000); // Scans the walls every 10 seconds
 
         loadScreen.style.opacity = '0';
         setTimeout(() => {
@@ -1661,7 +2012,6 @@ img {
             loadScreen.style.opacity = '1'; 
         }, 300);
     }
-
 
 
 
@@ -1837,15 +2187,34 @@ function startBotMatch() {
     function updateBotAI(dt) {
         if(!isBotMatch || !botData || pvpState !== 'playing') return;
 
-        // Father: We added attackTimer to track the arm animation cleanly!
-        if(botData.velocityY === undefined) {
+
+
+       if(botData.velocityY === undefined) {
             botData.velocityY = 0; botData.isGrounded = true; botData.attackCooldown = 0; botData.attackTimer = 0; botData.isDeadTimer = 0; botPathTimer = 0;
         }
 
+        // --- NEW: GRAVITY AND WALL COLLISION ALWAYS RUN (EVEN WHEN DEAD) ---
+        let botGroundY = (botData.hp <= 0) ? 0.3 : 0;
+        botData.y += botData.velocityY * dt;
+        if (botData.y > botGroundY) {
+            botData.velocityY -= 35 * dt; 
+            botData.isGrounded = false;
+        } else {
+            botData.y = botGroundY;
+            botData.velocityY = 0;
+            botData.isGrounded = true;
+        }
+
+        let botRadius = (botData.hp <= 0) ? 1.2 : PLAYER_RADIUS;
+        const resolvedBot = resolveOverlap(botData.x, botData.z, botRadius);
+        botData.x = resolvedBot.x;
+        botData.z = resolvedBot.z;
+        // -------------------------------------------------------------------
+
         // 1. PROFESSIONAL RESPAWN TIMER
         if (botData.hp <= 0) {
-            botData.isAttacking = false; // Reset the arm instantly if it dies!
-            if (botData.isDeadTimer === 0) botData.isDeadTimer = 3.0; // Stay dead for 3s
+            botData.isAttacking = false; 
+            if (botData.isDeadTimer === 0) botData.isDeadTimer = 3.0; 
             botData.isDeadTimer -= dt;
             if (botData.isDeadTimer <= 0) {
                 botData.hp = 100;
@@ -1858,17 +2227,7 @@ function startBotMatch() {
             return; // Dead bots don't move or think!
         }
 
-        // 2. BOT GRAVITY & JUMPING DODGE
-        botData.y += botData.velocityY * dt;
-        if (botData.y > 0) {
-            botData.velocityY -= 35 * dt; 
-            botData.isGrounded = false;
-        } else {
-            botData.y = 0;
-            botData.velocityY = 0;
-            botData.isGrounded = true;
-        }
-
+        // 2. BOT JUMPING DODGE
         let distToPlayer = Math.sqrt(Math.pow(botData.x - player.position.x, 2) + Math.pow(botData.z - player.position.z, 2));
 
         if (botData.isGrounded && Math.random() < 0.02 && distToPlayer < 8 && !keys.crouch) {
@@ -1903,10 +2262,12 @@ function startBotMatch() {
             botData.rot = Math.atan2(player.position.x - botData.x, player.position.z - botData.z);
         }
 
-        // FATHER: THE WALL HACK FIX! The bot now obeys the exact same wall collision laws as you do!
-        const resolvedBot = resolveOverlap(botData.x, botData.z);
-        botData.x = resolvedBot.x;
-        botData.z = resolvedBot.z;
+
+
+
+
+
+
         
         // 5. ENGINE-LEVEL ATTACK STATE MACHINE (NO SETTIMEOUTS!)
         if (botData.attackCooldown > 0) botData.attackCooldown -= dt;
@@ -2061,8 +2422,20 @@ function startBotMatch() {
         const flash = document.getElementById('damage-overlay'); 
         flash.style.opacity = '1'; 
         if(audioInitialized && window.gameSettings.sound.sfx > 0) hitSynth.triggerAttackRelease('C3', '8n'); 
-        screenShakeTime = 0.3; 
-        lastDamageTime = Date.now(); // FATHER: Resets the 6-second heal timer on every hit!
+        screenShakeTime = 0.3;
+lastDamageTime = Date.now();
+
+const vignette = document.getElementById('cinematic-vignette');
+
+if(vignette) {
+    vignette.style.transition = 'opacity .08s ease';
+    vignette.style.opacity = '1';
+
+    setTimeout(() => {
+        vignette.style.transition = 'opacity .35s ease';
+        vignette.style.opacity = '.75';
+    }, 120);
+}
         setTimeout(() => { flash.style.opacity = '0'; }, 200); 
     }
     
@@ -2086,14 +2459,33 @@ function startBotMatch() {
     function leaveOnlineSession() {
         voiceChat.stopMic(); document.getElementById('btn-hud-mic').classList.add('hidden');
         if(onlineSyncInterval) clearInterval(onlineSyncInterval); if(onlineUnsub) onlineUnsub(); if(sprayUnsub) sprayUnsub(); if(pvpStateUnsub) pvpStateUnsub();
+        
+        if(window.sprayGarbageCollector) clearInterval(window.sprayGarbageCollector);
+        if(window.sprayRemoveUnsub) window.sprayRemoveUnsub();
+
         onlineSyncInterval = null; onlineUnsub = null; sprayUnsub = null; pvpStateUnsub = null;
-        if(myDBUid && db) {
-            if(gameMode === 'mmo') window.FB.remove(window.FB.ref(db, `session/players/${mySessionId}`)).catch(e=>{});
+        
+        
+            if(myDBUid && db) {
+            if(gameMode === 'mmo' && currentMmoRoom) {
+                    // FATHER: Instant Wipe Logic Check! Explicitly nuke the sprays!
+                    if (activePlayerCount <= 1) {
+                        // FORCE DELETE EVERY INDIVIDUAL SPRAY ONE BY ONE TO GUARANTEE DELETION
+                        sprayMeshes.forEach(mesh => {
+                            if(mesh.userData && mesh.userData.sprayId) {
+                                window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays/${mesh.userData.sprayId}`));
+                            }
+                        });
+                        window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays`));
+                        window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}`));
+                    } else {
+                        window.FB.remove(window.FB.ref(db, `session/worlds/${currentMmoRoom}/players/${mySessionId}`)).catch(e=>{});
+                    }
+                }
             if(gameMode === 'pvp_1v1' && currentPvPRoom) window.FB.remove(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}`)).catch(e=>{});
             window.FB.remove(window.FB.ref(db, 'session/signals/' + mySessionId)).catch(e=>{});
         }
 
-        // Reset game state & health
         gameMode = 'campaign'; 
         setMyStatus('Online'); 
         myHP = 100;
@@ -2101,7 +2493,6 @@ function startBotMatch() {
         isBotMatch = false;
         botData = null;
 
-        // Reset HUD and red damage overlay
         document.getElementById('damage-overlay').style.opacity = '0';
         updateHPBar();
         document.getElementById('pvp-scoreboard').classList.add('hidden'); 
@@ -2114,21 +2505,25 @@ function startBotMatch() {
         player.rotation.z = 0; 
         mmoVictoryState = false;
         clearPowerups();
+        
+        // FATHER: Destroy old paint graphics so they don't bleed into Campaign mode!
+        sprayMeshes.forEach(m => scene.remove(m)); 
+        sprayMeshes = [];
     }
 
     function createNameTag(name) {
-        const c = document.createElement('canvas'); c.width = 512; c.height = 128; const ctx = c.getContext('2d');
+        // FATHER: Doubled the canvas width to 1024 to fit massive names without cutting off!
+        const c = document.createElement('canvas'); c.width = 1024; c.height = 128; const ctx = c.getContext('2d');
         ctx.font = '900 60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        // Add a thick black outline so it's readable against any background
-        ctx.lineWidth = 8; ctx.strokeStyle = '#000000'; ctx.strokeText(name.toUpperCase(), 256, 64);
-        ctx.fillStyle = '#22d3ee'; ctx.fillText(name.toUpperCase(), 256, 64);
+        ctx.lineWidth = 8; ctx.strokeStyle = '#000000'; ctx.strokeText(name.toUpperCase(), 512, 64);
+        ctx.fillStyle = '#22d3ee'; ctx.fillText(name.toUpperCase(), 512, 64);
         
         const tex = new THREE.CanvasTexture(c);
-        // depthTest: false allows tags to be seen through walls in the giant MMO maze
         const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }); 
         const sprite = new THREE.Sprite(mat); 
-        sprite.scale.set(2.0, 0.5, 1); 
-        sprite.position.y = 3.2; // Float slightly above the head
+        // FATHER: Doubled the visual scale from 2.0 to 4.0 so it matches the new wide canvas!
+        sprite.scale.set(4.0, 0.5, 1); 
+        sprite.position.y = 3.2; 
         return sprite;
     }
 
@@ -2146,12 +2541,16 @@ function startBotMatch() {
     customAudio.addEventListener('ended', () => { if (customPlaylist.length > 1) { currentPlaylistIndex = (currentPlaylistIndex + 1) % customPlaylist.length; customAudio.src = customPlaylist[currentPlaylistIndex]; playCustomAudio(); } else customAudio.play(); });
     function playCustomAudio() { if(customAudio.src && customAudio.src !== window.location.href) { let p = customAudio.play(); if (p !== undefined) p.catch(e => {}); } }
 
-    let defaultSettings = { display: { resolution: 'native', brightness: 100 }, graphics: { quality: 'custom', scale: 100, shadows: 'high', bloom: 'high', anisotropy: '16', fps: 'uncapped' }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
+    let defaultSettings = { display: { resolution: 'native', brightness: 100, fov: 75 }, graphics: { quality: 'custom', renderTech: 'ax', visionProfile: 'native', visionShadows: 'follow', upscaler: 'off', shadows: 'high', bloom: 'high', anisotropy: '16', fps: 'vsync', showFPS: false }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
     window.gameSettings = defaultSettings;
 
     try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
     if(!window.gameSettings.controls.crouch) window.gameSettings.controls.crouch = 'c';
     if(!window.gameSettings.controls.sensitivity) window.gameSettings.controls.sensitivity = 50;
+    if(typeof window.gameSettings.graphics.showFPS !== 'boolean') window.gameSettings.graphics.showFPS = false;
+    if(!window.gameSettings.graphics.renderTech) window.gameSettings.graphics.renderTech = 'ax';
+    if(!window.gameSettings.graphics.visionProfile) window.gameSettings.graphics.visionProfile = 'native';
+    if(!window.gameSettings.graphics.visionShadows) window.gameSettings.graphics.visionShadows = 'follow';
     mouseSensitivity = window.gameSettings.controls.sensitivity * 0.00004;
     
     window.saveSettings = () => { localStorage.setItem('maze_settings', JSON.stringify(window.gameSettings)); };
@@ -2290,11 +2689,16 @@ function startBotMatch() {
     const _target = new THREE.Vector3();
     const _dirToOpp = new THREE.Vector3();
 
-    function addSprayToScene(data) {
-        if (!data || !data.type || !data.ts || Date.now() - data.ts > 3600000) return; 
+
+
+
+
+
+
+
+    function addSprayToScene(data, sprayId) {
+        if (!data || !data.type) return; 
         const mat = data.type === 'cross' ? crossMat : tickMat; 
-        
-        // NEW: Use a subdivided plane so it can bend around corners!
         const geo = new THREE.PlaneGeometry(1.5, 1.5, 4, 4); 
         const mesh = new THREE.Mesh(geo, mat); 
         mesh.position.set(data.px, data.py, data.pz);
@@ -2303,7 +2707,6 @@ function startBotMatch() {
         mesh.lookAt(mesh.position.clone().add(norm)); 
         mesh.updateMatrixWorld();
 
-        // Calculate where the spray was shot from (fallback for older network data)
         const projOrigin = new THREE.Vector3(data.ox, data.oy, data.oz);
         if(data.ox === undefined) projOrigin.set(data.px + data.nx*2, data.py + data.ny*2, data.pz + data.nz*2);
 
@@ -2312,20 +2715,14 @@ function startBotMatch() {
         const rayDir = new THREE.Vector3();
         const decalRay = new THREE.Raycaster();
 
-        // Shrink-wrap every vertex to the walls
         for(let i = 0; i < posAttr.count; i++) {
             vWorld.fromBufferAttribute(posAttr, i);
             mesh.localToWorld(vWorld); 
-
-            // Shoot ray from projection origin through the un-bent vertex
             rayDir.subVectors(vWorld, projOrigin).normalize();
             decalRay.set(projOrigin, rayDir);
-            
             const hits = decalRay.intersectObjects(wallsGroup.children);
             if(hits.length > 0) {
-                // Prevent infinite stretching if it shoots through an empty gap
                 if(hits[0].distance < projOrigin.distanceTo(mesh.position) + 2.0) {
-                    // Snap vertex to the wall and pull it out 0.015 to prevent Z-fighting
                     vWorld.copy(hits[0].point).addScaledVector(hits[0].face.normal, 0.015);
                     mesh.worldToLocal(vWorld);
                     posAttr.setXYZ(i, vWorld.x, vWorld.y, vWorld.z);
@@ -2334,15 +2731,27 @@ function startBotMatch() {
         }
         geo.computeVertexNormals();
 
+        // FATHER: Attaches the timers directly to the 3D Paint Object!
+        mesh.userData = { sprayId: sprayId, uid: data.uid, ts: data.ts };
         scene.add(mesh); sprayMeshes.push(mesh);
     }
+
+    function removeSprayFromScene(sprayId) {
+        const index = sprayMeshes.findIndex(m => m.userData && m.userData.sprayId === sprayId);
+        if(index !== -1) {
+            scene.remove(sprayMeshes[index]);
+            sprayMeshes.splice(index, 1);
+        }
+    }
     
+
+
+
+
     const raycaster = new THREE.Raycaster();
     function sprayPaint(type) {
-        if(!isPlaying || isPaused || isDead) return;
-        if(gameMode === 'pvp_1v1') { return; }
+        if(!isPlaying || isPaused || isDead || gameMode === 'pvp_1v1') return;
         
-        // NEW: Instantly snap character's body to face the camera direction
         player.rotation.y = camAzimuth - Math.PI;
 
         _origin.copy(player.position); _origin.y += 1.5;
@@ -2350,14 +2759,13 @@ function startBotMatch() {
         raycaster.set(_origin, _dir); 
         const hits = raycaster.intersectObjects(wallsGroup.children);
         
-       if(hits.length > 0 && hits[0].distance < 4.0) {
-            isSpraying = true; sprayTimer = 0; // Trigger hand animation
+        if(hits.length > 0 && hits[0].distance < 4.0) {
+            isSpraying = true; sprayTimer = 0; 
             if(window.gameSettings.sound.sfx > 0) { spraySound.currentTime = 0; spraySound.play().catch(e=>{}); }
             const hit = hits[0]; 
             let px = hit.point.x, py = hit.point.y, pz = hit.point.z;
             const nx = hit.face.normal.x, ny = hit.face.normal.y, nz = hit.face.normal.z;
 
-            // --- FATHER: THIS PREVENTS EDGE OVERHANG! ---
             const dHalf = 0.75; 
             if (Math.abs(nx) > 0.5) { 
                 let cz = Math.round(pz / CELL_SIZE) * CELL_SIZE;
@@ -2367,18 +2775,20 @@ function startBotMatch() {
                 px = Math.max(cx - 1.5 + dHalf, Math.min(cx + 1.5 - dHalf, px));
             }
             py = Math.max(dHalf, Math.min(3.9 - dHalf, py));
-            // ------------------------------------------
 
+            const sprayId = Math.random().toString(36).substring(2, 10);
             const sprayData = { 
-                world: currentMmoRoom, // FATHER: Tag the spray so it stays in this specific world!
-                px: px, py: py, pz: pz, 
-                nx: nx, ny: ny, nz: nz, 
+                uid: mySessionId, // FATHER: Tags the paint to the specific player!
+                world: currentMmoRoom, 
+                px: px, py: py, pz: pz, nx: nx, ny: ny, nz: nz, 
                 ox: _origin.x, oy: _origin.y, oz: _origin.z, 
                 type: type, ts: Date.now() 
             };
-            if(gameMode === 'mmo' && db && window.FB) window.FB.push(window.FB.ref(db, `session/sprays`), sprayData);
-            else if(gameMode === 'pvp_1v1' && db && currentPvPRoom && window.FB) window.FB.push(window.FB.ref(db, `pvp/rooms/${currentPvPRoom}/sprays`), sprayData);
-            else addSprayToScene(sprayData);
+            
+            if(gameMode === 'mmo' && db && window.FB && currentMmoRoom) {
+                window.FB.set(window.FB.ref(db, `session/worlds/${currentMmoRoom}/sprays/${sprayId}`), sprayData);
+            }
+            else addSprayToScene(sprayData, sprayId);
         }
     }
 
@@ -2415,9 +2825,12 @@ function startBotMatch() {
         const pants = new THREE.MeshStandardMaterial({color:0x4b5563,roughness:0.6,envMapIntensity:1.0});
 
         const b=new THREE.Mesh(new THREE.CylinderGeometry(.34,.4,1,20,1), shirt); b.position.y=1.3; b.castShadow=true; b.receiveShadow=true; g.add(b);
-        const shL=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
-        const shR=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12), shirt); shR.position.set(.42,1.72,0); shR.castShadow=true; g.add(shR);
+        const shL=new THREE.Mesh(new THREE.SphereGeometry(.08,16,12), shirt); shL.position.set(-.42,1.72,0); shL.castShadow=true; g.add(shL);
+        const shR=new THREE.Mesh(new THREE.SphereGeometry(.08,16,12), shirt); shR.position.set(.42,1.72,0); shR.castShadow=true; g.add(shR);
         const h=new THREE.Mesh(new THREE.SphereGeometry(.36,24,18), skin); h.position.y=2.15; h.castShadow=true; g.add(h);
+        
+
+        
 
         const eyeMat = new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:0.25, envMapIntensity:1.2});
         const leftEye = new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), eyeMat); leftEye.position.set(-.14,.06,.33);
@@ -2643,7 +3056,8 @@ function startBotMatch() {
         powerPreference: "high-performance" 
     });
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
-    renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputEncoding = THREE.LinearEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
     
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000); scene.add(camera);
@@ -2791,42 +3205,254 @@ scene.add(ground);
     });
     let instancedWalls = null;
 
-    let composer = null, bloomPass = null, usePostFX = true;
-    function setupPostProcessing() {
-        try {
-            if (!THREE.EffectComposer || !THREE.RenderPass || !THREE.UnrealBloomPass) throw new Error('postfx libs missing');
-            composer = new THREE.EffectComposer(renderer);
-            composer.addPass(new THREE.RenderPass(scene, camera));
-            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.4, 0.85);
-            bloomPass.renderToScreen = true;
-            composer.addPass(bloomPass);
-        } catch (e) {
-            console.warn('Post-processing unavailable, using standard renderer:', e);
-            composer = null; usePostFX = false;
-        }
-    }
-    setupPostProcessing();
 
-    function renderFrame(time) {
-        if (usePostFX && composer) {
-            composer.render();
-        } else {
-            renderer.render(scene, camera);
+
+
+
+
+
+
+
+    let composer = null,
+        bloomPass = null,
+        axUpscalePass = null,
+        gammaPass = null,
+        visionAOPass = null,
+        visionRadiancePass = null,
+        visionClarityPass = null,
+        visionCopyPass = null,
+        visionDepthTarget = null,
+        visionDepthMaterial = null,
+        usePostFX = true;
+
+// ================================================================
+// AX UPSCALER - existing performance renderer
+// ================================================================
+const AXUpscalerShader = {
+    uniforms: {
+        tDiffuse: { value: null },
+        resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        sharpness: { value: 0.35 }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
         }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 resolution;
+        uniform float sharpness;
+        varying vec2 vUv;
+        void main() {
+            vec2 texel = 1.0 / resolution;
+            vec3 center = texture2D(tDiffuse,vUv).rgb;
+            vec3 north = texture2D(tDiffuse,vUv+vec2(0.0,-texel.y)).rgb;
+            vec3 south = texture2D(tDiffuse,vUv+vec2(0.0,texel.y)).rgb;
+            vec3 west = texture2D(tDiffuse,vUv+vec2(-texel.x,0.0)).rgb;
+            vec3 east = texture2D(tDiffuse,vUv+vec2(texel.x,0.0)).rgb;
+            vec3 localAverage = (north+south+west+east)*0.25;
+            vec3 detail = center-localAverage;
+            float edge = length(north-south)+length(east-west);
+            float edgeProtection = 1.0-smoothstep(0.02,0.35,edge);
+            vec3 result = center+detail*sharpness*edgeProtection;
+            gl_FragColor = vec4(clamp(result,0.0,1.0),1.0);
+        }
+    `
+};
+
+// ================================================================
+// AX OUTPUT - existing linear -> sRGB conversion + AX grading
+// ================================================================
+const AXOutputShader = {
+    uniforms:{tDiffuse:{value:null}},
+    vertexShader:`
+        varying vec2 vUv;
+        void main(){vUv=uv;gl_Position=vec4(position,1.0);}
+    `,
+    fragmentShader:`
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+        vec3 linearToSRGB(vec3 c){
+            c=max(c,vec3(0.0));
+            vec3 low=12.92*c;
+            vec3 high=1.055*pow(c,vec3(1.0/2.4))-0.055;
+            return mix(low,high,step(vec3(0.0031308),c));
+        }
+        void main(){
+            vec4 color=texture2D(tDiffuse,vUv);
+            vec3 graded=linearToSRGB(color.rgb);
+            float contrast=1.12;
+            float saturation=1.10;
+            float brightness=0.96;
+            graded=(graded-0.5)*contrast+0.5;
+            float luminance=dot(graded,vec3(0.2126,0.7152,0.0722));
+            graded=mix(vec3(luminance),graded,saturation);
+            graded*=brightness;
+            gl_FragColor=vec4(clamp(graded,0.0,1.0),color.a);
+        }
+    `
+};
+
+// ================================================================
+// AX VISION AO - depth-aware native contact shading
+// ================================================================
+const AXVisionAOShader = {
+    uniforms:{
+        tDiffuse:{value:null},tDepth:{value:null},resolution:{value:new THREE.Vector2(1,1)},
+        cameraNear:{value:0.1},cameraFar:{value:2000.0},strength:{value:0.24}
+    },
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+        uniform sampler2D tDiffuse; uniform sampler2D tDepth; uniform vec2 resolution;
+        uniform float cameraNear; uniform float cameraFar; uniform float strength; varying vec2 vUv;
+        float unpackDepth(vec4 rgbaDepth){const vec4 bitShift=vec4(1.0/(256.0*256.0*256.0),1.0/(256.0*256.0),1.0/256.0,1.0);return dot(rgbaDepth,bitShift);}
+        float viewDepth(float depth){return (cameraNear*cameraFar)/(cameraFar-depth*(cameraFar-cameraNear));}
+        void main(){
+            vec3 base=texture2D(tDiffuse,vUv).rgb;
+            float centerDepth=viewDepth(unpackDepth(texture2D(tDepth,vUv)));
+            vec2 t=1.0/resolution;
+            vec2 dirs[8]; dirs[0]=vec2(1,0);dirs[1]=vec2(-1,0);dirs[2]=vec2(0,1);dirs[3]=vec2(0,-1);
+            dirs[4]=normalize(vec2(1,1));dirs[5]=normalize(vec2(-1,1));dirs[6]=normalize(vec2(1,-1));dirs[7]=normalize(vec2(-1,-1));
+            float occ=0.0;
+            for(int d=0;d<8;d++) for(int s=1;s<=3;s++){
+                vec2 uv=clamp(vUv+dirs[d]*t*float(s)*3.0,vec2(0.001),vec2(0.999));
+                float sd=viewDepth(unpackDepth(texture2D(tDepth,uv)));
+                float relative=max(0.0,centerDepth-sd)/(0.18+centerDepth*0.012);
+                float hit=smoothstep(0.04,1.0,relative);
+                occ+=hit*(1.0-float(s-1)/3.0);
+            }
+            occ=clamp(occ/12.0,0.0,1.0);
+            gl_FragColor=vec4(base*(1.0-occ*strength),1.0);
+        }
+    `
+};
+
+// ================================================================
+// AX VISION RADIANCE - expensive screen-space ray simulation
+// ================================================================
+const AXVisionRadianceShader = {
+    uniforms:{
+        tDiffuse:{value:null},tDepth:{value:null},resolution:{value:new THREE.Vector2(1,1)},
+        cameraNear:{value:0.1},cameraFar:{value:2000.0},intensity:{value:0.035},steps:{value:4.0}
+    },
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+        uniform sampler2D tDiffuse;uniform sampler2D tDepth;uniform vec2 resolution;
+        uniform float cameraNear;uniform float cameraFar;uniform float intensity;uniform float steps;varying vec2 vUv;
+        float unpackDepth(vec4 rgbaDepth){const vec4 bitShift=vec4(1.0/(256.0*256.0*256.0),1.0/(256.0*256.0),1.0/256.0,1.0);return dot(rgbaDepth,bitShift);}
+        float viewDepth(float depth){return (cameraNear*cameraFar)/(cameraFar-depth*(cameraFar-cameraNear));}
+        void main(){
+            vec3 base=texture2D(tDiffuse,vUv).rgb;float centerDepth=viewDepth(unpackDepth(texture2D(tDepth,vUv)));vec2 t=1.0/resolution;
+            vec2 dirs[8];dirs[0]=normalize(vec2(1.0,0.2));dirs[1]=normalize(vec2(-1.0,-0.2));dirs[2]=normalize(vec2(0.2,1.0));dirs[3]=normalize(vec2(-0.2,-1.0));
+            dirs[4]=normalize(vec2(0.8,0.8));dirs[5]=normalize(vec2(-0.8,0.8));dirs[6]=normalize(vec2(0.8,-0.8));dirs[7]=normalize(vec2(-0.8,-0.8));
+            vec3 rad=vec3(0.0);float weight=0.0;
+            for(int d=0;d<8;d++)for(int s=1;s<=4;s++){
+                if(float(s)>steps)continue;
+                vec2 uv=clamp(vUv+dirs[d]*t*(2.0+float(s)*1.5)*5.0,vec2(0.001),vec2(0.999));
+                float sd=viewDepth(unpackDepth(texture2D(tDepth,uv)));vec3 sc=texture2D(tDiffuse,uv).rgb;
+                float front=smoothstep(0.02+centerDepth*0.002,0.35+centerDepth*0.008,max(0.0,centerDepth-sd));
+                float w=1.0/(1.0+float(s)*0.65);float lum=dot(sc,vec3(0.2126,0.7152,0.0722));float useful=smoothstep(0.18,0.85,lum);
+                rad+=sc*front*useful*w;weight+=front*useful*w;
+            }
+            if(weight>0.0001)rad/=weight;
+            float baseLum=dot(base,vec3(0.2126,0.7152,0.0722));float darkBoost=1.0-smoothstep(0.45,0.95,baseLum);
+            gl_FragColor=vec4(clamp(base+rad*intensity*darkBoost,0.0,1.0),1.0);
+        }
+    `
+};
+
+// ================================================================
+// AX VISION CLARITY - premium native detail / grade
+// ================================================================
+const AXVisionClarityShader = {
+    uniforms:{
+        tDiffuse:{value:null},resolution:{value:new THREE.Vector2(1,1)},detailStrength:{value:0.22},
+        contrast:{value:1.08},saturation:{value:1.06},brightness:{value:1.0},highlightCompression:{value:0.24}
+    },
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+        uniform sampler2D tDiffuse;uniform vec2 resolution;uniform float detailStrength;uniform float contrast;uniform float saturation;uniform float brightness;uniform float highlightCompression;varying vec2 vUv;
+        void main(){vec2 t=1.0/resolution;vec3 c=texture2D(tDiffuse,vUv).rgb;
+        vec3 n=texture2D(tDiffuse,vUv+vec2(0,-t.y)).rgb;vec3 s=texture2D(tDiffuse,vUv+vec2(0,t.y)).rgb;vec3 e=texture2D(tDiffuse,vUv+vec2(t.x,0)).rgb;vec3 w=texture2D(tDiffuse,vUv+vec2(-t.x,0)).rgb;
+        vec3 ne=texture2D(tDiffuse,vUv+vec2(t.x,-t.y)).rgb;vec3 nw=texture2D(tDiffuse,vUv+vec2(-t.x,-t.y)).rgb;vec3 se=texture2D(tDiffuse,vUv+vec2(t.x,t.y)).rgb;vec3 sw=texture2D(tDiffuse,vUv+vec2(-t.x,t.y)).rgb;
+        vec3 avg=(n+s+e+w+ne+nw+se+sw)*0.125;float edge=length(n-s)+length(e-w)+0.5*(length(ne-sw)+length(nw-se));float protect=1.0-smoothstep(0.05,0.42,edge);
+        vec3 result=c+(c-avg)*detailStrength*protect;result=(result-0.5)*contrast+0.5;float lum=dot(result,vec3(0.2126,0.7152,0.0722));result=mix(vec3(lum),result,saturation);result*=brightness;
+        result-=max(result-vec3(0.92),vec3(0.0))*highlightCompression;gl_FragColor=vec4(clamp(result,0.0,1.0),1.0);}
+    `
+};
+
+function setupPostProcessing(){
+    try{
+        if(!THREE.EffectComposer||!THREE.RenderPass||!THREE.UnrealBloomPass||!THREE.ShaderPass)throw new Error('postfx libs missing');
+        composer=new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(scene,camera));
+        bloomPass=new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),0.45,0.4,0.85);
+        composer.addPass(bloomPass);
+
+        visionAOPass=new THREE.ShaderPass(AXVisionAOShader);visionAOPass.enabled=false;visionAOPass.renderToScreen=false;composer.addPass(visionAOPass);
+        visionRadiancePass=new THREE.ShaderPass(AXVisionRadianceShader);visionRadiancePass.enabled=false;visionRadiancePass.renderToScreen=false;composer.addPass(visionRadiancePass);
+        visionClarityPass=new THREE.ShaderPass(AXVisionClarityShader);visionClarityPass.enabled=false;visionClarityPass.renderToScreen=false;composer.addPass(visionClarityPass);
+        visionCopyPass=new THREE.ShaderPass(THREE.CopyShader);visionCopyPass.enabled=false;visionCopyPass.renderToScreen=false;composer.addPass(visionCopyPass);
+
+        axUpscalePass=new THREE.ShaderPass(AXUpscalerShader);axUpscalePass.renderToScreen=false;composer.addPass(axUpscalePass);
+        gammaPass=new THREE.ShaderPass(AXOutputShader);gammaPass.renderToScreen=true;composer.addPass(gammaPass);
+
+        visionDepthTarget=new THREE.WebGLRenderTarget(1,1,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,format:THREE.RGBAFormat,stencilBuffer:false,depthBuffer:true});
+        visionDepthMaterial=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});
+    }catch(e){console.warn('Post-processing unavailable, using standard renderer:',e);composer=null;usePostFX=false;}
+}
+setupPostProcessing();
+
+function renderVisionDepthBuffer(){
+    if(!visionDepthTarget||!visionDepthMaterial)return;
+    const previousOverride=scene.overrideMaterial;const previousTarget=renderer.getRenderTarget();
+    scene.overrideMaterial=visionDepthMaterial;renderer.setRenderTarget(visionDepthTarget);renderer.clear();renderer.render(scene,camera);renderer.setRenderTarget(previousTarget);scene.overrideMaterial=previousOverride;
+}
+
+function renderFrame(time){
+    const graphics=window.gameSettings&&window.gameSettings.graphics;
+    const visionActive=graphics&&graphics.renderTech==='vision';
+    const profile=graphics?(graphics.visionProfile||'native'):'native';
+    if(visionActive&&profile!=='native'&&composer){
+        renderVisionDepthBuffer();
+        const depthTex=visionDepthTarget?visionDepthTarget.texture:null;
+        if(visionAOPass)visionAOPass.uniforms.tDepth.value=depthTex;
+        if(visionRadiancePass)visionRadiancePass.uniforms.tDepth.value=depthTex;
     }
+    if(usePostFX&&composer)composer.render();else renderer.render(scene,camera);
+}
+
+
+
 
 
 
    window.applySettingsToEngine = () => {
         const s = window.gameSettings; renderer.toneMappingExposure = (s.display.brightness / 100) * 1.0;
         
-       // 1. SKY: New Indian Sky for PvP, Black Void for everything else
+       // 1. SKY & LIGHTING: Daylight for MMO, Indian Sky for PvP, Void for Campaign
 if (gameMode === 'pvp_1v1') {
     scene.background = skyTexture; 
-    scene.environment = skyTexture; 
+    scene.environment = skyTexture;
+    scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
+    hemiLight.intensity = 0.6;
+    ambientLight.intensity = 0.8;
+} else if (gameMode === 'mmo') {
+    // FATHER: Bright beautiful daylight for MMO!
+    scene.background = new THREE.Color(0x60a5fa); // Bright blue sky
+    scene.environment = null; 
+    scene.fog = new THREE.FogExp2(0x60a5fa, 0.008); // Blue mist that fades into the sky
+    hemiLight.intensity = 1.2; // Brighter sun
+    ambientLight.intensity = 1.0; 
 } else {
     scene.background = new THREE.Color(0x0b0c16);
-    scene.environment = null; 
+    scene.environment = null;
+    scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
+    hemiLight.intensity = 0.6;
+    ambientLight.intensity = 0.8;
 }
 
 // 2. GROUND: Forest for Campaign + PvP | Rocky for MMO
@@ -2868,8 +3494,6 @@ if (gameMode === 'campaign' || gameMode === 'pvp_1v1') {
             }
         }
 
-// Consider adjusting fog for PvP so it matches the Kloppenheim sky!
-scene.fog = new THREE.FogExp2(0x0b0c16, 0.015);
 
 ground.material.needsUpdate = true;
 // Texture Shadow Quality
@@ -2882,13 +3506,19 @@ wallMat.needsUpdate = true;
         
         renderer.setPixelRatio(window.devicePixelRatio || 1);
         
-        const scaleFactor = Math.max(0.1, s.graphics.scale / 100);
-        renderer.setSize(targetW * scaleFactor, targetH * scaleFactor, false); 
-        camera.aspect = targetW / targetH; camera.updateProjectionMatrix();
+        // FATHER: AstraX DLSS/FSR Engine Integration!
+        let scaleFactor = 1.0;
+        let upscalerMode = s.graphics.upscaler || 'off';
+        if (upscalerMode === 'quality') scaleFactor = 0.77;
+        else if (upscalerMode === 'balanced') scaleFactor = 0.59;
+        else if (upscalerMode === 'performance') scaleFactor = 0.50;
+        else if (upscalerMode === 'ultra') scaleFactor = 0.33;
 
-
-
-
+        renderer.setSize(targetW, targetH, false);
+        
+        camera.aspect = targetW / targetH; 
+        camera.fov = s.display.fov || 75; // FATHER: Dynamic FOV injected!
+        camera.updateProjectionMatrix();
 
         // --- DYNAMIC BUMP ATTENUATION ---
         // Dynamically softens the wall textures when playing on lower resolutions to destroy specular aliasing / white static
@@ -2899,38 +3529,164 @@ wallMat.needsUpdate = true;
         
 
 
-        // 1. Post-Processing (Bloom) Logic, Father
+
+
+
+
+
+
+       // 1. Rendering Technology + Post-Processing
+        const renderTech = s.graphics.renderTech || 'ax';
+        const visionActive = (renderTech === 'vision');
+        const visionProfile = s.graphics.visionProfile || 'native';
+
+        if (visionActive) {
+            upscalerMode = 'off';
+            scaleFactor = 1.0;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        }
+
         let bloomSetting = s.graphics.bloom || 'high';
-        usePostFX = (bloomSetting !== 'off');
+        usePostFX = visionActive || bloomSetting !== 'off' || upscalerMode !== 'off';
+
+        if (!visionActive) {
+            renderer.outputEncoding = usePostFX ? THREE.LinearEncoding : THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        }
+
         if (composer) {
-            const pw = Math.max(1, Math.floor(targetW * scaleFactor)), ph = Math.max(1, Math.floor(targetH * scaleFactor));
-            composer._pixelRatio = renderer.getPixelRatio(); 
+            const postScale = visionActive ? 1.0 : ((upscalerMode !== 'off') ? scaleFactor : 1.0);
+            const pw = Math.max(1, Math.floor(targetW * postScale));
+            const ph = Math.max(1, Math.floor(targetH * postScale));
+            const pr = renderer.getPixelRatio();
+
+            composer.setPixelRatio(pr);
             composer.setSize(pw, ph);
+
             if (bloomPass) {
-                bloomPass.enabled = usePostFX;
-                if(bloomSetting === 'high') bloomPass.strength = 0.45;
-                else if(bloomSetting === 'medium') bloomPass.strength = 0.3;
-                else if(bloomSetting === 'low') bloomPass.strength = 0.15;
+                bloomPass.enabled = (bloomSetting !== 'off');
+                if (bloomSetting === 'high') bloomPass.strength = 0.45;
+                else if (bloomSetting === 'medium') bloomPass.strength = 0.30;
+                else if (bloomSetting === 'low') bloomPass.strength = 0.15;
+                bloomPass.radius = 0.4;
+                bloomPass.threshold = 0.85;
+                bloomPass.renderToScreen = false;
+            }
+
+            if (visionDepthTarget) {
+                visionDepthTarget.setSize(
+                    Math.max(1, Math.floor(pw * pr)),
+                    Math.max(1, Math.floor(ph * pr))
+                );
+            }
+
+            const depthProfile = visionActive && visionProfile !== 'native';
+
+            if (visionAOPass) {
+                visionAOPass.enabled = depthProfile;
+                visionAOPass.uniforms.resolution.value.set(Math.max(1,pw*pr), Math.max(1,ph*pr));
+                visionAOPass.uniforms.cameraNear.value = camera.near;
+                visionAOPass.uniforms.cameraFar.value = camera.far;
+                visionAOPass.uniforms.strength.value = visionProfile === 'radiance' ? 0.42 : (visionProfile === 'extreme' ? 0.34 : 0.24);
+                visionAOPass.renderToScreen = false;
+            }
+
+            if (visionRadiancePass) {
+                visionRadiancePass.enabled = visionActive && visionProfile === 'radiance';
+                visionRadiancePass.uniforms.resolution.value.set(Math.max(1,pw*pr), Math.max(1,ph*pr));
+                visionRadiancePass.uniforms.cameraNear.value = camera.near;
+                visionRadiancePass.uniforms.cameraFar.value = camera.far;
+                visionRadiancePass.uniforms.intensity.value = 0.035;
+                visionRadiancePass.uniforms.steps.value = 4.0;
+                visionRadiancePass.renderToScreen = false;
+            }
+
+            if (visionClarityPass) {
+                const clarity = visionActive && visionProfile !== 'native';
+                visionClarityPass.enabled = clarity;
+                visionClarityPass.renderToScreen = clarity;
+                visionClarityPass.uniforms.resolution.value.set(Math.max(1,pw*pr), Math.max(1,ph*pr));
+
+                if (visionProfile === 'radiance') {
+                    visionClarityPass.uniforms.detailStrength.value = 0.32;
+                    visionClarityPass.uniforms.contrast.value = 1.11;
+                    visionClarityPass.uniforms.saturation.value = 1.10;
+                    visionClarityPass.uniforms.brightness.value = 0.99;
+                    visionClarityPass.uniforms.highlightCompression.value = 0.30;
+                } else if (visionProfile === 'extreme') {
+                    visionClarityPass.uniforms.detailStrength.value = 0.30;
+                    visionClarityPass.uniforms.contrast.value = 1.10;
+                    visionClarityPass.uniforms.saturation.value = 1.08;
+                    visionClarityPass.uniforms.brightness.value = 0.99;
+                    visionClarityPass.uniforms.highlightCompression.value = 0.28;
+                } else {
+                    visionClarityPass.uniforms.detailStrength.value = 0.22;
+                    visionClarityPass.uniforms.contrast.value = 1.08;
+                    visionClarityPass.uniforms.saturation.value = 1.06;
+                    visionClarityPass.uniforms.brightness.value = 1.00;
+                    visionClarityPass.uniforms.highlightCompression.value = 0.24;
+                }
+            }
+
+            if (visionCopyPass) {
+                visionCopyPass.enabled = visionActive && visionProfile === 'native' && bloomSetting === 'off';
+                visionCopyPass.renderToScreen = visionActive && visionProfile === 'native' && bloomSetting === 'off';
+            }
+
+            if (axUpscalePass) {
+                axUpscalePass.enabled = !visionActive && upscalerMode !== 'off';
+                axUpscalePass.uniforms.resolution.value.set(Math.max(1,pw*pr), Math.max(1,ph*pr));
+                if (upscalerMode === 'quality') axUpscalePass.uniforms.sharpness.value = 0.60;
+                else if (upscalerMode === 'balanced') axUpscalePass.uniforms.sharpness.value = 0.68;
+                else if (upscalerMode === 'performance') axUpscalePass.uniforms.sharpness.value = 0.75;
+                else if (upscalerMode === 'ultra') axUpscalePass.uniforms.sharpness.value = 0.85;
+                else axUpscalePass.uniforms.sharpness.value = 0.35;
+                axUpscalePass.renderToScreen = false;
+            }
+
+            if (gammaPass) {
+                gammaPass.enabled = !visionActive && usePostFX;
+                gammaPass.renderToScreen = !visionActive && usePostFX;
+            }
+
+            // Native Fidelity deliberately uses the original sRGB + ACES path.
+            if (visionActive && visionProfile === 'native') {
+                if (bloomPass && bloomSetting !== 'off') {
+                    bloomPass.renderToScreen = true;
+                    if (visionCopyPass) visionCopyPass.enabled = false;
+                } else if (visionCopyPass) {
+                    visionCopyPass.enabled = true;
+                    visionCopyPass.renderToScreen = true;
+                }
+                if (gammaPass) gammaPass.enabled = false;
+                if (axUpscalePass) axUpscalePass.enabled = false;
             }
         }
 
         // 2. Shadows Logic, Father
         let shadowSetting = s.graphics.shadows || 'high';
+        const visionShadowSetting = s.graphics.visionShadows || 'follow';
         renderer.shadowMap.enabled = (shadowSetting !== 'off');
         if(instancedWalls) { instancedWalls.castShadow = renderer.shadowMap.enabled; instancedWalls.receiveShadow = renderer.shadowMap.enabled; }
         if(typeof ground !== 'undefined' && ground) ground.receiveShadow = renderer.shadowMap.enabled;
         
         if (renderer.shadowMap.enabled) {
-            let sSize = 2048; // default high
+            let sSize = 2048; // existing Shadow Quality behavior
             if (shadowSetting === 'ultra') sSize = 4096;
             else if (shadowSetting === 'medium') sSize = 1024;
             else if (shadowSetting === 'low') sSize = 512;
+
+            if (visionActive && visionShadowSetting === '4k') sSize = 4096;
+            else if (visionActive && visionShadowSetting === '8k') sSize = Math.min(8192, renderer.capabilities.maxTextureSize || 8192);
 
             if(dirLight.shadow.mapSize.width !== sSize) { 
                 dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = sSize; 
                 if(dirLight.shadow.map) { dirLight.shadow.map.dispose(); dirLight.shadow.map=null; } 
                 shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / sSize; 
             }
+
+            dirLight.shadow.blurSamples = visionActive ? (visionShadowSetting === '8k' ? 40 : 32) : 25;
         }
 
         // 3. Anisotropic Filtering Logic, Father
@@ -2983,14 +3739,58 @@ wallMat.needsUpdate = true;
     const bindUI = () => {
         const s = window.gameSettings;
         document.getElementById('set-brightness').value = s.display.brightness; document.getElementById('val-brightness').innerText = s.display.brightness+'%';
-        if(document.getElementById('set-quality')) document.getElementById('set-quality').value = s.graphics.quality || 'custom';
-        document.getElementById('set-scale').value = s.graphics.scale; document.getElementById('val-scale').innerText = s.graphics.scale+'%';
+        document.getElementById('set-fov').value = s.display.fov || 75; document.getElementById('val-fov').innerText = (s.display.fov || 75);
+        
+        const renderTech = s.graphics.renderTech || 'ax';
+        const visionActive = renderTech === 'vision';
+
+        if(document.getElementById('set-render-tech')) document.getElementById('set-render-tech').value = renderTech;
+        if(document.getElementById('set-quality')) document.getElementById('set-quality').value = visionActive ? 'custom' : (s.graphics.quality || 'custom');
+        if(document.getElementById('set-upscaler')) document.getElementById('set-upscaler').value = s.graphics.upscaler || 'off';
+
+        const axSelect = document.getElementById('set-upscaler');
+        const axSection = document.getElementById('ax-upscaler-section');
+        const visionSection = document.getElementById('ax-vision-section');
+        const techDescription = document.getElementById('render-tech-description');
+        const visionProfileSelect = document.getElementById('set-vision-profile');
+        const visionShadowSelect = document.getElementById('set-vision-shadows');
+        const visionDescription = document.getElementById('vision-profile-description');
+
+        if(axSelect) axSelect.disabled = visionActive;
+        if(axSection) { axSection.style.opacity = visionActive ? '0.45' : '1'; axSection.style.pointerEvents = visionActive ? 'none' : 'auto'; }
+        if(visionSection) { visionSection.style.opacity = visionActive ? '1' : '0.45'; visionSection.style.pointerEvents = visionActive ? 'auto' : 'none'; }
+        if(visionProfileSelect) visionProfileSelect.value = s.graphics.visionProfile || 'native';
+        if(visionShadowSelect) visionShadowSelect.value = s.graphics.visionShadows || 'follow';
+
+        if(techDescription) techDescription.innerText = visionActive
+            ? 'Native-resolution premium rendering for high-end PCs. AX reconstruction is automatically disabled.'
+            : 'Performance-focused rendering. AX reconstruction can reduce internal resolution for higher FPS.';
+
+        if(visionDescription) {
+            const vp = s.graphics.visionProfile || 'native';
+            if(vp === 'radiance') visionDescription.innerText = 'Experimental multi-sample screen-space radiance simulation. Extremely GPU-heavy.';
+            else if(vp === 'extreme') visionDescription.innerText = 'Maximum native detail with depth occlusion, premium clarity, and high-end shadow support.';
+            else if(vp === 'cinematic') visionDescription.innerText = 'Enhanced native depth, contact shading, clarity, and highlight control.';
+            else visionDescription.innerText = 'Restores the original native rendering character with no AX reconstruction.';
+        }
         
         if(document.getElementById('set-shadows-select')) document.getElementById('set-shadows-select').value = s.graphics.shadows || 'high';
         if(document.getElementById('set-bloom')) document.getElementById('set-bloom').value = s.graphics.bloom || 'high';
         if(document.getElementById('set-anisotropy')) document.getElementById('set-anisotropy').value = s.graphics.anisotropy || '16';
         
-        document.getElementById('set-fps').value = s.graphics.fps;
+        document.getElementById('set-fps').value = s.graphics.fps || 'vsync';
+
+        const fpsEnabled = s.graphics.showFPS === true;
+        const fpsToggle = document.getElementById('toggle-fps');
+        const fpsCounter = document.getElementById('fps-counter');
+        if (fpsToggle) {
+            fpsToggle.innerText = fpsEnabled ? 'ON' : 'OFF';
+            fpsToggle.classList.toggle('active', fpsEnabled);
+        }
+        if (fpsCounter) {
+            fpsCounter.classList.toggle('hidden', !fpsEnabled || !isPlaying || isPaused);
+        }
+
         document.getElementById('set-master').value = s.sound.master; document.getElementById('val-master').innerText = s.sound.master+'%';
         document.getElementById('set-music').value = s.sound.music; document.getElementById('val-music').innerText = s.sound.music+'%';
         document.getElementById('set-sfx').value = s.sound.sfx; document.getElementById('val-sfx').innerText = s.sound.sfx+'%';
@@ -3165,7 +3965,7 @@ wallMat.needsUpdate = true;
         return false;
     }
 
-    function resolveOverlap(px, pz) {
+    function resolveOverlap(px, pz, radius = PLAYER_RADIUS) {
         if (isFlyMode) return {x: px, z: pz};
         let gx=Math.round(px/CELL_SIZE), gz=Math.round(pz/CELL_SIZE); let outX = px, outZ = pz;
         for(let dz=-1;dz<=1;dz++) for(let dx=-1;dx<=1;dx++){
@@ -3173,15 +3973,17 @@ wallMat.needsUpdate = true;
             if(cz>=0&&cz<mazeHeight&&cx>=0&&cx<mazeWidth&&mazeGrid[cz][cx]===1){
                 const nearX = Math.max(cx*CELL_SIZE - CELL_SIZE/2, Math.min(outX, cx*CELL_SIZE + CELL_SIZE/2)), nearZ = Math.max(cz*CELL_SIZE - CELL_SIZE/2, Math.min(outZ, cz*CELL_SIZE + CELL_SIZE/2));
                 const distX = outX - nearX, distZ = outZ - nearZ, distSq = distX*distX + distZ*distZ;
-                if(distSq < PLAYER_RADIUS*PLAYER_RADIUS) { const dist = Math.sqrt(distSq) || 0.0001, push = (PLAYER_RADIUS - dist) + 0.001; outX += (distX/dist) * push; outZ += (distZ/dist) * push; }
+                if(distSq < radius*radius) { const dist = Math.sqrt(distSq) || 0.0001, push = (radius - dist) + 0.001; outX += (distX/dist) * push; outZ += (distZ/dist) * push; }
             }
         }
         return {x: outX, z: outZ};
     }
 
-    let cameraMode = 'thirdPerson';
+    let cameraMode = 'firstPerson';
     function updateCamera(dt) {
-        if(player.userData.head) player.userData.head.visible = (cameraMode!=='firstPerson');
+        // FATHER: Smart Head Visibility! Keeps the head ON during Intros, Victory, and Death!
+        let hideHead = (cameraMode === 'firstPerson' && pvpState !== 'intro' && !mmoVictoryState && !isDead);
+        if (player.userData.head) player.userData.head.visible = !hideHead;
         
         if (activeEffects.map) {
             camera.position.set(player.position.x, Math.max(100, mazeWidth * 1.5), player.position.z);
@@ -3264,11 +4066,37 @@ wallMat.needsUpdate = true;
 
     let clock=new THREE.Clock(), frameTimeAcc=0;
     
+    let fpsFrames = 0;
+    let fpsTimer = 0;
+    let displayedFPS = 0;
     function animate(){
         requestAnimationFrame(animate);
         let dtRaw=clock.getDelta(); const fpsLimit=window.gameSettings.graphics.fps;
-        if(fpsLimit!=='uncapped'){ frameTimeAcc+=dtRaw; const tdt=1/parseInt(fpsLimit); if(frameTimeAcc<tdt)return; frameTimeAcc%=tdt; }
+        if(fpsLimit!=='uncapped' && fpsLimit!=='vsync'){ frameTimeAcc+=dtRaw; const tdt=1/parseInt(fpsLimit); if(frameTimeAcc<tdt)return; frameTimeAcc%=tdt; }
         const dt=Math.min(dtRaw,.1), time=clock.getElapsedTime();
+
+        const fpsElement = document.getElementById('fps-counter');
+        const fpsEnabled = window.gameSettings.graphics.showFPS === true;
+
+        if (fpsEnabled && isPlaying && !isPaused) {
+            if (fpsElement) fpsElement.classList.remove('hidden');
+
+            fpsFrames++;
+            if (time - fpsTimer >= 1) {
+                displayedFPS = fpsFrames;
+                fpsFrames = 0;
+                fpsTimer = time;
+
+                if (fpsElement) {
+                    fpsElement.innerText = `FPS ${displayedFPS}`;
+                }
+            }
+        } else {
+            if (fpsElement) fpsElement.classList.add('hidden');
+            fpsFrames = 0;
+            fpsTimer = time;
+        }
+
         
         // --- FATHER: AAA AFK DETECTION SYSTEM ---
         if (isPlaying && !isDead && !mmoVictoryState && !isPaused) {
@@ -3385,25 +4213,37 @@ wallMat.needsUpdate = true;
         const isSprinting = !isMenuOpen && keys.sprint; 
         let speedMult = isSprinting ? 2.5 : 1.0;
 
+
+
+
+
         const targetScaleY = (!isMenuOpen && keys.crouch) ? 0.6 : 0.8;
         player.scale.y = THREE.MathUtils.lerp(player.scale.y, targetScaleY, dt*15);
 
-        if(!isDead) {
-            if (isFlyMode) {
-                velocityY = 0;
-                isGrounded = false;
-                if (!isMenuOpen && keys.jump) player.position.y += 15 * dt;
-                else if (!isMenuOpen && keys.crouch) player.position.y -= 15 * dt;
-            } else {
-                if (!isMenuOpen && keys.jump && isGrounded && !keys.crouch) {
-                    velocityY = 12; isGrounded = false; 
-                    if(window.gameSettings.sound.sfx > 0) { jumpSound.currentTime = 0; jumpSound.play().catch(e=>{}); }
-                }
-                player.position.y += velocityY * dt;
-                if (player.position.y > 0) { velocityY -= 35 * dt; isGrounded = false; } 
-                else { player.position.y = 0; velocityY = 0; isGrounded = true; }
+        // --- NEW: GRAVITY ALWAYS RUNS (Even when dead!) ---
+        let localGroundY = isDead ? 0.3 : 0; 
+        if (isFlyMode && !isDead) {
+            velocityY = 0;
+            isGrounded = false;
+            if (!isMenuOpen && keys.jump) player.position.y += 15 * dt;
+            else if (!isMenuOpen && keys.crouch) player.position.y -= 15 * dt;
+        } else {
+            if (!isDead && !isMenuOpen && keys.jump && isGrounded && !keys.crouch) {
+                velocityY = 12; isGrounded = false; 
+                if(window.gameSettings.sound.sfx > 0) { jumpSound.currentTime = 0; jumpSound.play().catch(e=>{}); }
             }
+            player.position.y += velocityY * dt;
+            if (player.position.y > localGroundY) { velocityY -= 35 * dt; isGrounded = false; } 
+            else { player.position.y = localGroundY; velocityY = 0; isGrounded = true; }
+        }
+        
+        // --- NEW: WALL COLLISION ALWAYS RUNS (With bigger radius if dead so bodies don't clip!) ---
+        let localRadius = isDead ? 1.2 : PLAYER_RADIUS;
+        const resolved = resolveOverlap(player.position.x, player.position.z, localRadius); 
+        player.position.x = resolved.x; 
+        player.position.z = resolved.z;
 
+        if(!isDead) {
             let isMoving=false;
             
             _camDir.set(-Math.sin(camAzimuth), 0, -Math.cos(camAzimuth)).normalize();
@@ -3436,8 +4276,13 @@ wallMat.needsUpdate = true;
                     if(time - lastFootstepTime > (isSprinting ? 0.25 : 0.35)){ footstepSynth.triggerAttackRelease('16n'); lastFootstepTime = time; }
                 }
             }
-            
-            const resolved = resolveOverlap(player.position.x, player.position.z); player.position.x = resolved.x; player.position.z = resolved.z;
+
+
+
+
+
+
+
             
             if(gameMode !== 'pvp_1v1' && !isFlyMode) {
                 const px = player.position.x / CELL_SIZE; const pz = player.position.z / CELL_SIZE;
@@ -3561,9 +4406,58 @@ wallMat.needsUpdate = true;
                     }, 3500);
                 }
                 else {
-                    isPlaying=false; 
-                    try { playWinMelody(); } catch(e){} 
-                    if(window.saveGameProgress) window.saveGameProgress(currentLevel+1);
+    isPlaying = false;
+
+    try { playWinMelody(); } catch(e){} 
+
+    if(document.pointerLockElement) document.exitPointerLock();
+
+    // Calculate performance rating
+    let stars = 3;
+
+    if(levelTimer > 180) stars = 2;
+    if(levelTimer > 300) stars = 1;
+
+    // Save progress
+    if(window.saveGameProgress) {
+        window.saveGameProgress(currentLevel + 1);
+    }
+
+    document.getElementById('hud').classList.add('hidden'); 
+    document.getElementById('level-menu').classList.remove('hidden');
+
+    document.getElementById('end-title').innerText = "LEVEL CLEARED";
+    document.getElementById('end-title').style.color = "#4CAF50";
+
+    // Add performance information
+    const endTitle = document.getElementById('end-title');
+
+    let oldRating = document.getElementById('level-rating');
+    if(oldRating) oldRating.remove();
+
+    const rating = document.createElement('div');
+    rating.id = 'level-rating';
+    rating.style.cssText = `
+        margin-top:18px;
+        font-size:42px;
+        font-weight:900;
+        letter-spacing:8px;
+        text-align:center;
+        color:#facc15;
+        text-shadow:0 0 18px rgba(250,204,21,.45);
+    `;
+
+    rating.innerText = "★".repeat(stars) + "☆".repeat(3-stars);
+
+    endTitle.parentElement.appendChild(rating);
+
+    gtaNotify(
+        stars === 3 ? "PERFECT RUN!" :
+        stars === 2 ? "GOOD RUN!" :
+        "LEVEL CLEARED!",
+        false
+    );
+
                     if(document.pointerLockElement) document.exitPointerLock();
                     document.getElementById('hud').classList.add('hidden'); 
                     document.getElementById('level-menu').classList.remove('hidden'); 
@@ -3747,10 +4641,10 @@ wallMat.needsUpdate = true;
         }
 
        
-        if (gameMode === 'campaign') {
-            cameraMode = 'firstPerson';
-        } else {
+        if (gameMode === 'mmo') {
             cameraMode = 'thirdPerson';
+        } else {
+            cameraMode = 'firstPerson';
         }
 
         buildLevel(false, spawnX, spawnZ); isPlaying = true; isPaused = false; isDead = false; 
@@ -3870,15 +4764,62 @@ window.playAgainMMO = function() {
     
    document.getElementById('set-quality').onchange = e => { 
         const q = e.target.value; window.gameSettings.graphics.quality = q;
-        if(q === 'ultra') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = 'ultra'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'uncapped'; }
-        else if(q === 'high') { window.gameSettings.graphics.scale = 100; window.gameSettings.graphics.shadows = 'high'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = '60'; }
-        else if(q === 'medium') { window.gameSettings.graphics.scale = 75; window.gameSettings.graphics.shadows = 'medium'; window.gameSettings.graphics.bloom = 'low'; window.gameSettings.graphics.anisotropy = '4'; window.gameSettings.graphics.fps = '60'; }
-        else if(q === 'low') { window.gameSettings.graphics.scale = 50; window.gameSettings.graphics.shadows = 'off'; window.gameSettings.graphics.bloom = 'off'; window.gameSettings.graphics.anisotropy = '1'; window.gameSettings.graphics.fps = '30'; }
+        // Graphics presets remain the existing AX performance presets.
+        window.gameSettings.graphics.renderTech = 'ax';
+        if(q === 'ultra') { window.gameSettings.graphics.upscaler = 'off'; window.gameSettings.graphics.shadows = 'ultra'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'uncapped'; }
+        else if(q === 'high') { window.gameSettings.graphics.upscaler = 'quality'; window.gameSettings.graphics.shadows = 'high'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'vsync'; }
+        else if(q === 'medium') { window.gameSettings.graphics.upscaler = 'balanced'; window.gameSettings.graphics.shadows = 'medium'; window.gameSettings.graphics.bloom = 'low'; window.gameSettings.graphics.anisotropy = '8'; window.gameSettings.graphics.fps = 'vsync'; }
+        else if(q === 'low') { window.gameSettings.graphics.upscaler = 'ultra'; window.gameSettings.graphics.shadows = 'off'; window.gameSettings.graphics.bloom = 'off'; window.gameSettings.graphics.anisotropy = '1'; window.gameSettings.graphics.fps = '30'; }
         bindUI(); saveSettings(); applySettingsToEngine();
     };
     
-    document.getElementById('set-scale').oninput = e => { window.gameSettings.graphics.scale = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('val-scale').innerText = e.target.value + '%'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-render-tech').onchange = e => {
+        window.gameSettings.graphics.renderTech = e.target.value;
+        if (e.target.value === 'vision') {
+            window.gameSettings.graphics.upscaler = 'off';
+            window.gameSettings.graphics.quality = 'custom';
+        }
+        bindUI(); saveSettings(); applySettingsToEngine();
+    };
+
+    document.getElementById('set-upscaler').onchange = e => {
+        window.gameSettings.graphics.renderTech = 'ax';
+        window.gameSettings.graphics.upscaler = e.target.value;
+        window.gameSettings.graphics.quality = 'custom';
+        document.getElementById('set-quality').value = 'custom';
+        bindUI(); saveSettings(); applySettingsToEngine();
+    };
+
+    document.getElementById('set-vision-profile').onchange = e => {
+        window.gameSettings.graphics.renderTech = 'vision';
+        window.gameSettings.graphics.upscaler = 'off';
+        window.gameSettings.graphics.quality = 'custom';
+        window.gameSettings.graphics.visionProfile = e.target.value;
+        bindUI(); saveSettings(); applySettingsToEngine();
+    };
+
+    document.getElementById('set-vision-shadows').onchange = e => {
+        window.gameSettings.graphics.renderTech = 'vision';
+        window.gameSettings.graphics.upscaler = 'off';
+        window.gameSettings.graphics.quality = 'custom';
+        window.gameSettings.graphics.visionShadows = e.target.value;
+        bindUI(); saveSettings(); applySettingsToEngine();
+    };
+
     document.getElementById('set-fps').onchange = e => { window.gameSettings.graphics.fps = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+
+    document.getElementById('toggle-fps').onclick = () => {
+        window.gameSettings.graphics.showFPS = !window.gameSettings.graphics.showFPS;
+        const enabled = window.gameSettings.graphics.showFPS === true;
+        const btn = document.getElementById('toggle-fps');
+        const counter = document.getElementById('fps-counter');
+        btn.innerText = enabled ? 'ON' : 'OFF';
+        btn.classList.toggle('active', enabled);
+        if (counter) counter.classList.toggle('hidden', !enabled || !isPlaying || isPaused);
+        saveSettings();
+    };
+
+    document.getElementById('set-fov').oninput = e => { window.gameSettings.display.fov = e.target.value; document.getElementById('val-fov').innerText = e.target.value; saveSettings(); applySettingsToEngine(); };
     
     if(document.getElementById('set-shadows-select')) document.getElementById('set-shadows-select').onchange = e => { window.gameSettings.graphics.shadows = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
     if(document.getElementById('set-bloom')) document.getElementById('set-bloom').onchange = e => { window.gameSettings.graphics.bloom = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };

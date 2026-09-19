@@ -1,8 +1,18 @@
 const { app, BrowserWindow, globalShortcut, Menu, ipcMain } = require('electron'); // Added ipcMain for updater communication
 const { autoUpdater } = require('electron-updater');
 
+// --- ADD THESE LINES FOR MSI AFTERBURNER / RTSS SUPPORT ---
+// Forces a native DirectX 11 swapchain for overlay hooking
+app.commandLine.appendSwitch('use-angle', 'd3d11');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+// Disabling direct composition often helps overlays hook into Chromium
+app.commandLine.appendSwitch('disable-direct-composition'); 
+// ----------------------------------------------------------
+
 let win;
 let splash;
+
 
 // Auto-updater configuration
 autoUpdater.autoDownload = false; // CRITICAL: Changed to false so player triggers it from the custom UI
@@ -32,9 +42,11 @@ function launchMainGame() {
         autoHideMenuBar: true,
         show: false, // Don't show until ready
         icon: __dirname + '/icon.ico',
+        transparent: false, // CRITICAL: Must explicitly be false for RTSS
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            offscreen: false // CRITICAL: Ensure native OS window rendering
         }
     });
 

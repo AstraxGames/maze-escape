@@ -1,7 +1,7 @@
 {
   "name": "maze-escape",
   "productName": "Maze Escape",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "description": "3D Multiplayer Maze Escape game",
   "author": "AstraX Games",
   "main": "main.js",
@@ -26,9 +26,25 @@
         "releaseType": "draft"
       }
     ],
-    "win": {
-      "target": "nsis",
-      "icon": "icon.ico"
+   "win": {
+  "target": "nsis",
+  "icon": "icon.ico",
+  "requestedExecutionLevel": "asInvoker"
+},
+"nsis": {
+  "oneClick": false,
+  "allowToChangeInstallationDirectory": true,
+  "perMachine": false,
+  "shortcutName": "Maze Escape",
+  "createDesktopShortcut": true,
+  "createStartMenuShortcut": true,
+  "uninstallDisplayName": "Maze Escape"
+},
+    "winVersionInfo": {
+      "FileDescription": "Maze Escape Game Client",
+      "ProductName": "Maze Escape",
+      "CompanyName": "AstraX Games",
+      "InternalName": "MazeEscape"
     }
   },
   "devDependencies": {
