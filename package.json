@@ -39,14 +39,8 @@
   "createDesktopShortcut": true,
   "createStartMenuShortcut": true,
   "uninstallDisplayName": "Maze Escape"
-},
-    "winVersionInfo": {
-      "FileDescription": "Maze Escape Game Client",
-      "ProductName": "Maze Escape",
-      "CompanyName": "AstraX Games",
-      "InternalName": "MazeEscape"
-    }
-  },
+  }
+ },
   "devDependencies": {
     "electron": "^34.0.0",
     "electron-builder": "^26.15.3"
