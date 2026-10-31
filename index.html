@@ -48,6 +48,19 @@
 </script>
 
 
+    <!-- Offline support: the service worker pre-caches game libraries on HTTPS/localhost. -->
+    <script>
+    (() => {
+        if (!('serviceWorker' in navigator)) return;
+        const isSecureHost = location.protocol === 'https:' ||
+            location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (!isSecureHost) return;
+        navigator.serviceWorker.register('./maze-offline-sw.js', { scope: './' })
+            .then(registration => console.info('[Maze Escape] Offline cache registered:', registration.scope))
+            .catch(error => console.warn('[Maze Escape] Offline cache registration failed:', error));
+    })();
+    </script>
+
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -210,6 +223,165 @@ img {
         .glow-green { box-shadow: 0 0 15px rgba(34,197,94,0.6); border-color: #22c55e !important; }
         .glow-yellow { box-shadow: 0 0 15px rgba(234,179,8,0.6); border-color: #eab308 !important; }
         .glow-purple { box-shadow: 0 0 15px rgba(168,85,247,0.6); border-color: #a855f7 !important; }
+    
+
+        /* Profile refresh */
+        .profile-overlay { background: radial-gradient(ellipse at 50% 18%, rgba(8,75,105,.24), rgba(3,5,12,.94) 62%); }
+        .profile-shell { width: min(680px, 94vw); max-height: 92vh; overflow: auto; color: #eaf5ff; background: linear-gradient(145deg, rgba(11,20,35,.98), rgba(5,9,18,.98)); border: 1px solid rgba(56,189,248,.32); border-radius: 18px; box-shadow: 0 28px 90px rgba(0,0,0,.72), 0 0 42px rgba(14,165,233,.10); }
+        .profile-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:24px 28px 20px; border-bottom:1px solid rgba(148,163,184,.16); background:linear-gradient(110deg,rgba(8,145,178,.16),transparent 58%); }
+        .profile-kicker,.settings-eyebrow { display:block; color:#67e8f9; font-size:.62rem; font-weight:900; letter-spacing:.19em; text-transform:uppercase; }
+        .profile-title { margin:5px 0 2px; color:#f8fafc; font-size:clamp(1.35rem,4vw,1.8rem); font-weight:950; letter-spacing:.06em; text-transform:uppercase; }
+        .profile-subtitle { margin:0; color:#93a4b8; font-size:.78rem; }
+        .profile-version { flex-shrink:0; padding:7px 10px; border:1px solid rgba(103,232,249,.22); border-radius:7px; color:#a5f3fc; background:rgba(8,145,178,.10); font-size:.58rem; font-weight:900; letter-spacing:.13em; }
+        .profile-content { display:flex; flex-direction:column; gap:17px; padding:22px 28px 26px; }
+        .profile-identity-card { display:flex; align-items:center; gap:19px; padding:17px; border:1px solid rgba(148,163,184,.16); border-radius:13px; background:linear-gradient(120deg,rgba(15,38,58,.78),rgba(10,17,29,.75)); }
+        .profile-avatar-frame { position:relative; width:92px; height:92px; flex:0 0 92px; cursor:pointer; border-radius:50%; padding:3px; background:linear-gradient(145deg,#67e8f9,#2563eb); box-shadow:0 0 26px rgba(34,211,238,.16); }
+        .profile-avatar { display:block; width:100%; height:100%; border:2px solid #07111f; border-radius:50%; object-fit:cover; background:#0f172a; }
+        .profile-avatar-overlay { position:absolute; inset:3px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(2,8,18,.76); color:#a5f3fc; font-size:.66rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; opacity:0; transition:opacity .18s ease; }
+        .profile-avatar-frame:hover .profile-avatar-overlay { opacity:1; }
+        .profile-identity-copy { min-width:0; }
+        .profile-player-name { margin:5px 0 8px; overflow-wrap:anywhere; color:#fff; font-size:clamp(1.25rem,4vw,1.85rem); font-weight:950; letter-spacing:.03em; }
+        .profile-identity-meta { display:flex; align-items:center; gap:8px; color:#a6b6c8; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+        .profile-status-dot { width:7px; height:7px; border-radius:50%; background:#38bdf8; box-shadow:0 0 10px rgba(56,189,248,.75); }
+        .profile-fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+        .profile-field-card { min-width:0; padding:14px 15px; border:1px solid rgba(148,163,184,.15); border-radius:11px; background:rgba(15,23,42,.66); }
+        .profile-field-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; color:#94a3b8; font-size:.62rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+        .profile-field-heading label { color:#8ddff0; }
+        #name-changes-text { color:#64748b; font-size:.58rem; letter-spacing:0; text-transform:none; }
+        #name-changes-left { color:#67e8f9; }
+        .profile-text-input,.profile-uid-value { display:block; width:100%; min-width:0; padding:10px 11px; border:1px solid rgba(148,163,184,.19); border-radius:7px; outline:none; background:rgba(2,6,15,.76); color:#f8fafc; font-size:.85rem; font-weight:800; }
+        .profile-text-input:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.09); }
+        .profile-text-input:disabled { color:#cbd5e1; opacity:.8; }
+        .profile-uid-value { color:#67e8f9; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; }
+        .profile-cloud-card { padding:16px; border:1px solid rgba(34,211,238,.23); border-radius:12px; background:linear-gradient(120deg,rgba(8,47,73,.42),rgba(7,14,26,.72)); }
+        .profile-cloud-topline { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .profile-cloud-topline h3 { margin:4px 0 0; color:#f1f5f9; font-size:1rem; font-weight:900; letter-spacing:.04em; }
+        .profile-verified { flex-shrink:0; padding:5px 8px; border:1px solid rgba(34,197,94,.26); border-radius:6px; background:rgba(22,163,74,.10); color:#86efac; font-size:.56rem; font-weight:900; letter-spacing:.08em; }
+        .profile-cloud-status { min-height:34px; margin:12px 0; color:#a5b4c7; font-size:.72rem; font-weight:750; line-height:1.5; overflow-wrap:anywhere; }
+        .profile-connect-button { width:100%; padding:11px 14px; border:1px solid rgba(103,232,249,.55); border-radius:7px; background:linear-gradient(100deg,#22d3ee,#38bdf8); color:#04121c; font-size:.68rem; font-weight:950; letter-spacing:.13em; text-transform:uppercase; transition:filter .18s,transform .18s; }
+        .profile-connect-button:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .profile-actions { display:flex; gap:11px; padding-top:3px; }
+        .profile-button { flex:1; padding:12px 16px; border-radius:8px; font-size:.68rem; font-weight:950; letter-spacing:.12em; text-transform:uppercase; transition:background .16s,border-color .16s,transform .16s; }
+        .profile-button:hover { transform:translateY(-1px); }
+        .profile-button-secondary { border:1px solid rgba(148,163,184,.25); background:rgba(15,23,42,.75); color:#cbd5e1; }
+        .profile-button-secondary:hover { background:rgba(51,65,85,.65); }
+        .profile-button-primary { border:1px solid #e2e8f0; background:#e2e8f0; color:#07111f; }
+        .profile-button-primary:hover { background:#fff; }
+        #profile-menu .hidden { display:none !important; }
+
+        /* Graphics settings hierarchy */
+        .graphics-settings-panel { display:flex; flex-direction:column; gap:12px; }
+        .rendering-card,.render-subpanel { padding:15px; border:1px solid rgba(56,189,248,.24); border-radius:11px; background:linear-gradient(130deg,rgba(8,47,73,.38),rgba(8,15,27,.78)); }
+        .rendering-card-heading,.render-subpanel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+        .rendering-card-heading h3,.render-subpanel-heading h4 { margin:4px 0 0; color:#f1f5f9; font-size:.95rem; font-weight:950; letter-spacing:.05em; text-transform:uppercase; }
+        .rendering-card-mark,.settings-mode-tag { flex-shrink:0; padding:5px 8px; border:1px solid rgba(34,211,238,.24); border-radius:5px; color:#67e8f9; background:rgba(8,145,178,.10); font-size:.54rem; font-weight:950; letter-spacing:.12em; }
+        .vision-tag { color:#c4b5fd; border-color:rgba(167,139,250,.3); background:rgba(109,40,217,.12); }
+        .rendering-mode-select,.rendering-subselect { border-color:rgba(34,211,238,.48) !important; color:#cffafe !important; background-color:rgba(2,8,18,.94) !important; }
+        .settings-helper { margin:8px 0 0; color:#8194a9; font-size:.62rem; line-height:1.45; letter-spacing:.025em; }
+        .render-subpanel { border-color:rgba(148,163,184,.17); background:rgba(9,17,30,.76); }
+        .render-subpanel[hidden] { display:none !important; }
+        .render-advanced-setting { display:grid; grid-template-columns:1fr minmax(120px,.9fr); align-items:center; gap:12px; margin-top:13px; padding-top:12px; border-top:1px solid rgba(148,163,184,.13); }
+        .render-advanced-setting label,.settings-control-row label { color:#aebdd0; font-size:.65rem; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }
+        .settings-section-divider { display:flex; align-items:center; gap:12px; margin:7px 0 1px; color:#67e8f9; font-size:.63rem; font-weight:950; letter-spacing:.16em; text-transform:uppercase; }
+        .settings-section-divider::after { content:""; height:1px; flex:1; background:linear-gradient(90deg,rgba(34,211,238,.35),transparent); }
+        .settings-control-row { display:grid; grid-template-columns:minmax(125px,1fr) minmax(145px,1.1fr); align-items:center; gap:13px; padding:11px 12px; border:1px solid rgba(148,163,184,.12); border-radius:8px; background:rgba(15,23,42,.44); }
+        .settings-control-row .gta-select { margin-top:0; }
+        .settings-fps-toggle { display:flex; justify-content:space-between; }
+        @media (max-width:540px) {
+            .profile-header { padding:19px 18px 16px; }
+            .profile-content { padding:17px 18px 20px; }
+            .profile-fields-grid { grid-template-columns:1fr; }
+            .profile-identity-card { gap:13px; padding:13px; }
+            .profile-avatar-frame { width:76px; height:76px; flex-basis:76px; }
+            .render-advanced-setting,.settings-control-row { grid-template-columns:1fr; gap:7px; }
+        }
+
+
+        /* 1v1 Arena result presentation */
+        .pvp-result-card {
+            --pvp-accent: #48e0e8;
+            --pvp-accent-rgb: 72,224,232;
+            position: relative;
+            width: min(92vw, 690px);
+            max-height: min(88vh, 760px);
+            overflow: auto;
+            padding: clamp(20px, 4vw, 34px);
+            color: #f8fafc;
+            border: 1px solid rgba(var(--pvp-accent-rgb), .52);
+            border-radius: 18px;
+            background:
+                radial-gradient(ellipse at 90% 0%, rgba(var(--pvp-accent-rgb), .17), transparent 42%),
+                linear-gradient(145deg, rgba(11,18,30,.98), rgba(4,8,16,.98) 68%);
+            box-shadow: 0 28px 90px rgba(0,0,0,.7), 0 0 42px rgba(var(--pvp-accent-rgb), .12), inset 0 1px 0 rgba(255,255,255,.08);
+            isolation: isolate;
+            animation: pvp-result-arrive .55s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .pvp-result-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            opacity: .17;
+            background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mask-image: linear-gradient(135deg, #000, transparent 72%);
+        }
+        .pvp-result-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--pvp-accent), #fff, var(--pvp-accent), transparent);
+            opacity: .9;
+        }
+        .pvp-result-card.is-defeat { --pvp-accent: #ff6678; --pvp-accent-rgb: 255,102,120; }
+        .pvp-result-topline { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:17px; border-bottom:1px solid rgba(255,255,255,.1); }
+        .pvp-result-kicker,.pvp-result-mode,.pvp-result-overline,.pvp-result-player-label,.pvp-result-player-tag,.pvp-result-footstats span,.pvp-result-footer { font-family:Inter,Arial,sans-serif; font-size:10px; font-weight:900; letter-spacing:.19em; }
+        .pvp-result-kicker { display:flex; align-items:center; gap:9px; color:#aab8c9; }
+        .pvp-live-dot { width:7px; height:7px; border-radius:50%; background:var(--pvp-accent); box-shadow:0 0 12px var(--pvp-accent); }
+        .pvp-report-index { color:#526176; }
+        .pvp-result-mode { color:var(--pvp-accent); padding:7px 10px; border:1px solid rgba(var(--pvp-accent-rgb),.28); background:rgba(var(--pvp-accent-rgb),.07); border-radius:5px; white-space:nowrap; }
+        .pvp-result-heading-row { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:25px 0 20px; }
+        .pvp-result-overline { color:#718096; margin-bottom:5px; }
+        .pvp-result-heading { margin:0; color:var(--pvp-accent); font-size:clamp(38px,8vw,66px); line-height:.95; font-weight:1000; letter-spacing:-.055em; text-shadow:0 0 28px rgba(var(--pvp-accent-rgb),.18); }
+        .pvp-result-copy { margin:9px 0 0; color:#a5b4c5; font-size:11px; font-weight:800; letter-spacing:.18em; }
+        .pvp-result-emblem { width:78px; height:78px; flex:0 0 78px; display:grid; place-items:center; border:1px solid rgba(var(--pvp-accent-rgb),.3); border-radius:14px; background:linear-gradient(145deg,rgba(var(--pvp-accent-rgb),.13),rgba(255,255,255,.025)); transform:rotate(3deg); }
+        .pvp-result-emblem svg { width:52px; height:52px; fill:none; stroke:var(--pvp-accent); stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 7px rgba(var(--pvp-accent-rgb),.25)); }
+        .pvp-result-emblem .pvp-emblem-star { fill:var(--pvp-accent); stroke:none; }
+        .pvp-result-player { display:flex; align-items:center; gap:13px; padding:13px 15px; margin:0 0 13px; border:1px solid rgba(255,255,255,.1); border-radius:10px; background:rgba(255,255,255,.035); }
+        .pvp-result-player img { width:48px; height:48px; flex:0 0 48px; object-fit:cover; border:2px solid var(--pvp-accent); border-radius:50%; box-shadow:0 0 18px rgba(var(--pvp-accent-rgb),.18); background:#101827; }
+        .pvp-result-player-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
+        .pvp-result-player-label { color:#64748b; font-size:9px; }
+        .pvp-result-player-copy strong { max-width:40vw; overflow:hidden; color:#fff; font-size:15px; font-weight:900; letter-spacing:.07em; text-overflow:ellipsis; white-space:nowrap; }
+        .pvp-result-player-tag { margin-left:auto; color:var(--pvp-accent); padding:6px 9px; border:1px solid rgba(var(--pvp-accent-rgb),.25); border-radius:4px; }
+        .pvp-result-score-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+        .pvp-score-cell { min-width:0; display:flex; flex-direction:column; gap:7px; padding:15px 14px 13px; border:1px solid rgba(255,255,255,.09); border-radius:9px; background:rgba(0,0,0,.24); }
+        .pvp-score-label { color:#8290a3; font-size:9px; font-weight:900; letter-spacing:.16em; }
+        .pvp-score-cell strong { color:#f8fafc; font-size:clamp(25px,5vw,38px); font-weight:950; line-height:1; font-variant-numeric:tabular-nums; }
+        .pvp-score-kills strong { color:#5eead4; }
+        .pvp-score-deaths strong { color:#fb7185; }
+        .pvp-score-ratio strong { color:#f8fafc; }
+        .pvp-result-footstats { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:15px 2px 18px; }
+        .pvp-result-footstats div { display:flex; flex-direction:column; gap:5px; }
+        .pvp-result-footstats span { color:#64748b; font-size:8px; }
+        .pvp-result-footstats strong { color:#dbe5f1; font-size:14px; font-weight:900; font-variant-numeric:tabular-nums; }
+        .pvp-result-exit { width:100%; display:flex; justify-content:space-between; align-items:center; padding:15px 17px; border:1px solid var(--pvp-accent); border-radius:7px; background:linear-gradient(100deg,rgba(var(--pvp-accent-rgb),.18),rgba(var(--pvp-accent-rgb),.06)); color:#fff; cursor:pointer; font-size:10px; font-weight:950; letter-spacing:.16em; transition:background .2s,transform .2s,box-shadow .2s; }
+        .pvp-result-exit:hover { background:rgba(var(--pvp-accent-rgb),.24); box-shadow:0 0 22px rgba(var(--pvp-accent-rgb),.14); transform:translateY(-1px); }
+        .pvp-result-exit span:last-child { color:var(--pvp-accent); font-size:20px; }
+        .pvp-result-footer { display:flex; justify-content:space-between; color:#526176; font-size:8px; padding-top:14px; }
+        @keyframes pvp-result-arrive { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @media (max-width:520px) {
+            .pvp-result-card { width:94vw; padding:18px 15px; border-radius:13px; }
+            .pvp-result-emblem { width:60px; height:60px; flex-basis:60px; }
+            .pvp-result-emblem svg { width:42px; height:42px; }
+            .pvp-score-cell { padding:12px 9px; }
+            .pvp-score-label { font-size:8px; letter-spacing:.1em; }
+            .pvp-result-player-copy strong { max-width:52vw; }
+        }
+
     </style>
 </head>
 <body>
@@ -236,6 +408,7 @@ img {
         <!-- NEW: Offline Fallback UI -->
         <div id="offline-prompt" class="hidden flex-col items-center gap-4 mt-8 z-[1000]">
             <p class="text-red-500 font-bold uppercase tracking-widest text-sm text-center mb-2">Connection Timeout</p>
+            <p id="offline-cache-hint" class="max-w-md text-center text-xs leading-relaxed text-gray-400">Offline campaign requires a one-time online cache setup. Reconnect, open the game, refresh once after it loads, start Campaign and let the level load, then refresh again while still online.</p>
             <button onclick="playOffline()" class="gta-btn bg-cyan-600 hover:bg-cyan-500 text-center justify-center w-64 border border-cyan-400">Play Offline Maze</button>
             <button onclick="window.close()" class="gta-btn bg-red-600/50 hover:bg-red-500 text-center justify-center w-64 border border-red-400">Quit Game</button>
         </div>
@@ -386,54 +559,62 @@ img {
                             </div>
                         </div>
                         
-                        <div id="tab-graphics" class="settings-panel hidden flex-grow">
-
-                            <!-- ASTRAX RENDERING TECHNOLOGY -->
-                            <div class="mb-5 border-b border-white/20 pb-5">
-                                <label class="block text-xs font-black text-cyan-400 mb-1 uppercase tracking-widest">Rendering Technology</label>
-                                <select id="set-render-tech" class="gta-select border-cyan-500 text-cyan-300">
-                                    <option value="ax">AX Upscaler — Performance</option>
-                                    <option value="vision">AX Vision — Native Fidelity</option>
+                        <div id="tab-graphics" class="settings-panel hidden flex-grow graphics-settings-panel">
+                            <section class="rendering-card">
+                                <div class="rendering-card-heading">
+                                    <div>
+                                        <span class="settings-eyebrow">DISPLAY PIPELINE</span>
+                                        <h3>Rendering Mode</h3>
+                                    </div>
+                                    <span class="rendering-card-mark">AX / GPU</span>
+                                </div>
+                                <select id="set-render-tech" class="gta-select rendering-mode-select">
+                                    <option value="native">Native</option>
+                                    <option value="ax">AX Upscaler</option>
+                                    <option value="vision">AX Vision</option>
                                 </select>
-                                <p id="render-tech-description" class="text-[0.6rem] text-gray-500 mt-1 uppercase">Performance-focused rendering for lower-end hardware.</p>
-                            </div>
+                                <p id="render-tech-description" class="settings-helper">Full-resolution rendering with no upscaling.</p>
+                            </section>
 
-                            <div id="ax-upscaler-section" class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">AX Upscaler</label>
-                                <select id="set-upscaler" class="gta-select border-cyan-500 text-cyan-300">
-                                    <option value="off">Off (Native 100%)</option>
-                                    <option value="quality">Quality (77% + AX Reconstruction)</option>
-                                    <option value="balanced">Balanced (59% + AX Reconstruction)</option>
-                                    <option value="performance">Performance (50% + AX Reconstruction)</option>
-                                    <option value="ultra">Ultra Performance (33% + AX Reconstruction)</option>
+                            <section id="ax-upscaler-section" class="render-subpanel" hidden>
+                                <div class="render-subpanel-heading">
+                                    <div><span class="settings-eyebrow">AX UPSCALER</span><h4>Upscaling Preset</h4></div>
+                                    <span class="settings-mode-tag">PERFORMANCE</span>
+                                </div>
+                                <select id="set-upscaler" class="gta-select rendering-subselect">
+                                    <option value="quality">Quality</option>
+                                    <option value="balanced">Balanced</option>
+                                    <option value="performance">Performance</option>
+                                    <option value="ultra">Ultra Performance</option>
                                 </select>
-                                <p class="text-[0.6rem] text-gray-500 mt-1 uppercase">Boosts FPS by rendering at lower resolution and edge-sharpening the output.</p>
-                            </div>
+                                <p class="settings-helper">Lower internal resolution with image reconstruction.</p>
+                            </section>
 
-                            <!-- ASTRAX VISION HIGH-END CONTROLS -->
-                            <div id="ax-vision-section" class="mb-5 p-3 border border-cyan-500/20 bg-cyan-950/10 rounded-md">
-                                <label class="block text-xs font-black text-cyan-300 mb-1 uppercase tracking-widest">AX Vision Profile</label>
-                                <select id="set-vision-profile" class="gta-select">
-                                    <option value="native">Native Fidelity — Legacy Look</option>
-                                    <option value="cinematic">Cinematic — Enhanced Depth</option>
-                                    <option value="extreme">Extreme — Maximum Fidelity</option>
-                                    <option value="radiance">Radiance Experimental — Screen-Space Ray Simulation</option>
+                            <section id="ax-vision-section" class="render-subpanel" hidden>
+                                <div class="render-subpanel-heading">
+                                    <div><span class="settings-eyebrow">AX VISION</span><h4>Visual Profile</h4></div>
+                                    <span class="settings-mode-tag vision-tag">FIDELITY</span>
+                                </div>
+                                <select id="set-vision-profile" class="gta-select rendering-subselect">
+                                    <option value="native">Fidelity</option>
+                                    <option value="cinematic">Cinematic</option>
+                                    <option value="extreme">Extreme</option>
+                                    <option value="radiance">Radiance</option>
                                 </select>
-                                <p id="vision-profile-description" class="text-[0.6rem] text-gray-500 mt-1 uppercase">Restores the original native rendering character with no AX reconstruction.</p>
-
-                                <div class="mt-4">
-                                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Vision Shadow Detail</label>
+                                <p id="vision-profile-description" class="settings-helper">Native-resolution image processing.</p>
+                                <div class="render-advanced-setting">
+                                    <label for="set-vision-shadows">Vision Shadow Map</label>
                                     <select id="set-vision-shadows" class="gta-select">
                                         <option value="follow">Follow Shadow Quality</option>
-                                        <option value="4k">4K Ultra</option>
-                                        <option value="8k">8K Extreme (Hardware Limit)</option>
+                                        <option value="4k">4K</option>
+                                        <option value="8k">8K</option>
                                     </select>
-                                    <p class="text-[0.6rem] text-gray-500 mt-1 uppercase">Optional premium shadow map. 8K is capped by the GPU texture limit.</p>
                                 </div>
-                            </div>
+                            </section>
 
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Graphics Quality</label>
+                            <div class="settings-section-divider"><span>Graphics Quality</span></div>
+                            <div class="settings-control-row">
+                                <label for="set-quality">Graphics Preset</label>
                                 <select id="set-quality" class="gta-select">
                                     <option value="custom">Custom</option>
                                     <option value="ultra">Ultra</option>
@@ -442,46 +623,46 @@ img {
                                     <option value="low">Low</option>
                                 </select>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Shadow Quality</label>
+                            <div class="settings-control-row">
+                                <label for="set-shadows-select">Shadow Quality</label>
                                 <select id="set-shadows-select" class="gta-select">
                                     <option value="ultra">Ultra (4K)</option>
                                     <option value="high">High (2K)</option>
                                     <option value="medium">Medium (1K)</option>
                                     <option value="low">Low (512p)</option>
-                                    <option value="off">OFF</option>
+                                    <option value="off">Off</option>
                                 </select>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Post-FX (Bloom)</label>
+                            <div class="settings-control-row">
+                                <label for="set-bloom">Post Processing</label>
                                 <select id="set-bloom" class="gta-select">
-                                    <option value="high">High</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="low">Low</option>
-                                    <option value="off">OFF</option>
+                                    <option value="high">Bloom — High</option>
+                                    <option value="medium">Bloom — Medium</option>
+                                    <option value="low">Bloom — Low</option>
+                                    <option value="off">Bloom — Off</option>
                                 </select>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Anisotropic Filtering</label>
+                            <div class="settings-control-row">
+                                <label for="set-anisotropy">Anisotropic Filtering</label>
                                 <select id="set-anisotropy" class="gta-select">
-                                    <option value="16">16x (Ultra)</option>
-                                    <option value="8">8x (High)</option>
-                                    <option value="4">4x (Medium)</option>
-                                    <option value="1">1x (Off)</option>
+                                    <option value="16">16x</option>
+                                    <option value="8">8x</option>
+                                    <option value="4">4x</option>
+                                    <option value="1">Off</option>
                                 </select>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">V-Sync / FPS Limit</label>
+                            <div class="settings-control-row">
+                                <label for="set-fps">Frame Rate</label>
                                 <select id="set-fps" class="gta-select">
-                                    <option value="vsync">V-Sync (Match Monitor)</option>
-                                    <option value="uncapped">Uncapped / Max</option>
-                                    <option value="60">Lock 60 FPS</option>
-                                    <option value="30">Lock 30 FPS</option>
+                                    <option value="vsync">Display Sync</option>
+                                    <option value="uncapped">Uncapped (No In-Game Limit)</option>
+                                    <option value="60">60 FPS</option>
+                                    <option value="30">30 FPS</option>
                                 </select>
                             </div>
-
-                            <div class="mb-4 flex justify-between items-center">
-                                <label class="text-xs font-bold text-gray-400 uppercase">Show FPS Counter</label>
+                            <p class="settings-helper">Uncapped removes the game limiter. Browser rendering still follows the active display refresh rate.</p>
+                            <div class="settings-control-row settings-fps-toggle">
+                                <label for="toggle-fps">FPS Counter</label>
                                 <button id="toggle-fps" type="button" class="gta-toggle">OFF</button>
                             </div>
                         </div>
@@ -575,7 +756,7 @@ img {
                         <div class="gta-menu-header">Credits</div>
                         <div class="text-center p-8 flex-grow flex flex-col justify-center">
                             <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-wider">MAZE ESCAPE</h1>
-                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.5.0</p>
+                            <p class="text-gray-400 font-bold mb-6 text-lg">v1.5.5</p>
                             <p class="text-gray-300 font-bold mb-2">Developed by</p>
                             <h2 class="text-2xl font-black text-cyan-400 mb-8 tracking-widest">ASTRAX</h2>
                         </div>
@@ -619,62 +800,66 @@ img {
 
 
 
-   <div id="profile-menu" class="overlay hidden bg-[#050508]/90 backdrop-blur-md z-[70]">
-        <!-- Modernized Container -->
-        <div class="w-full max-w-md bg-black/80 border border-cyan-500/40 rounded-xl shadow-[0_0_40px_rgba(34,211,238,0.15)] flex flex-col overflow-hidden relative">
-            
-            <!-- Tech Header -->
-            <div class="bg-gradient-to-r from-cyan-900/50 to-transparent p-5 border-b border-cyan-500/30 flex items-center justify-between">
-                <h2 class="text-xl font-black text-cyan-400 tracking-[0.2em] uppercase m-0" style="text-shadow: 0 0 10px rgba(34,211,238,0.5);">Operative Profile</h2>
-                <div class="text-[0.6rem] font-mono text-cyan-500/50">AX-OS v1.2</div>
-            </div>
+    <div id="profile-menu" class="overlay hidden profile-overlay z-[70]">
+        <section class="profile-shell" aria-label="Player profile">
+            <header class="profile-header">
+                <div>
+                    <div class="profile-kicker">ASTRAX NETWORK</div>
+                    <h2 class="profile-title">Player Profile</h2>
+                    <p class="profile-subtitle">Your identity and account connection</p>
+                </div>
+                <span class="profile-version">PLAYER HUB</span>
+            </header>
 
-            <!-- Content Body -->
-            <div class="p-6 flex flex-col items-center">
-                <!-- PFP Avatar with Glow -->
-                <div class="relative cursor-pointer group mb-8 flex-shrink-0" onclick="if(!localStorage.getItem('ax_uid')) document.getElementById('pfp-upload').click()">
-                    <div class="absolute inset-0 bg-cyan-500 blur-md opacity-20 group-hover:opacity-50 transition-opacity rounded-full"></div>
-                    <img id="edit-pfp" src="" class="relative w-28 h-28 md:w-32 md:h-32 rounded-full border-2 border-cyan-400 object-cover bg-gray-900 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
-                    <div id="pfp-change-overlay" class="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border-2 border-cyan-400">
-                        <span class="text-cyan-300 font-black text-xs uppercase tracking-widest">Update</span>
+            <div class="profile-content">
+                <div class="profile-identity-card">
+                    <div class="profile-avatar-frame" onclick="if(!localStorage.getItem('ax_uid')) document.getElementById('pfp-upload').click()" title="Change avatar">
+                        <img id="edit-pfp" src="" alt="Player avatar" class="profile-avatar">
+                        <div id="pfp-change-overlay" class="profile-avatar-overlay"><span>Change</span></div>
+                    </div>
+                    <div class="profile-identity-copy">
+                        <span class="profile-kicker">CURRENT PLAYER</span>
+                        <h3 id="profile-display-name" class="profile-player-name">Player</h3>
+                        <div class="profile-identity-meta">
+                            <span class="profile-status-dot"></span>
+                            <span id="profile-identity-state">Local profile</span>
+                        </div>
                     </div>
                 </div>
                 <input type="file" id="pfp-upload" accept="image/*" class="hidden">
-                
-                <!-- Inputs -->
-                <div class="w-full mb-5">
-                    <div class="flex justify-between items-end mb-1">
-                        <label class="text-[0.65rem] font-black text-cyan-500/70 uppercase tracking-widest">Callsign</label>
-                        <span id="name-changes-text" class="text-[0.6rem] text-gray-500 font-bold">Changes: <span id="name-changes-left" class="text-cyan-400">2</span></span>
+
+                <div class="profile-fields-grid">
+                    <div class="profile-field-card">
+                        <div class="profile-field-heading">
+                            <label for="edit-name-input">Display Name</label>
+                            <span id="name-changes-text">Changes: <b id="name-changes-left">2</b></span>
+                        </div>
+                        <input type="text" id="edit-name-input" class="profile-text-input" maxlength="15" autocomplete="nickname">
                     </div>
-                    <input type="text" id="edit-name-input" class="w-full bg-black border border-white/10 focus:border-cyan-400 text-white font-bold px-4 py-2.5 outline-none transition-colors rounded text-sm" maxlength="15">
-                </div>
-
-                <div class="w-full mb-8">
-                    <label class="block text-[0.65rem] font-black text-cyan-500/70 mb-1 uppercase tracking-widest">Network UID</label>
-                    <div id="edit-uid-display" class="w-full bg-white/5 border border-white/5 text-gray-400 font-mono px-4 py-2.5 rounded text-sm cursor-not-allowed">------</div>
-                </div>
-
-                <!-- AstraX Cloud Module -->
-                <div class="w-full mb-6 p-4 bg-gradient-to-br from-black to-cyan-950/30 border border-cyan-500/20 rounded-lg flex flex-col items-center shadow-inner relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
-                    <h3 class="text-[0.65rem] font-black text-cyan-400 tracking-widest uppercase mb-1">AstraX Network Sync</h3>
-                    <div id="ax-status" class="text-xs font-bold mb-4 text-gray-400 truncate w-full text-center">Local Guest Instance</div>
-                    
-                    <div id="ax-locked-warning" class="hidden text-[0.65rem] text-cyan-300 uppercase tracking-widest mb-3 flex items-center justify-center gap-1 bg-cyan-900/30 px-3 py-1 rounded-full border border-cyan-500/30">
-                        <span class="text-cyan-400">⚡</span> Identity Verified
+                    <div class="profile-field-card">
+                        <div class="profile-field-heading"><label>Player UID</label><span>IDENTIFIER</span></div>
+                        <div id="edit-uid-display" class="profile-uid-value">------</div>
                     </div>
-                    
-                    <button id="btn-ax-modal" onclick="openAstraXModal()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-widest py-2.5 rounded transition-all shadow-[0_0_10px_rgba(34,211,238,0.2)]">Connect AstraX ID</button>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="flex w-full gap-3 mt-auto">
-                    <button class="flex-1 bg-transparent hover:bg-white/5 border border-white/20 text-gray-300 font-black text-xs uppercase tracking-widest py-3 rounded transition-colors" onclick="closeMenu('profile-menu')">Abort</button>
-                    <button id="btn-save-profile" class="flex-1 bg-white hover:bg-gray-200 text-black font-black text-xs uppercase tracking-widest py-3 rounded transition-colors shadow-lg">Save Profile</button>
-                </div>
+                <section class="profile-cloud-card">
+                    <div class="profile-cloud-topline">
+                        <div>
+                            <span class="profile-kicker">ACCOUNT CONNECTIVITY</span>
+                            <h3>AstraX Cloud</h3>
+                        </div>
+                        <span id="ax-locked-warning" class="profile-verified hidden"><span>✓</span> VERIFIED</span>
+                    </div>
+                    <div id="ax-status" class="profile-cloud-status">Local Guest Instance</div>
+                    <button id="btn-ax-modal" onclick="openAstraXModal()" class="profile-connect-button">Connect AstraX Account</button>
+                </section>
+
+                <footer class="profile-actions">
+                    <button class="profile-button profile-button-secondary" onclick="closeMenu('profile-menu')">Close</button>
+                    <button id="btn-save-profile" class="profile-button profile-button-primary">Save Profile</button>
+                </footer>
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- AstraX ID Link Modal -->
@@ -852,17 +1037,69 @@ img {
             <h1 id="slogan-text" class="text-4xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-600 tracking-widest uppercase scale-150 opacity-0 transition-all duration-700 ease-out text-center px-4" style="text-shadow: 0 0 40px rgba(245, 158, 11, 0.5);">Perfect Escape! CONQUERED</h1>
         </div>
         <div id="victory-stats-stage" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-1000 hidden">
-            <div class="absolute top-8 left-8 flex items-center gap-4">
-                <img id="victory-pfp" src="" class="w-12 h-12 md:w-16 md:h-16 border-2 border-yellow-500 rounded-full shadow-[0_0_15px_#f59e0b] object-cover">
+            <div id="victory-player-header" class="absolute top-8 left-8 flex items-center gap-4">
+                <img id="victory-pfp" src="" class="w-12 h-12 md:w-16 md:h-16 border-2 border-yellow-500 rounded-full shadow-[0_0_15px_#f59e0b] object-cover" alt="Player avatar">
                 <span id="victory-player-name" class="text-yellow-500 font-black text-xl md:text-2xl tracking-widest uppercase">Player</span>
             </div>
-            <div class="bg-black/60 border-2 border-yellow-500/50 p-8 md:p-12 rounded-xl shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md flex flex-col items-center text-center mt-12 w-[90%] max-w-md">
+
+            <!-- Standard campaign / MMO result panel -->
+            <div id="generic-victory-card" class="bg-black/60 border-2 border-yellow-500/50 p-8 md:p-12 rounded-xl shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md flex flex-col items-center text-center mt-12 w-[90%] max-w-md">
                 <div id="victory-time" class="text-5xl md:text-6xl font-black text-white font-mono tracking-widest mb-10 text-shadow-lg shadow-yellow-500">00:00</div>
                 <div class="flex flex-col md:flex-row gap-4 w-full mt-4">
                     <button class="flex-1 gta-btn bg-yellow-600/20 hover:bg-yellow-500 border border-yellow-500 justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="playAgainMMO()">PLAY AGAIN</button>
                     <button class="flex-1 gta-btn bg-black hover:bg-white text-white hover:text-black border border-white justify-center text-center py-4 text-xs md:text-sm tracking-widest" onclick="returnToMainMenuFromVictory()">MAIN MENU</button>
                 </div>
             </div>
+
+            <!-- Dedicated 1v1 Arena result card -->
+            <section id="pvp-result-card" class="pvp-result-card hidden" aria-live="polite" aria-label="1v1 match results">
+                <div class="pvp-result-topline">
+                    <span class="pvp-result-kicker"><span class="pvp-live-dot"></span> MATCH REPORT <span class="pvp-report-index">/ 01</span></span>
+                    <span class="pvp-result-mode">1V1 ARENA</span>
+                </div>
+                <div class="pvp-result-heading-row">
+                    <div>
+                        <div class="pvp-result-overline">FINAL RESULT</div>
+                        <h2 id="pvp-result-heading" class="pvp-result-heading">VICTORY</h2>
+                        <p id="pvp-result-copy" class="pvp-result-copy">DUEL COMPLETE</p>
+                    </div>
+                    <div class="pvp-result-emblem" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" role="presentation">
+                            <path d="M18 9h28v10c0 13-6 21-14 21S18 32 18 19V9Z" />
+                            <path d="M18 15H8v5c0 9 5 14 14 15M46 15h10v5c0 9-5 14-14 15M32 40v9m-12 6h24M24 49h16" />
+                            <path d="m32 15 2.4 5 5.6.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.6-.8L32 15Z" class="pvp-emblem-star" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="pvp-result-player">
+                    <img id="pvp-result-pfp" src="" alt="Your avatar">
+                    <div class="pvp-result-player-copy">
+                        <span class="pvp-result-player-label">OPERATIVE</span>
+                        <strong id="pvp-result-player-name">Player</strong>
+                    </div>
+                    <span class="pvp-result-player-tag">YOU</span>
+                </div>
+                <div class="pvp-result-score-grid">
+                    <div class="pvp-score-cell pvp-score-kills">
+                        <span class="pvp-score-label">KILLS</span>
+                        <strong id="pvp-result-kills">0</strong>
+                    </div>
+                    <div class="pvp-score-cell pvp-score-deaths">
+                        <span class="pvp-score-label">DEATHS</span>
+                        <strong id="pvp-result-deaths">0</strong>
+                    </div>
+                    <div class="pvp-score-cell pvp-score-ratio">
+                        <span class="pvp-score-label">K/D RATIO</span>
+                        <strong id="pvp-result-kd">0.00</strong>
+                    </div>
+                </div>
+                <div class="pvp-result-footstats">
+                    <div><span>DAMAGE DEALT</span><strong id="pvp-result-damage">0</strong></div>
+                    <div><span>MATCH DURATION</span><strong id="pvp-result-duration">00:00</strong></div>
+                </div>
+                <button class="pvp-result-exit" onclick="returnToMainMenuFromVictory()"><span>RETURN TO MAIN MENU</span><span aria-hidden="true">&#8594;</span></button>
+                <div class="pvp-result-footer"><span>ASTRAX COMPETITIVE</span><span>GG / WP</span></div>
+            </section>
         </div>
     </div>
 
@@ -1036,14 +1273,19 @@ img {
             if (data.success) {
                 // 1. Lock the ID in the browser storage (Cross-Progression)
                 localStorage.setItem('ax_uid', data.uid);
-                localStorage.setItem('ax_email', data.email);
+localStorage.setItem('ax_email', data.email);
                 localStorage.setItem('ax_name', data.name);
                 localStorage.setItem('ax_pfp', data.pfp || DEFAULT_PFP);
                 
                 // 2. Overwrite the temporary Guest Profile in the active game memory
+                userProfile.axUid = data.uid;
+                userProfile.uidNum = data.uid;
                 userProfile.name = data.name;
-                userProfile.uidNum = data.uid.substring(0, 6).toUpperCase(); 
                 userProfile.pfp = data.pfp || DEFAULT_PFP;
+                localStorage.setItem('ax_supporter', data.isSupporter === true ? 'true' : 'false');
+                localStorage.setItem('ax_supporter_rewards', JSON.stringify(data.supporterRewards || { supporterBadge: data.isSupporter === true, goldSkin: data.isSupporter === true }));
+
+                await syncAstraXRewards();
                 
                 // 3. Force sync the true identity to Firebase so everyone in the multiplayer room sees the change instantly
                 if (myDBUid && db && window.FB) {
@@ -1086,17 +1328,38 @@ img {
     let db, auth, currentUser, myDBUid, onlineUnsub, onlineSyncInterval, sprayUnsub, pvpStateUnsub;
     
     let userProfile = { 
-        name: "Player", uidNum: "------", changesLeft: 2, pfp: DEFAULT_PFP, 
-        equippedWeapon: "knife", equippedChar: "default", level: 1,
-        coins: 0, dailyAdsWatched: 0, lastAdDate: "",
-        inventory: { weapons: ['knife'], chars: ['default'] }
-    };
-    
+    name: "Player",
+    uidNum: "------",
+    axUid: "",
+    changesLeft: 2,
+    pfp: DEFAULT_PFP,
+
+    equippedWeapon: "knife",
+    equippedChar: "default",
+    level: 1,
+
+    coins: 0,
+    dailyAdsWatched: 0,
+    lastAdDate: "",
+
+    isSupporter: false,
+
+    supporterRewards: {
+        supporterBadge: false,
+        goldSkin: false
+    },
+
+    inventory: {
+        weapons: ['knife'],
+        chars: ['default']
+    }
+};
     let mySessionId = Math.random().toString(36).substring(2, 10);
     let myStatusRef = null;
     let globalStoreCatalog = { weapons: {}, chars: {} };
     
     let connectionTimeout;
+    let isOfflineMode = false;
 
     async function loadAppAuth() {
         // Check if there is absolutely no internet right away
@@ -1137,10 +1400,11 @@ img {
         }
         
         window.FB.onAuthStateChanged(auth, async (user) => {
-            clearTimeout(connectionTimeout); 
+            clearTimeout(connectionTimeout);
+            if (isOfflineMode) return;
             if (user) { 
                 currentUser = user; 
-                myDBUid = localStorage.getItem('ax_uid') || currentUser.uid;
+                myDBUid = currentUser.uid;
                 
                 const axEmail = (localStorage.getItem('ax_email') || '').toLowerCase();
                 isDeveloper = (axEmail === 'ranjanroushan5@gmail.com');
@@ -1149,6 +1413,7 @@ img {
                 window.FB.onDisconnect(myStatusRef).set('Offline');
                 
                 try {
+                    if (localStorage.getItem('ax_uid')) await syncAstraXIdentity();
                     await loadUserProfile(); 
                     listenForInvites();
                     listenForGlobalNotices();
@@ -1176,28 +1441,241 @@ img {
         document.getElementById('loader-text').innerText = "NETWORK UNAVAILABLE";
         const prompt = document.getElementById('offline-prompt');
         if(prompt) { prompt.classList.remove('hidden'); prompt.classList.add('flex'); }
+        const hint = document.getElementById('offline-cache-hint');
+        if (hint && (!('serviceWorker' in navigator) || !window.isSecureContext)) {
+            hint.textContent = 'Offline caching requires HTTPS or localhost. Do not launch this game using file://. Host it online once to cache the libraries and campaign assets.';
+        } else if (hint && navigator.serviceWorker && !navigator.serviceWorker.controller) {
+            hint.textContent = 'The offline cache is not controlling this page yet. Reconnect, open the game, wait for it to load, and refresh once while online. Then load Campaign and refresh again before disconnecting.';
+        }
     };
 
-    window.playOffline = function() {
-        // Build a temporary local profile so the game doesn't crash without the database
-        const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
-        userProfile = { 
-            name: "Offline Player", uidNum: "000000", changesLeft: 0, pfp: DEFAULT_PFP, 
-            equippedWeapon: "knife", equippedChar: "default", level: localLevel, 
-            coins: 0, dailyAdsWatched: 0, lastAdDate: "", 
-            inventory: { weapons: ['knife'], chars: ['default'] } 
+    window.playOffline = async function() {
+        // Offline campaign must not depend on Firebase/Auth, Cloudflare, or remote audio.
+        if (!window.THREE || typeof renderer === 'undefined' || !renderer) {
+            const hint = document.getElementById('offline-cache-hint');
+            if (hint) hint.textContent = 'The 3D libraries are not available in this browser cache. Reconnect, open the game over HTTPS, let it load once, then refresh before disconnecting.';
+            return;
+        }
+
+        clearTimeout(connectionTimeout);
+        isOfflineMode = true;
+        db = null;
+        auth = null;
+        currentUser = null;
+        myDBUid = null;
+        myStatusRef = null;
+
+        const storedLevel = parseInt(localStorage.getItem('maze_escape_level') || '1', 10);
+        const localLevel = Number.isFinite(storedLevel) && storedLevel > 0 ? storedLevel : 1;
+        userProfile = {
+            name: 'Offline Player', uidNum: '000000', changesLeft: 0, pfp: DEFAULT_PFP,
+            equippedWeapon: 'knife', equippedChar: 'default', level: localLevel,
+            coins: 0, dailyAdsWatched: 0, lastAdDate: '',
+            inventory: { weapons: ['knife'], chars: ['default'] }
         };
         currentLevel = localLevel;
         updateProfileUI();
 
-        // Hide loader and drop directly into offline campaign
+        // Clearly disable online-only entry points for this local session.
+        const onlineButton = document.getElementById('btn-mode-online');
+        const pvpButton = document.getElementById('btn-pvp-open');
+        if (onlineButton) {
+            onlineButton.classList.add('opacity-40');
+            onlineButton.title = 'Multiplayer requires an internet connection.';
+        }
+        if (pvpButton) {
+            pvpButton.classList.add('opacity-40');
+            pvpButton.title = 'PvP requires an internet connection.';
+        }
+
         document.getElementById('initial-loader').classList.add('hidden');
+        document.getElementById('offline-prompt').classList.add('hidden');
         gameMode = 'campaign';
-        startGamePlay();
-        canvas.requestPointerLock();
+
+        try {
+            await startGamePlay();
+            if (canvas && typeof canvas.requestPointerLock === 'function') {
+                canvas.requestPointerLock();
+            }
+        } catch (error) {
+            console.error('[Maze Escape] Offline campaign failed to start:', error);
+            isPlaying = false;
+            isPaused = false;
+            document.getElementById('initial-loader').classList.remove('hidden');
+            document.getElementById('loader-spinner').classList.add('hidden');
+            document.getElementById('loader-text').innerText = 'OFFLINE CAMPAIGN COULD NOT START';
+            const hint = document.getElementById('offline-cache-hint');
+            if (hint) hint.textContent = 'A required game asset is missing from the offline cache. Reconnect, enter Campaign once, wait for the level to finish loading, and refresh.';
+            document.getElementById('offline-prompt').classList.remove('hidden');
+            document.getElementById('offline-prompt').classList.add('flex');
+        }
     };
 
-    function setMyStatus(status) { if(myStatusRef) window.FB.set(myStatusRef, status); }
+    function setMyStatus(status) { if(!isOfflineMode && myStatusRef && window.FB) window.FB.set(myStatusRef, status); }
+
+        async function syncAstraXIdentity() {
+        const axUid = (localStorage.getItem('ax_uid') || '').trim();
+        if (!/^\d{6}$/.test(axUid) && !/^AX-[A-Z0-9]{5,7}$/i.test(axUid)) return false;
+        try {
+            const res = await fetch('https://astrax-auth.ranjanroushan5.workers.dev/status?uid=' + encodeURIComponent(axUid), { cache: 'no-store' });
+            const data = await res.json();
+            if (!res.ok || !data.success) return false;
+            localStorage.setItem('ax_uid', String(data.uid));
+            if (data.name) localStorage.setItem('ax_name', data.name);
+            if (data.pfp) localStorage.setItem('ax_pfp', data.pfp);
+            localStorage.setItem('ax_supporter', data.isSupporter === true ? 'true' : 'false');
+            localStorage.setItem('ax_supporter_rewards', JSON.stringify(data.supporterRewards || { supporterBadge: data.isSupporter === true, goldSkin: data.isSupporter === true }));
+            userProfile.axUid = String(data.uid);
+            userProfile.uidNum = String(data.uid);
+            if (data.name) userProfile.name = data.name;
+            if (data.pfp) userProfile.pfp = data.pfp;
+            return true;
+        } catch (e) {
+            console.warn('AstraX identity sync failed:', e);
+            return false;
+        }
+    }
+
+        async function syncAstraXRewards() {
+        const axUid =
+            (localStorage.getItem('ax_uid') || '')
+                .trim()
+                .toUpperCase();
+
+        if (!/^\d{6}$/.test(axUid)) {
+            return false;
+        }
+
+        try {
+            const res = await fetch(
+                'https://astrax-auth.ranjanroushan5.workers.dev/status?uid=' +
+                encodeURIComponent(axUid)
+            );
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                return false;
+            }
+
+            const nextAxUid =
+                data.uid || axUid;
+
+            const nextIsSupporter =
+                data.isSupporter === true;
+
+            const nextRewards =
+                data.supporterRewards || {
+                    supporterBadge: false,
+                    goldSkin: false
+                };
+
+            const supporterChanged =
+                userProfile.isSupporter !== nextIsSupporter;
+
+            const rewardsChanged =
+                JSON.stringify(
+                    userProfile.supporterRewards || {}
+                ) !== JSON.stringify(nextRewards);
+
+            userProfile.axUid = String(nextAxUid);
+            userProfile.uidNum = String(nextAxUid);
+            localStorage.setItem('ax_uid', String(nextAxUid));
+            if (typeof data.name === 'string' && data.name) {
+                userProfile.name = data.name;
+                localStorage.setItem('ax_name', data.name);
+            }
+            if (typeof data.pfp === 'string' && data.pfp) {
+                userProfile.pfp = data.pfp;
+                localStorage.setItem('ax_pfp', data.pfp);
+            }
+            userProfile.isSupporter =
+                nextIsSupporter;
+
+            userProfile.supporterRewards =
+                nextRewards;
+            localStorage.setItem('ax_supporter', nextIsSupporter ? 'true' : 'false');
+            localStorage.setItem('ax_supporter_rewards', JSON.stringify(nextRewards));
+
+            let inventoryChanged = false;
+
+            if (userProfile.isSupporter) {
+                if (!userProfile.inventory) {
+                    userProfile.inventory = {
+                        weapons: ['knife'],
+                        chars: ['default']
+                    };
+                }
+
+                if (!userProfile.inventory.chars) {
+                    userProfile.inventory.chars =
+                        ['default'];
+                }
+
+                if (
+                    !userProfile.inventory.chars.includes('gold')
+                ) {
+                    userProfile.inventory.chars.push('gold');
+                    inventoryChanged = true;
+                }
+            }
+
+            if (
+                (supporterChanged ||
+                 rewardsChanged ||
+                 inventoryChanged) &&
+                myDBUid &&
+                db &&
+                window.FB
+            ) {
+                await window.FB.update(
+                    window.FB.ref(
+                        db,
+                        'users/' +
+                        myDBUid +
+                        '/profile'
+                    ),
+                    {
+                        axUid: userProfile.axUid,
+                        isSupporter:
+                            userProfile.isSupporter,
+                        supporterRewards:
+                            userProfile.supporterRewards,
+                        inventory:
+                            userProfile.inventory
+                    }
+                ).catch(() => {});
+            }
+
+            return true;
+
+        } catch (e) {
+            console.warn(
+                'AstraX reward sync failed:',
+                e
+            );
+
+            return false;
+        }
+    }
+
+    window.addEventListener('focus', async () => {
+        if (!localStorage.getItem('ax_uid')) {
+            return;
+        }
+
+        const before =
+            userProfile.isSupporter === true;
+
+        if (
+            await syncAstraXRewards() &&
+            before !==
+            (userProfile.isSupporter === true)
+        ) {
+            updateProfileUI();
+            renderCharacters();
+        }
+    });
 
     async function loadUserProfile() {
         const userRef = window.FB.ref(db, 'users/' + myDBUid + '/profile');
@@ -1220,11 +1698,19 @@ img {
             currentLevel = parseInt(userProfile.level);
 
             if(localStorage.getItem('ax_uid')) {
+                userProfile.uidNum = localStorage.getItem('ax_uid');
+                userProfile.axUid = localStorage.getItem('ax_uid');
                 userProfile.name = localStorage.getItem('ax_name') || userProfile.name;
                 userProfile.pfp = localStorage.getItem('ax_pfp') || userProfile.pfp;
             }
         } else {
-            const randomID = Math.floor(100000 + Math.random() * 900000);
+            let randomID = 0;
+            for (let attempt = 0; attempt < 50 && !randomID; attempt++) {
+                const candidate = Math.floor(100000 + Math.random() * 900000);
+                const exists = await window.FB.get(window.FB.ref(db, 'uids/' + candidate));
+                if (!exists.exists()) randomID = candidate;
+            }
+            if (!randomID) throw new Error('Unable to allocate a unique 6-digit game UID.');
             const localLevel = parseInt(localStorage.getItem('maze_escape_level') || 1);
             
            
@@ -1243,12 +1729,19 @@ img {
                 lastAdDate: "", 
                 inventory: { weapons: ['knife'], chars: ['default'] } 
             };
+            if (localStorage.getItem('ax_uid')) {
+                userProfile.uidNum = localStorage.getItem('ax_uid');
+                userProfile.axUid = localStorage.getItem('ax_uid');
+                userProfile.name = localStorage.getItem('ax_name') || userProfile.name;
+                userProfile.pfp = localStorage.getItem('ax_pfp') || userProfile.pfp;
+            }
             
             await window.FB.set(window.FB.ref(db, 'users/' + myDBUid + '/profile'), userProfile);
             await window.FB.set(window.FB.ref(db, 'uids/' + randomID), myDBUid);
             currentLevel = localLevel;
         }
         
+                await syncAstraXRewards();
         updateProfileUI();
         listenForFriends();
         setMyStatus('Online');
@@ -1267,55 +1760,133 @@ img {
         'gold': { name: 'AstraX VIP', icon: '👑' }
     };
 
-    window.renderCharacters = function() {
-        const grid = document.getElementById('dynamic-chars');
-        if (!grid) return;
-        grid.innerHTML = '';
-        
-        const equippedId = userProfile.equippedChar || 'default';
+   window.renderCharacters = function() {
+    const grid =
+        document.getElementById('dynamic-chars');
 
-        for(let id in availableCharacters) {
-            const item = availableCharacters[id];
-            const isEquipped = (equippedId === id);
-            
-            grid.innerHTML += `
-                <div class="aaa-store-card ${isEquipped ? 'equipped' : ''}">
-                    <div class="aaa-icon-wrapper">${item.icon}</div>
-                    <div class="aaa-item-title">${item.name}</div>
-                    ${isEquipped 
-                        ? `<button class="aaa-btn-equipped" disabled>Equipped</button>` 
-                        : `<button class="aaa-btn-equip" onclick="equipCharacter('${id}')">Select</button>`
-                    }
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    const equippedId =
+        userProfile.equippedChar || 'default';
+
+    for (let id in availableCharacters) {
+        const item = availableCharacters[id];
+
+        const isEquipped =
+            equippedId === id;
+
+        const locked =
+            id === 'gold' &&
+            !userProfile.isSupporter;
+
+        grid.innerHTML += `
+            <div class="aaa-store-card ${isEquipped ? 'equipped' : ''}">
+                <div class="aaa-icon-wrapper">${item.icon}</div>
+
+                <div class="aaa-item-title">
+                    ${item.name}
                 </div>
-            `;
-        }
-    };
 
-    window.equipCharacter = async function(id) {
-        userProfile.equippedChar = id;
-        applyCharacterSkin(player, id);
-        
-        // Save to Firebase
-        if(myDBUid && db && window.FB) {
-            await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { equippedChar: id });
-        }
-        
-        updateProfileUI();
-        renderCharacters();
-        gtaNotify("Character Selected!");
-    };
+                ${
+                    locked
+                    ? `<button
+                        class="aaa-btn-equip"
+                        onclick="gtaNotify('Supporter reward required.', true)">
+                        Supporter Only
+                    </button>`
+
+                    : isEquipped
+                    ? `<button
+                        class="aaa-btn-equipped"
+                        disabled>
+                        Equipped
+                    </button>`
+
+                    : `<button
+                        class="aaa-btn-equip"
+                        onclick="equipCharacter('${id}')">
+                        Select
+                    </button>`
+                }
+            </div>
+        `;
+    }
+};
+
+window.equipCharacter = async function(id) {
+
+    if (
+        id === 'gold' &&
+        !userProfile.isSupporter
+    ) {
+        gtaNotify(
+            "Supporter reward required.",
+            true
+        );
+        return;
+    }
+
+    userProfile.equippedChar = id;
+
+    applyCharacterSkin(
+        player,
+        id
+    );
+
+    if (
+        myDBUid &&
+        db &&
+        window.FB
+    ) {
+        await window.FB.update(
+            window.FB.ref(
+                db,
+                'users/' +
+                myDBUid +
+                '/profile'
+            ),
+            {
+                equippedChar: id
+            }
+        );
+    }
+
+    updateProfileUI();
+    renderCharacters();
+
+    gtaNotify("Character Selected!");
+};
 
 
 
 
+    function maskProfileEmail(rawEmail) {
+        const email = String(rawEmail || '').trim();
+        if (!email) return 'Account linked';
+        const at = email.lastIndexOf('@');
+        if (at < 1) return email.slice(0, 2) + '****';
+        const local = email.slice(0, at);
+        const domain = email.slice(at + 1);
+        return local.slice(0, Math.min(2, local.length)) + '****@' + domain;
+    }
 
     function updateProfileUI() {
-        document.getElementById('widget-name').innerText = userProfile.name;
-        document.getElementById('widget-uid').innerText = "UID: " + userProfile.uidNum;
+    document.getElementById('widget-name').innerText = userProfile.name;
+    const profileName = document.getElementById('profile-display-name');
+    if (profileName) profileName.innerText = userProfile.name || 'Player';
+
+    const displayUid = isOfflineMode
+        ? (userProfile.uidNum || '000000')
+        : (localStorage.getItem('ax_uid') || userProfile.uidNum || '000000');
+
+    document.getElementById('widget-uid').innerText =
+        "UID: " + displayUid;
         document.getElementById('widget-pfp').src = userProfile.pfp;
         
         document.getElementById('edit-name-input').value = userProfile.name;
-        document.getElementById('edit-uid-display').innerText = userProfile.uidNum;
+       document.getElementById('edit-uid-display').innerText = displayUid;
         document.getElementById('name-changes-left').innerText = userProfile.changesLeft;
         document.getElementById('edit-pfp').src = userProfile.pfp;
 
@@ -1341,8 +1912,10 @@ img {
 
         const axUid = localStorage.getItem('ax_uid');
         if(axUid) {
-            document.getElementById('ax-status').innerText = "Linked Account: " + (localStorage.getItem('ax_email') || "Active");
-            document.getElementById('ax-status').className = "text-sm font-bold mb-1 text-green-400";
+            document.getElementById('ax-status').innerText = "Linked • UID " + axUid + " • " + maskProfileEmail(localStorage.getItem('ax_email')) + (userProfile.isSupporter ? " • ★ SUPPORTER" : "");
+            document.getElementById('ax-status').className = "profile-cloud-status text-green-300";
+            const identityState = document.getElementById('profile-identity-state');
+            if (identityState) identityState.innerText = userProfile.isSupporter ? 'Cloud linked • Supporter' : 'Cloud account linked';
             if(document.getElementById('btn-ax-modal')) document.getElementById('btn-ax-modal').classList.add('hidden');
             
             document.getElementById('edit-name-input').disabled = true;
@@ -1351,6 +1924,23 @@ img {
             document.getElementById('pfp-change-overlay').classList.add('hidden');
             document.getElementById('ax-locked-warning').classList.remove('hidden');
             document.getElementById('btn-save-profile').classList.add('hidden');
+        } else {
+            const identityState = document.getElementById('profile-identity-state');
+            if (identityState) identityState.innerText = 'Local profile';
+            const status = document.getElementById('ax-status');
+            if (status) { status.innerText = 'Local Guest Instance'; status.className = 'profile-cloud-status'; }
+            const connectButton = document.getElementById('btn-ax-modal');
+            if (connectButton) connectButton.classList.remove('hidden');
+            const saveButton = document.getElementById('btn-save-profile');
+            if (saveButton) saveButton.classList.remove('hidden');
+            const warning = document.getElementById('ax-locked-warning');
+            if (warning) warning.classList.add('hidden');
+            const nameInput = document.getElementById('edit-name-input');
+            if (nameInput) nameInput.disabled = false;
+            const changeText = document.getElementById('name-changes-text');
+            if (changeText) changeText.classList.remove('hidden');
+            const avatarOverlay = document.getElementById('pfp-change-overlay');
+            if (avatarOverlay) avatarOverlay.classList.remove('hidden');
         }
         
         applyWeaponMesh(player, userProfile.equippedWeapon);
@@ -1951,7 +2541,7 @@ img {
                 const pData = data[id]; if(id === mySessionId) return;
                 if(!remotePlayers[id]) { 
                     if (!isInitialSync) gtaNotify(`${pData.name || 'Player'} joined`); 
-                    createHologram(id, pData.wpn, pData.char, pData.name); 
+                    createHologram(id, pData.wpn, pData.char, pData.name, pData.isSupporter); 
                     if(voiceChat.isActive) voiceChat.createPeer(id, true); 
                 } 
                 else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { 
@@ -1966,7 +2556,21 @@ img {
 
         onlineSyncInterval = setInterval(() => {
             if(!myDBUid) return;
-            window.FB.set(myPlayerRef, { x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, wpn: userProfile.equippedWeapon, char: userProfile.equippedChar, name: userProfile.name, uidNum: userProfile.uidNum, mic: voiceChat.isActive, crouch: keys.crouch, active: true, hp: myHP });
+            window.FB.set(myPlayerRef, {
+    x: player.position.x,
+    y: player.position.y,
+    z: player.position.z,
+    rot: player.rotation.y,
+    wpn: userProfile.equippedWeapon,
+    char: userProfile.equippedChar,
+    name: userProfile.name,
+    uidNum: userProfile.uidNum,
+    isSupporter: !!userProfile.isSupporter,
+    mic: voiceChat.isActive,
+    crouch: keys.crouch,
+    active: true,
+    hp: myHP
+});
         }, 150);
 
         await new Promise(resolve => setTimeout(resolve, 5000));
@@ -2390,7 +2994,7 @@ function startBotMatch() {
                     for(let id in data.players) {
                         if(id !== mySessionId) {
                             const pData = data.players[id];
-                            if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char, pData.name); gtaNotify("Match Started! First to 15!"); }
+                            if(!remotePlayers[id]) { createHologram(id, pData.wpn, pData.char, pData.name, pData.isSupporter); gtaNotify("Match Started! First to 15!"); }
                             else if ((remotePlayers[id].wpn !== pData.wpn || remotePlayers[id].char !== pData.char) && remoteMeshes[id]) { applyWeaponMesh(remoteMeshes[id], pData.wpn); applyCharacterSkin(remoteMeshes[id], pData.char); }
                             remotePlayers[id] = pData; enemyScore = pData.score || 0; updatePvPScoreboard();
                             if((enemyScore >= 15 || myScore >= 15) && pvpState === 'playing') { endPvP(myScore >= 15); }
@@ -2511,47 +3115,133 @@ if(vignette) {
         sprayMeshes = [];
     }
 
-    function createNameTag(name) {
-        // FATHER: Doubled the canvas width to 1024 to fit massive names without cutting off!
-        const c = document.createElement('canvas'); c.width = 1024; c.height = 128; const ctx = c.getContext('2d');
-        ctx.font = '900 60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.lineWidth = 8; ctx.strokeStyle = '#000000'; ctx.strokeText(name.toUpperCase(), 512, 64);
-        ctx.fillStyle = '#22d3ee'; ctx.fillText(name.toUpperCase(), 512, 64);
-        
-        const tex = new THREE.CanvasTexture(c);
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }); 
-        const sprite = new THREE.Sprite(mat); 
-        // FATHER: Doubled the visual scale from 2.0 to 4.0 so it matches the new wide canvas!
-        sprite.scale.set(4.0, 0.5, 1); 
-        sprite.position.y = 3.2; 
-        return sprite;
+    function createNameTag(
+    name,
+    isSupporter = false
+) {
+    const c =
+        document.createElement('canvas');
+
+    c.width = 1024;
+    c.height = 128;
+
+    const ctx =
+        c.getContext('2d');
+
+    const label =
+        isSupporter
+        ? '★ ' + (name || 'Player')
+        : (name || 'Player');
+
+    ctx.font =
+        '900 60px sans-serif';
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#000000';
+
+    ctx.strokeText(
+        label.toUpperCase(),
+        512,
+        64
+    );
+
+    ctx.fillStyle =
+        isSupporter
+        ? '#ffd700'
+        : '#22d3ee';
+
+    ctx.fillText(
+        label.toUpperCase(),
+        512,
+        64
+    );
+
+    const tex =
+        new THREE.CanvasTexture(c);
+
+    const mat =
+        new THREE.SpriteMaterial({
+            map: tex,
+            transparent: true,
+            depthTest: false
+        });
+
+    const sprite =
+        new THREE.Sprite(mat);
+
+    sprite.scale.set(
+        4.0,
+        0.5,
+        1
+    );
+
+    sprite.position.y = 3.2;
+
+    return sprite;
+}
+
+function createHologram(
+    id,
+    wpn,
+    charType,
+    playerName,
+    isSupporter = false
+) {
+    const holo =
+        createBoy(false);
+
+    applyWeaponMesh(
+        holo,
+        wpn || 'knife'
+    );
+
+    applyCharacterSkin(
+        holo,
+        charType || 'default'
+    );
+
+    if (gameMode === 'mmo') {
+        holo.add(
+            createNameTag(
+                playerName || 'Player',
+                isSupporter
+            )
+        );
     }
 
-    function createHologram(id, wpn, charType, playerName) {
-        const holo = createBoy(false); applyWeaponMesh(holo, wpn || 'knife'); applyCharacterSkin(holo, charType || 'default'); 
-        
-        // Only attach the name tag if we are in the MMO session
-        if (gameMode === 'mmo') { holo.add(createNameTag(playerName || 'Player')); }
-        
-        scene.add(holo); remoteMeshes[id] = holo;
-    }
+    scene.add(holo);
+
+    remoteMeshes[id] = holo;
+}
+
+
+
     function removeHologram(id) { if(remoteMeshes[id]) { scene.remove(remoteMeshes[id]); delete remoteMeshes[id]; } }
 
     let customAudio = new Audio(); customAudio.loop = false; let customPlaylist = ["https://www.dropbox.com/scl/fi/s19la3xygk253t36170g8/Creating-Modern-Latin-Dance-Pop.mp3?rlkey=mq1fslnrv1cngcrg5wy01w457&st=2pstyob0&raw=1"]; let currentPlaylistIndex = 0; customAudio.src = customPlaylist[0];
     customAudio.addEventListener('ended', () => { if (customPlaylist.length > 1) { currentPlaylistIndex = (currentPlaylistIndex + 1) % customPlaylist.length; customAudio.src = customPlaylist[currentPlaylistIndex]; playCustomAudio(); } else customAudio.play(); });
     function playCustomAudio() { if(customAudio.src && customAudio.src !== window.location.href) { let p = customAudio.play(); if (p !== undefined) p.catch(e => {}); } }
 
-    let defaultSettings = { display: { resolution: 'native', brightness: 100, fov: 75 }, graphics: { quality: 'custom', renderTech: 'ax', visionProfile: 'native', visionShadows: 'follow', upscaler: 'off', shadows: 'high', bloom: 'high', anisotropy: '16', fps: 'vsync', showFPS: false }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
+    let defaultSettings = { display: { resolution: 'native', brightness: 100, fov: 75 }, graphics: { quality: 'custom', renderTech: 'native', visionProfile: 'native', visionShadows: 'follow', upscaler: 'off', shadows: 'high', bloom: 'high', anisotropy: '16', fps: 'vsync', showFPS: false }, controls: { up: 'w', down: 's', left: 'a', right: 'd', jump: 'space', sprint: 'shift', crouch: 'c', sprayTick: 'f', sprayCross: 'g', attack: 'e', sensitivity: 50 }, sound: { master: 100, music: 50, sfx: 100 } };
     window.gameSettings = defaultSettings;
 
     try { const raw = localStorage.getItem('maze_settings'); if(raw) { const p = JSON.parse(raw); Object.assign(window.gameSettings.display, p.display||{}); Object.assign(window.gameSettings.graphics, p.graphics||{}); Object.assign(window.gameSettings.controls, p.controls||{}); Object.assign(window.gameSettings.sound, p.sound||{}); } } catch(e) {}
     if(!window.gameSettings.controls.crouch) window.gameSettings.controls.crouch = 'c';
     if(!window.gameSettings.controls.sensitivity) window.gameSettings.controls.sensitivity = 50;
     if(typeof window.gameSettings.graphics.showFPS !== 'boolean') window.gameSettings.graphics.showFPS = false;
-    if(!window.gameSettings.graphics.renderTech) window.gameSettings.graphics.renderTech = 'ax';
+    if(!window.gameSettings.graphics.renderTech) window.gameSettings.graphics.renderTech = 'native';
+    if(window.gameSettings.graphics.renderTech === 'ax' && (!window.gameSettings.graphics.upscaler || window.gameSettings.graphics.upscaler === 'off')) {
+        window.gameSettings.graphics.renderTech = 'native';
+    }
     if(!window.gameSettings.graphics.visionProfile) window.gameSettings.graphics.visionProfile = 'native';
     if(!window.gameSettings.graphics.visionShadows) window.gameSettings.graphics.visionShadows = 'follow';
-    mouseSensitivity = window.gameSettings.controls.sensitivity * 0.00004;
+    if(!['vsync', 'uncapped', '60', '30'].includes(String(window.gameSettings.graphics.fps))) {
+        window.gameSettings.graphics.fps = 'uncapped';
+    }
+    mouseSensitivity = window.gameSettings.controls.sensitivity * 0.00006;
     
     window.saveSettings = () => { localStorage.setItem('maze_settings', JSON.stringify(window.gameSettings)); };
     window.initGameSave = async () => { let s = localStorage.getItem('maze_escape_level'); return s ? parseInt(s) : 1; };
@@ -2559,7 +3249,7 @@ if(vignette) {
     window.saveGameProgress = async (level) => { 
         localStorage.setItem('maze_escape_level', level); 
         userProfile.level = level;
-        if(myDBUid && db) {
+        if(!isOfflineMode && myDBUid && db && window.FB) {
             await window.FB.update(window.FB.ref(db, 'users/' + myDBUid + '/profile'), { level: level });
         }
     };
@@ -3025,19 +3715,26 @@ if(vignette) {
                 const sec = (timeElapsed % 60).toString().padStart(2, '0');
                 const kdRatio = enemyScore === 0 ? myScore.toFixed(2) : (myScore / enemyScore).toFixed(2);
                 
-                // FATHER: Advanced Glassy Stats Overhaul
-                document.getElementById('victory-time').innerHTML = `
-                    <div class="flex flex-col gap-3 text-left w-full border-b border-white/20 pb-6 mb-2">
-                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">KILLS</span> <span class="text-cyan-400">${myScore}</span></div>
-                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">DEATHS</span> <span class="text-red-500">${enemyScore}</span></div>
-                        <div class="flex justify-between items-center text-xl md:text-2xl tracking-widest font-black"><span class="text-gray-400">K/D RATIO</span> <span class="text-yellow-400">${kdRatio}</span></div>
-                        <div class="flex justify-between items-center text-sm md:text-base tracking-widest font-bold mt-2"><span class="text-gray-500">DMG DEALT</span> <span class="text-white">${window.myTotalDamage || 0}</span></div>
-                        <div class="flex justify-between items-center text-sm md:text-base tracking-widest font-bold"><span class="text-gray-500">MATCH TIME</span> <span class="text-white">${min}:${sec}</span></div>
-                    </div>
-                `;
+                // Dedicated 1v1 Arena result card: update data fields without replacing markup.
+                const pvpResultCard = document.getElementById('pvp-result-card');
+                const genericVictoryCard = document.getElementById('generic-victory-card');
+                const victoryPlayerHeader = document.getElementById('victory-player-header');
+                if (pvpResultCard && genericVictoryCard) {
+                    pvpResultCard.classList.toggle('is-defeat', !won);
+                    pvpResultCard.classList.remove('hidden');
+                    genericVictoryCard.classList.add('hidden');
+                    if (victoryPlayerHeader) victoryPlayerHeader.classList.add('hidden');
 
-                // FATHER: Hide the "Play Again" button and just show one giant "MAIN MENU" button
-                document.getElementById('victory-time').nextElementSibling.innerHTML = `<button class="w-full gta-btn bg-white hover:bg-cyan-400 text-black font-black border border-white justify-center text-center py-4 text-sm md:text-base tracking-widest uppercase transition-colors" onclick="returnToMainMenuFromVictory()">RETURN TO MAIN MENU</button>`;
+                    document.getElementById('pvp-result-heading').textContent = won ? 'VICTORY' : 'DEFEAT';
+                    document.getElementById('pvp-result-copy').textContent = won ? 'DUEL WON  /  OPPONENT ELIMINATED' : 'MATCH COMPLETE  /  BETTER LUCK NEXT TIME';
+                    document.getElementById('pvp-result-pfp').src = userProfile.pfp || '';
+                    document.getElementById('pvp-result-player-name').textContent = userProfile.name || 'Player';
+                    document.getElementById('pvp-result-kills').textContent = String(myScore);
+                    document.getElementById('pvp-result-deaths').textContent = String(enemyScore);
+                    document.getElementById('pvp-result-kd').textContent = kdRatio;
+                    document.getElementById('pvp-result-damage').textContent = String(window.myTotalDamage || 0);
+                    document.getElementById('pvp-result-duration').textContent = `${min}:${sec}`;
+                }
 
                 window.myTotalDamage = 0;
 
@@ -3064,20 +3761,21 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x112211, 0.6); scene.add(hemiLight);
     const ambientLight = new THREE.AmbientLight(0x202530, 0.8); scene.add(ambientLight);
 
-    const SHADOW_FRUSTUM_SIZE = 25;  
+    const SHADOW_FRUSTUM_SIZE = 40;  
     const dirLight = new THREE.DirectionalLight(0x77aacc, 1.2);
     dirLight.castShadow = true; 
-    dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 160;
+    dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 1; dirLight.shadow.camera.far = 180;
     dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -SHADOW_FRUSTUM_SIZE; dirLight.shadow.camera.right = dirLight.shadow.camera.top = SHADOW_FRUSTUM_SIZE;
+    dirLight.shadow.camera.updateProjectionMatrix();
     
-    dirLight.shadow.bias = -0.0007; 
-    dirLight.shadow.normalBias = 0.045; 
-    dirLight.shadow.radius = 4.0; 
-    dirLight.shadow.blurSamples = 25; 
+    dirLight.shadow.bias = -0.0002; 
+    dirLight.shadow.normalBias = 0.018; 
+    dirLight.shadow.radius = 2.0; 
+    dirLight.shadow.blurSamples = 16; 
     
     dirLight.target = new THREE.Object3D(); scene.add(dirLight.target); scene.add(dirLight);
-    let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 1024;
+    let shadowTexelSize = (SHADOW_FRUSTUM_SIZE * 2) / 2048;
 
     const rimLight = new THREE.DirectionalLight(0x6a7fd6, 0.35); rimLight.position.set(-40, 25, -30); scene.add(rimLight);
 const gltfLoader = new THREE.GLTFLoader();
@@ -3508,7 +4206,7 @@ wallMat.needsUpdate = true;
         
         // FATHER: AstraX DLSS/FSR Engine Integration!
         let scaleFactor = 1.0;
-        let upscalerMode = s.graphics.upscaler || 'off';
+        let upscalerMode = (s.graphics.renderTech === 'ax') ? (s.graphics.upscaler || 'quality') : 'off';
         if (upscalerMode === 'quality') scaleFactor = 0.77;
         else if (upscalerMode === 'balanced') scaleFactor = 0.59;
         else if (upscalerMode === 'performance') scaleFactor = 0.50;
@@ -3536,7 +4234,8 @@ wallMat.needsUpdate = true;
 
 
        // 1. Rendering Technology + Post-Processing
-        const renderTech = s.graphics.renderTech || 'ax';
+        const renderTech = ['native', 'ax', 'vision'].includes(s.graphics.renderTech) ? s.graphics.renderTech : 'native';
+        s.graphics.renderTech = renderTech;
         const visionActive = (renderTech === 'vision');
         const visionProfile = s.graphics.visionProfile || 'native';
 
@@ -3733,7 +4432,7 @@ wallMat.needsUpdate = true;
             if (!Array.from(resSelect.options).some(o => o.value === s.display.resolution)) s.display.resolution = 'native'; resSelect.value = s.display.resolution;
         }
         
-        mouseSensitivity = (s.controls.sensitivity || 50) * 0.00004;
+        mouseSensitivity = (s.controls.sensitivity || 50) * 0.00006;
     };
     
     const bindUI = () => {
@@ -3741,14 +4440,17 @@ wallMat.needsUpdate = true;
         document.getElementById('set-brightness').value = s.display.brightness; document.getElementById('val-brightness').innerText = s.display.brightness+'%';
         document.getElementById('set-fov').value = s.display.fov || 75; document.getElementById('val-fov').innerText = (s.display.fov || 75);
         
-        const renderTech = s.graphics.renderTech || 'ax';
+        const renderTech = ['native', 'ax', 'vision'].includes(s.graphics.renderTech) ? s.graphics.renderTech : 'native';
+        s.graphics.renderTech = renderTech;
         const visionActive = renderTech === 'vision';
+        const upscalerActive = renderTech === 'ax';
+        const upscalerValue = ['quality', 'balanced', 'performance', 'ultra'].includes(s.graphics.upscaler) ? s.graphics.upscaler : 'quality';
+        if (upscalerActive) s.graphics.upscaler = upscalerValue;
 
         if(document.getElementById('set-render-tech')) document.getElementById('set-render-tech').value = renderTech;
-        if(document.getElementById('set-quality')) document.getElementById('set-quality').value = visionActive ? 'custom' : (s.graphics.quality || 'custom');
-        if(document.getElementById('set-upscaler')) document.getElementById('set-upscaler').value = s.graphics.upscaler || 'off';
+        if(document.getElementById('set-quality')) document.getElementById('set-quality').value = (visionActive || renderTech === 'native') ? (s.graphics.quality || 'custom') : (s.graphics.quality || 'custom');
+        if(document.getElementById('set-upscaler')) document.getElementById('set-upscaler').value = upscalerValue;
 
-        const axSelect = document.getElementById('set-upscaler');
         const axSection = document.getElementById('ax-upscaler-section');
         const visionSection = document.getElementById('ax-vision-section');
         const techDescription = document.getElementById('render-tech-description');
@@ -3756,22 +4458,23 @@ wallMat.needsUpdate = true;
         const visionShadowSelect = document.getElementById('set-vision-shadows');
         const visionDescription = document.getElementById('vision-profile-description');
 
-        if(axSelect) axSelect.disabled = visionActive;
-        if(axSection) { axSection.style.opacity = visionActive ? '0.45' : '1'; axSection.style.pointerEvents = visionActive ? 'none' : 'auto'; }
-        if(visionSection) { visionSection.style.opacity = visionActive ? '1' : '0.45'; visionSection.style.pointerEvents = visionActive ? 'auto' : 'none'; }
+        if(axSection) axSection.hidden = !upscalerActive;
+        if(visionSection) visionSection.hidden = !visionActive;
         if(visionProfileSelect) visionProfileSelect.value = s.graphics.visionProfile || 'native';
         if(visionShadowSelect) visionShadowSelect.value = s.graphics.visionShadows || 'follow';
 
-        if(techDescription) techDescription.innerText = visionActive
-            ? 'Native-resolution premium rendering for high-end PCs. AX reconstruction is automatically disabled.'
-            : 'Performance-focused rendering. AX reconstruction can reduce internal resolution for higher FPS.';
+        if(techDescription) {
+            if (renderTech === 'vision') techDescription.innerText = 'Native-resolution image processing with enhanced visual effects.';
+            else if (renderTech === 'ax') techDescription.innerText = 'Reconstructed lower-resolution rendering for higher performance.';
+            else techDescription.innerText = 'Full native resolution. No upscaling or AX Vision processing.';
+        }
 
         if(visionDescription) {
             const vp = s.graphics.visionProfile || 'native';
-            if(vp === 'radiance') visionDescription.innerText = 'Experimental multi-sample screen-space radiance simulation. Extremely GPU-heavy.';
-            else if(vp === 'extreme') visionDescription.innerText = 'Maximum native detail with depth occlusion, premium clarity, and high-end shadow support.';
-            else if(vp === 'cinematic') visionDescription.innerText = 'Enhanced native depth, contact shading, clarity, and highlight control.';
-            else visionDescription.innerText = 'Restores the original native rendering character with no AX reconstruction.';
+            if(vp === 'radiance') visionDescription.innerText = 'Experimental lighting and radiance processing.';
+            else if(vp === 'extreme') visionDescription.innerText = 'Maximum image detail and depth effects.';
+            else if(vp === 'cinematic') visionDescription.innerText = 'Enhanced depth, contrast and highlight control.';
+            else visionDescription.innerText = 'Native-resolution fidelity profile.';
         }
         
         if(document.getElementById('set-shadows-select')) document.getElementById('set-shadows-select').value = s.graphics.shadows || 'high';
@@ -4071,8 +4774,8 @@ wallMat.needsUpdate = true;
     let displayedFPS = 0;
     function animate(){
         requestAnimationFrame(animate);
-        let dtRaw=clock.getDelta(); const fpsLimit=window.gameSettings.graphics.fps;
-        if(fpsLimit!=='uncapped' && fpsLimit!=='vsync'){ frameTimeAcc+=dtRaw; const tdt=1/parseInt(fpsLimit); if(frameTimeAcc<tdt)return; frameTimeAcc%=tdt; }
+        let dtRaw=clock.getDelta(); const fpsLimit=String(window.gameSettings.graphics.fps || 'vsync');
+        if(fpsLimit === '30' || fpsLimit === '60'){ const targetFrameTime = 1 / Number(fpsLimit); frameTimeAcc += dtRaw; if(frameTimeAcc < targetFrameTime) return; frameTimeAcc %= targetFrameTime; }
         const dt=Math.min(dtRaw,.1), time=clock.getElapsedTime();
 
         const fpsElement = document.getElementById('fps-counter');
@@ -4363,6 +5066,10 @@ wallMat.needsUpdate = true;
                     const sloganStage = document.getElementById('victory-slogan-stage');
                     const statsStage = document.getElementById('victory-stats-stage');
                     const sloganText = document.getElementById('slogan-text');
+                    // Keep the standard campaign/MMO panel active outside 1v1.
+                    document.getElementById('pvp-result-card')?.classList.add('hidden');
+                    document.getElementById('generic-victory-card')?.classList.remove('hidden');
+                    document.getElementById('victory-player-header')?.classList.remove('hidden');
 
                     vicScreen.classList.remove('hidden'); vicScreen.classList.add('flex');
                     sloganStage.classList.remove('hidden'); sloganStage.style.opacity = '1';
@@ -4602,20 +5309,48 @@ wallMat.needsUpdate = true;
     let spraySound = new Audio("audio/spray.mp3");
 
     async function initAudio() {
-        if(audioInitialized) return; await Tone.start();
-        
-        footstepSynth = new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.01,decay:0.05,sustain:0,release:0.05}}).toDestination();
-        swingSynth = new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.01,decay:0.1,sustain:0,release:0.1}}).toDestination();
-        hitSynth = new Tone.MembraneSynth({pitchDecay: 0.1, octaves: 4, oscillator: {type: 'sine'}, envelope: {attack: 0.001, decay: 0.2, sustain: 0, release: 0.1}}).toDestination();
-        nightSynth = new Tone.FMSynth({ harmonicity: 0.5, modulationIndex: 5, oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 1 } }).toDestination();
-        
-        let noteIdx = 0; const nightMelody = ['C2', 'D#2', 'G2', 'A#2']; 
-        Tone.Transport.scheduleRepeat(time => {
-            if(isPlaying && !isPaused && customPlaylist.length === 0) { if(noteIdx % 4 === 0) { const note = nightMelody[(noteIdx/4) % nightMelody.length]; if(note) nightSynth.triggerAttackRelease(note, '4n', time); } }
-            noteIdx++;
-        }, '16n'); Tone.Transport.start(); audioInitialized = true; applySettingsToEngine();
+        if (audioInitialized) return;
+        if (!window.Tone) {
+            console.info('[Maze Escape] Tone.js unavailable; continuing without synthesized audio.');
+            return;
+        }
+        try {
+            await Tone.start();
+            footstepSynth = new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.01,decay:0.05,sustain:0,release:0.05}}).toDestination();
+            swingSynth = new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.01,decay:0.1,sustain:0,release:0.1}}).toDestination();
+            hitSynth = new Tone.MembraneSynth({pitchDecay: 0.1, octaves: 4, oscillator: {type: 'sine'}, envelope: {attack: 0.001, decay: 0.2, sustain: 0, release: 0.1}}).toDestination();
+            nightSynth = new Tone.FMSynth({ harmonicity: 0.5, modulationIndex: 5, oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 1 } }).toDestination();
+
+            let noteIdx = 0;
+            const nightMelody = ['C2', 'D#2', 'G2', 'A#2'];
+            Tone.Transport.scheduleRepeat(time => {
+                if (isPlaying && !isPaused && customPlaylist.length === 0 && nightSynth) {
+                    if (noteIdx % 4 === 0) {
+                        const note = nightMelody[(noteIdx / 4) % nightMelody.length];
+                        if (note) nightSynth.triggerAttackRelease(note, '4n', time);
+                    }
+                }
+                noteIdx++;
+            }, '16n');
+            Tone.Transport.start();
+            audioInitialized = true;
+            applySettingsToEngine();
+        } catch (error) {
+            audioInitialized = false;
+            console.warn('[Maze Escape] Audio initialization failed; gameplay will continue silently.', error);
+        }
     }
-    
+
+    async function resumeGameAudio() {
+        if (!window.Tone || !audioInitialized) return;
+        try {
+            if (Tone.context && Tone.context.state !== 'running') await Tone.start();
+            if (Tone.Transport) Tone.Transport.start();
+        } catch (error) {
+            console.warn('[Maze Escape] Audio resume failed; continuing without audio.', error);
+        }
+    }
+
     function playWinMelody() {
         if(!audioInitialized || window.gameSettings.sound.sfx <= 0) return;
         const vol = Tone.gainToDb(window.gameSettings.sound.sfx / 100) - 8;
@@ -4629,7 +5364,9 @@ wallMat.needsUpdate = true;
     async function startGamePlay(spawnX, spawnZ) {
         lastActivityTime = Date.now(); // FATHER: Fresh AFK timer when spawning in!
         closeAllSubmenus(); document.getElementById('main-menu-layer').classList.add('hidden');
-        await initAudio(); if(Tone.context.state!=='running') await Tone.start(); Tone.Transport.start(); playCustomAudio();
+        await initAudio();
+        await resumeGameAudio();
+        if (!isOfflineMode) playCustomAudio(); else if (customAudio && !customAudio.paused) customAudio.pause();
         if(gameMode === 'campaign' && window.initGameSave) currentLevel=await window.initGameSave();
         lastFootstepTime=0; levelTimer=0; document.getElementById('hud').classList.remove('hidden');
         setMyStatus('In-Game');
@@ -4670,9 +5407,17 @@ window.playAgainMMO = function() {
     };
     
     document.getElementById('btn-mode-campaign').onclick = () => { gameMode = 'campaign'; startGamePlay(); canvas.requestPointerLock(); };
-    document.getElementById('btn-mode-online').onclick = (e) => { e.target.innerText='CONNECTING...'; joinOnlineLobby(); canvas.requestPointerLock(); };
-    
-    document.getElementById('btn-mode-pvp1v1').onclick = () => { startPvPMatchmaking(); };
+    document.getElementById('btn-mode-online').onclick = (e) => {
+        if (isOfflineMode || !window.FB || !db) { gtaNotify('Multiplayer requires an internet connection.', true); return; }
+        e.target.innerText = 'CONNECTING...';
+        joinOnlineLobby();
+        canvas.requestPointerLock();
+    };
+
+    document.getElementById('btn-mode-pvp1v1').onclick = () => {
+        if (isOfflineMode || !window.FB || !db) { gtaNotify('PvP requires an internet connection.', true); return; }
+        startPvPMatchmaking();
+    };
     
     document.getElementById('btn-hud-pause').onclick  = ()=>{
         isMenuOpen = true; 
@@ -4723,7 +5468,7 @@ window.playAgainMMO = function() {
     document.getElementById('btn-hud-mic').onclick = ()=> voiceChat.toggleMic();
     
     document.getElementById('btn-resume').onclick = async()=>{
-        if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start();
+        await resumeGameAudio();
         isPaused = false; 
         isMenuOpen = false; // FATHER: Close the menu tracker!
         playCustomAudio(); document.getElementById('pause-menu').classList.add('hidden'); canvas.requestPointerLock(); 
@@ -4741,7 +5486,7 @@ window.playAgainMMO = function() {
     };
     
     document.getElementById('next-level-btn').onclick = async()=>{
-        if(gameMode === 'campaign') { if(Tone.context.state!=='running')await Tone.start();Tone.Transport.start(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; canvas.requestPointerLock();}
+        if(gameMode === 'campaign') { await resumeGameAudio(); currentLevel++;lastFootstepTime=0;levelTimer=0; document.getElementById('level-menu').classList.add('hidden');document.getElementById('hud').classList.remove('hidden'); buildLevel(false);isPlaying=true;isPaused=false; canvas.requestPointerLock();}
     };
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -4764,21 +5509,19 @@ window.playAgainMMO = function() {
     
    document.getElementById('set-quality').onchange = e => { 
         const q = e.target.value; window.gameSettings.graphics.quality = q;
-        // Graphics presets remain the existing AX performance presets.
-        window.gameSettings.graphics.renderTech = 'ax';
-        if(q === 'ultra') { window.gameSettings.graphics.upscaler = 'off'; window.gameSettings.graphics.shadows = 'ultra'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'uncapped'; }
-        else if(q === 'high') { window.gameSettings.graphics.upscaler = 'quality'; window.gameSettings.graphics.shadows = 'high'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'vsync'; }
-        else if(q === 'medium') { window.gameSettings.graphics.upscaler = 'balanced'; window.gameSettings.graphics.shadows = 'medium'; window.gameSettings.graphics.bloom = 'low'; window.gameSettings.graphics.anisotropy = '8'; window.gameSettings.graphics.fps = 'vsync'; }
-        else if(q === 'low') { window.gameSettings.graphics.upscaler = 'ultra'; window.gameSettings.graphics.shadows = 'off'; window.gameSettings.graphics.bloom = 'off'; window.gameSettings.graphics.anisotropy = '1'; window.gameSettings.graphics.fps = '30'; }
+        if(q === 'ultra') { window.gameSettings.graphics.renderTech = 'native'; window.gameSettings.graphics.upscaler = 'off'; window.gameSettings.graphics.shadows = 'ultra'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'uncapped'; }
+        else if(q === 'high') { window.gameSettings.graphics.renderTech = 'ax'; window.gameSettings.graphics.upscaler = 'quality'; window.gameSettings.graphics.shadows = 'high'; window.gameSettings.graphics.bloom = 'high'; window.gameSettings.graphics.anisotropy = '16'; window.gameSettings.graphics.fps = 'vsync'; }
+        else if(q === 'medium') { window.gameSettings.graphics.renderTech = 'ax'; window.gameSettings.graphics.upscaler = 'balanced'; window.gameSettings.graphics.shadows = 'medium'; window.gameSettings.graphics.bloom = 'low'; window.gameSettings.graphics.anisotropy = '8'; window.gameSettings.graphics.fps = 'vsync'; }
+        else if(q === 'low') { window.gameSettings.graphics.renderTech = 'ax'; window.gameSettings.graphics.upscaler = 'ultra'; window.gameSettings.graphics.shadows = 'off'; window.gameSettings.graphics.bloom = 'off'; window.gameSettings.graphics.anisotropy = '1'; window.gameSettings.graphics.fps = '30'; }
         bindUI(); saveSettings(); applySettingsToEngine();
     };
     
     document.getElementById('set-render-tech').onchange = e => {
-        window.gameSettings.graphics.renderTech = e.target.value;
-        if (e.target.value === 'vision') {
-            window.gameSettings.graphics.upscaler = 'off';
-            window.gameSettings.graphics.quality = 'custom';
-        }
+        const mode = e.target.value;
+        window.gameSettings.graphics.renderTech = mode;
+        if (mode === 'native' || mode === 'vision') window.gameSettings.graphics.upscaler = 'off';
+        if (mode === 'ax' && !['quality', 'balanced', 'performance', 'ultra'].includes(window.gameSettings.graphics.upscaler)) window.gameSettings.graphics.upscaler = 'quality';
+        window.gameSettings.graphics.quality = 'custom';
         bindUI(); saveSettings(); applySettingsToEngine();
     };
 
@@ -4806,7 +5549,7 @@ window.playAgainMMO = function() {
         bindUI(); saveSettings(); applySettingsToEngine();
     };
 
-    document.getElementById('set-fps').onchange = e => { window.gameSettings.graphics.fps = e.target.value; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
+    document.getElementById('set-fps').onchange = e => { window.gameSettings.graphics.fps = e.target.value; frameTimeAcc = 0; window.gameSettings.graphics.quality = 'custom'; document.getElementById('set-quality').value = 'custom'; saveSettings(); applySettingsToEngine(); };
 
     document.getElementById('toggle-fps').onclick = () => {
         window.gameSettings.graphics.showFPS = !window.gameSettings.graphics.showFPS;
@@ -4833,7 +5576,7 @@ window.playAgainMMO = function() {
     document.getElementById('set-sens').addEventListener('input', (e) => {
         window.gameSettings.controls.sensitivity = parseInt(e.target.value);
         document.getElementById('val-sens').innerText = e.target.value + '%';
-        mouseSensitivity = parseInt(e.target.value) * 0.00004;
+        mouseSensitivity = parseInt(e.target.value) * 0.00006;
         saveSettings();
     });
 

@@ -1,7 +1,7 @@
 {
   "name": "maze-escape",
   "productName": "Maze Escape",
-  "version": "1.5.0",
+  "version": "1.5.5",
   "description": "3D Multiplayer Maze Escape game",
   "author": "AstraX Games",
   "main": "main.js",
